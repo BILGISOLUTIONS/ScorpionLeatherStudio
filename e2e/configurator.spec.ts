@@ -35,7 +35,7 @@ test('multi-product studio builds and captures a customized order request', asyn
   await page.getByPlaceholder('Name, initials, company, unit, etc.').fill('ZAN CREW')
   await page.getByRole('button', { name: 'Block', exact: true }).click()
   await page.getByLabel('Requested placement').selectOption({ label: 'Front chest panel' })
-  await page.getByLabel('Quantity').fill('2')
+  await page.getByRole('spinbutton', { name: 'Quantity' }).fill('2')
 
   await expect(page.getByText('ZAN CREW').first()).toBeVisible()
   await expect(page.getByText('Western floral').last()).toBeVisible()
@@ -46,7 +46,7 @@ test('multi-product studio builds and captures a customized order request', asyn
   await page.reload()
   await expect(page.getByTestId('base-price')).toHaveText('$350.00')
   await expect(page.getByPlaceholder('Name, initials, company, unit, etc.')).toHaveValue('ZAN CREW')
-  await expect(page.getByLabel('Quantity')).toHaveValue('2')
+  await expect(page.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue('2')
 
   await page.getByLabel(/^Name/).fill('Test Customer')
   await page.getByLabel('Email').fill('customer@example.com')
