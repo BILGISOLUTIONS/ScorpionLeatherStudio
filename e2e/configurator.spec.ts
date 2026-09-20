@@ -21,11 +21,13 @@ test('catalog-linked configurator restores the selected Scorpion build', async (
 
   await expect(page.getByTestId('build-total')).toHaveText('$10.00')
   await expect(page.getByText('NOT APPROVED RETAIL PRICING')).toBeVisible()
-  await expect(page.getByText('SC-WH-CTX-002')).toBeVisible()
+  const referenceRegion = page.getByRole('region', { name: 'Photographed Scorpion reference' })
+  const buildSpec = page.getByRole('region', { name: 'Current build specification' })
+  await expect(referenceRegion.getByText('SC-WH-CTX-002')).toBeVisible()
 
   await page.getByRole('button', { name: /Tan Smooth/i }).click()
-  await expect(page.getByText('SC-WH-TSM-003')).toBeVisible()
-  await expect(page.getByText('83915544')).toBeVisible()
+  await expect(referenceRegion.getByText('SC-WH-TSM-003')).toBeVisible()
+  await expect(buildSpec.getByText('83915544')).toBeVisible()
 
   await page.getByRole('button', { name: 'Open visor' }).click()
   await expect(page.getByRole('button', { name: 'Close visor' })).toBeVisible()
@@ -40,8 +42,8 @@ test('catalog-linked configurator restores the selected Scorpion build', async (
 
   await page.reload()
   await expect(page.getByTestId('build-total')).toHaveText('$10.00')
-  await expect(page.getByText('SC-WH-TSM-003')).toBeVisible()
-  await expect(page.getByText('83915544')).toBeVisible()
+  await expect(referenceRegion.getByText('SC-WH-TSM-003')).toBeVisible()
+  await expect(buildSpec.getByText('83915544')).toBeVisible()
 
   await page.getByRole('button', { name: 'Prepare Shopify Build' }).click()
   await expect(page.getByRole('status')).toContainText('Shopify build prepared for SC-WH-TSM-003: SC-')
