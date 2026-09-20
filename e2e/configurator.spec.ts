@@ -48,12 +48,12 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByPlaceholder('Name, initials, company, unit, etc.')).toHaveValue('ZAN CREW')
   await expect(page.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue('2')
 
-  await page.getByLabel(/^Name/).fill('Test Customer')
-  await page.getByLabel('Email').fill('customer@example.com')
-  await page.getByRole('button', { name: 'Create Order Request' }).click()
-
-  await expect(page.getByText('REQUEST READY')).toBeVisible()
   const requestPanel = page.getByRole('region', { name: 'Custom order request' })
+  await requestPanel.getByRole('textbox', { name: /^Name/ }).fill('Test Customer')
+  await requestPanel.getByRole('textbox', { name: 'Email', exact: true }).fill('customer@example.com')
+  await requestPanel.getByRole('button', { name: 'Create Order Request' }).click()
+
+  await expect(requestPanel.getByText('REQUEST READY')).toBeVisible()
   await expect(requestPanel.locator('pre')).toContainText('SC-LRH-BLK-XL-002')
   await expect(requestPanel.locator('pre')).toContainText('Quantity: 2')
   await expect(requestPanel.locator('pre')).toContainText('ZAN CREW')
