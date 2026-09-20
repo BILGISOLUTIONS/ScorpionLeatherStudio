@@ -22,12 +22,26 @@ export interface ResolvedConfiguration {
   configurationId: string
 }
 
+export function resolveMerchandiseId(
+  product: ProductDefinition,
+  selections: Record<string, string>,
+  fallback = product.commerce.defaultMerchandiseId,
+): string {
+  for (const group of product.optionGroups) {
+    const selectedId = selections[group.id]
+    const value = group.values.find((candidate) => candidate.id === selectedId)
+    if (value?.commerce?.merchandiseId) return value.commerce.merchandiseId
+  }
+  return fallback
+}
+
 export function createInitialConfiguration(product: ProductDefinition): ConfigurationState {
+  const selections = Object.fromEntries(product.optionGroups.map((group) => [group.id, group.defaultValue]))
   return {
     schemaVersion: 1,
     productId: product.id,
-    merchandiseId: product.commerce.defaultMerchandiseId,
-    selections: Object.fromEntries(product.optionGroups.map((group) => [group.id, group.defaultValue])),
+    merchandiseId: resolveMerchandiseId(product, selections),
+    selections,
     measurements: Object.fromEntries(product.measurements.map((measurement) => [measurement.id, undefined])),
     personalization: {},
   }
@@ -81,9 +95,12 @@ export function setSelection(
   const permission = isSelectionAllowed(product, configuration, groupId, valueId)
   if (!permission.allowed) throw new Error(permission.reason ?? 'Selection is not compatible with the current configuration.')
 
+  const selections = {...configuration.selections, [groupId]: valueId}
+
   return {
     ...configuration,
-    selections: {...configuration.selections, [groupId]: valueId},
+    merchandiseId: resolveMerchandiseId(product, selections, configuration.merchandiseId),
+    selections,
   }
 }
 
