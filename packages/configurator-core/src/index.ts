@@ -101,6 +101,17 @@ export function setMeasurement(
   }
 }
 
+export function setPersonalization(
+  configuration: ConfigurationState,
+  fieldId: string,
+  value: string,
+): ConfigurationState {
+  return {
+    ...configuration,
+    personalization: {...configuration.personalization, [fieldId]: value},
+  }
+}
+
 function canonicalJson(configuration: ConfigurationState): string {
   const orderedSelections = Object.fromEntries(Object.entries(configuration.selections).sort(([a], [b]) => a.localeCompare(b)))
   const orderedMeasurements = Object.fromEntries(Object.entries(configuration.measurements).sort(([a], [b]) => a.localeCompare(b)))
@@ -124,12 +135,38 @@ function fnv1a(input: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/u, '')
+}
+
+function base64UrlToBytes(token: string): Uint8Array {
+  const base64 = token.replaceAll('-', '+').replaceAll('_', '/')
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+  const binary = atob(padded)
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0))
+}
+
 export function createConfigurationId(configuration: ConfigurationState): string {
   return `SC-${fnv1a(canonicalJson(configuration)).toUpperCase()}`
 }
 
 export function serializeConfiguration(configuration: ConfigurationState): string {
   return canonicalJson(configuration)
+}
+
+export function createShareToken(configuration: ConfigurationState): string {
+  return bytesToBase64Url(new TextEncoder().encode(canonicalJson(configuration)))
+}
+
+export function restoreShareToken(product: ProductDefinition, token: string): ConfigurationState {
+  try {
+    const serialized = new TextDecoder().decode(base64UrlToBytes(token))
+    return restoreConfiguration(product, serialized)
+  } catch {
+    throw new Error('This shared build link is invalid or no longer compatible.')
+  }
 }
 
 export function restoreConfiguration(product: ProductDefinition, serialized: string): ConfigurationState {
