@@ -27,7 +27,8 @@ test('multi-product studio builds and captures a customized order request', asyn
   await page.getByRole('button', { name: /Cowhide Radio Harness - Black/i }).click()
   await page.getByRole('button', { name: /X-Large/i }).click()
   await expect(page.getByTestId('base-price')).toHaveText('$350.00')
-  await expect(page.getByText('SC-LRH-BLK-XL-002')).toBeVisible()
+  const buildSummary = page.getByRole('region', { name: 'Build summary' })
+  await expect(buildSummary.getByText('SC-LRH-BLK-XL-002')).toBeVisible()
 
   await page.getByRole('button', { name: 'Western floral' }).click()
   await page.getByRole('checkbox', { name: /Add text/i }).check()
