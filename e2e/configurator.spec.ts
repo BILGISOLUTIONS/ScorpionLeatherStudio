@@ -58,7 +58,23 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(requestPanel.locator('pre')).toContainText('Quantity: 2')
   await expect(requestPanel.locator('pre')).toContainText('ZAN CREW')
   await expect(requestPanel.locator('pre')).toContainText('western-floral')
-  await expect(page.getByRole('button', { name: 'Email Scorpion' })).toBeVisible()
+  let deliveredRequestId = ''
+  await page.route('**/api/order-requests', async (route) => {
+    const body = JSON.parse(route.request().postData() ?? '{}') as { request?: { requestId?: string; commerce?: { sku?: string } } }
+    deliveredRequestId = body.request?.requestId ?? ''
+    expect(body.request?.commerce?.sku).toBe('SC-LRH-BLK-XL-002')
+    await route.fulfill({
+      status: 202,
+      contentType: 'application/json',
+      body: JSON.stringify({ accepted: true, requestId: deliveredRequestId, deliveryId: 'test-delivery' }),
+    })
+  })
+
+  await requestPanel.getByRole('button', { name: 'Send to Scorpion' }).click()
+  await expect(requestPanel.getByRole('button', { name: 'Sent to Scorpion' })).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('sent to Scorpion successfully')
+  expect(deliveredRequestId).toMatch(/^SC-REQ-/u)
+  await expect(requestPanel.getByRole('button', { name: 'Email fallback' })).toBeVisible()
 
   const screenshotName = testInfo.project.name.includes('mobile') ? 'mobile.png' : 'desktop.png'
   await page.screenshot({
