@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "assetId": "placeholder-welding-hood-v1",
+  "model": "/models/placeholder-welding-hood.glb",
+  "units": "meters",
+  "upAxis": "Y",
+  "frontAxis": "-Z",
+  "rootNode": "SLS_ProductRoot",
+  "materialSlots": {
+    "LeatherPrimary": ["Shell_Main", "NeckGuard_Standard", "NeckGuard_Extended"],
+    "HardwarePrimary": ["Visor_Frame", "Rivets"],
+    "Lens": ["Visor_Lens"]
+  },
+  "components": {
+    "neckGuard.standard": ["NeckGuard_Standard"],
+    "neckGuard.extended": ["NeckGuard_Extended"]
+  },
+  "animations": {
+    "visor.open": {
+      "target": "Visor_Pivot",
+      "property": "rotation.x",
+      "from": 0,
+      "to": -1.72,
+      "durationMs": 420,
+      "easing": "easeInOutCubic"
+    }
+  },
+  "cameraPresets": {
+    "hero": {"target": [0, 0.05, 0], "position": [0.48, 0.28, 0.68], "fov": 35},
+    "rear": {"target": [0, 0.05, 0], "position": [0, 0.22, -0.82], "fov": 35}
+  }
+}
