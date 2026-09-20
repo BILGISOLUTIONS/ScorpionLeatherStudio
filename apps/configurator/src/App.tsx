@@ -1,424 +1,905 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createInitialConfiguration, setSelection } from '@sls/configurator-core'
 import {
-  createInitialConfiguration,
-  createShareToken,
-  isSelectionAllowed,
-  resolveConfiguration,
-  restoreConfiguration,
-  restoreShareToken,
-  serializeConfiguration,
-  setMeasurement,
-  setSelection,
-  type ConfigurationState,
-} from '@sls/configurator-core'
-import { recommendFit, validateMeasurement } from '@sls/fitting-engine'
-import { calculatePrice, formatMoney } from '@sls/pricing-engine'
-import { buildMockCartLine } from '@sls/shopify-adapter'
+  createDefaultPersonalization,
+  createOrderRequest,
+  createStudioBuildId,
+  createStudioShareToken,
+  formatOrderSummary,
+  restoreStudioShareToken,
+  validateOrderDraft,
+  type CustomerDraft,
+  type StudioBuildDraft,
+  type StudioOrderRequest,
+  type TextStyle,
+  type ToolingStyle,
+} from '@sls/order-engine'
+import { formatMoney } from '@sls/pricing-engine'
 import { ThreeProductViewer } from '@sls/three-renderer'
-import type { OptionGroup, OptionValue, ValidationIssue } from '@sls/product-schema'
+import type { ValidationIssue } from '@sls/product-schema'
 import { sampleManifest, sampleMaterials, sampleProduct } from './sample-product'
+import {
+  getFamily,
+  getReference,
+  getVariant,
+  studioFamilies,
+  type StudioProductFamily,
+  type StudioReference,
+  type StudioVariant,
+} from './studio-catalog'
 
-const STORAGE_KEY = 'scorpion-leather-studio:welding-hood-v3'
+const BUILD_STORAGE_KEY = 'scorpion-leather-studio:v004-build'
+const CUSTOMER_STORAGE_KEY = 'scorpion-leather-studio:v004-customer'
+const REQUEST_STORAGE_KEY = 'scorpion-leather-studio:v004-requests'
 
-function loadInitialConfiguration(): ConfigurationState {
-  const fallback = createInitialConfiguration(sampleProduct)
-  if (typeof window === 'undefined') return fallback
+const hoodReferenceMap: Record<string, string> = {
+  'hood-dark-yellow': 'dark-textured-yellow-trim',
+  'hood-cognac': 'cognac-textured',
+  'hood-tan-smooth': 'tan-smooth',
+  'hood-tan-textured': 'tan-textured',
+}
 
-  const token = new URL(window.location.href).searchParams.get('build')
+const toolingLabels: Record<ToolingStyle, string> = {
+  none: 'No tooling',
+  'western-floral': 'Western floral',
+  'basket-weave': 'Basket weave',
+  geometric: 'Geometric',
+  border: 'Border tooling',
+  'custom-concept': 'Custom concept',
+}
+
+const textStyleLabels: Record<TextStyle, string> = {
+  block: 'Block',
+  western: 'Western',
+  script: 'Script',
+  monogram: 'Monogram',
+  'shop-choice': 'Shop choice',
+}
+
+function defaultBuild(): StudioBuildDraft {
+  const family = studioFamilies[0]
+  const reference = family.references[1] ?? family.references[0]
+  return {
+    schemaVersion: 1,
+    familyId: family.id,
+    referenceId: reference.id,
+    variantId: reference.variants[0].id,
+    quantity: 1,
+    personalization: createDefaultPersonalization(family.personalization.placementOptions.at(-1) ?? 'Shop recommendation'),
+  }
+}
+
+function normalizeBuild(input: StudioBuildDraft): StudioBuildDraft {
+  const family = getFamily(input.familyId)
+  const reference = getReference(family, input.referenceId)
+  const variant = getVariant(reference, input.variantId)
+  const allowedPlacement = family.personalization.placementOptions.includes(input.personalization?.placement)
+    ? input.personalization.placement
+    : family.personalization.placementOptions.at(-1) ?? 'Shop recommendation'
+
+  return {
+    schemaVersion: 1,
+    familyId: family.id,
+    referenceId: reference.id,
+    variantId: variant.id,
+    quantity: Math.min(99, Math.max(1, Number.isInteger(input.quantity) ? input.quantity : 1)),
+    personalization: {
+      ...createDefaultPersonalization(allowedPlacement),
+      ...(input.personalization ?? {}),
+      placement: allowedPlacement,
+    },
+  }
+}
+
+function loadInitialBuild(): StudioBuildDraft {
+  if (typeof window === 'undefined') return defaultBuild()
+
+  const token = new URL(window.location.href).searchParams.get('studio')
   if (token) {
     try {
-      return restoreShareToken(sampleProduct, token)
+      return normalizeBuild(restoreStudioShareToken(token))
     } catch {
-      // Fall through to a local saved build if the shared token is invalid.
+      // Fall through to local state.
     }
   }
 
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (saved) return restoreConfiguration(sampleProduct, saved)
+    const saved = window.localStorage.getItem(BUILD_STORAGE_KEY)
+    if (saved) return normalizeBuild(JSON.parse(saved) as StudioBuildDraft)
   } catch {
-    // Persistence is optional and must never block the configurator.
+    // Local persistence is optional.
   }
 
-  return fallback
+  return defaultBuild()
 }
 
-function OptionControl({
-  group,
-  configuration,
-  onChoose,
+function defaultCustomer(): CustomerDraft {
+  return {
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    preferredContact: 'either',
+    neededBy: '',
+  }
+}
+
+function loadCustomer(): CustomerDraft {
+  if (typeof window === 'undefined') return defaultCustomer()
+  try {
+    const saved = window.localStorage.getItem(CUSTOMER_STORAGE_KEY)
+    if (!saved) return defaultCustomer()
+    return { ...defaultCustomer(), ...(JSON.parse(saved) as Partial<CustomerDraft>) }
+  } catch {
+    return defaultCustomer()
+  }
+}
+
+function resolveStudio(
+  build: StudioBuildDraft,
+): { family: StudioProductFamily; reference: StudioReference; variant: StudioVariant } {
+  const family = getFamily(build.familyId)
+  const reference = getReference(family, build.referenceId)
+  const variant = getVariant(reference, build.variantId)
+  return { family, reference, variant }
+}
+
+function selectedHoodConfiguration(reference: StudioReference) {
+  let configuration = createInitialConfiguration(sampleProduct)
+  const optionId = hoodReferenceMap[reference.id]
+  if (optionId) {
+    try {
+      configuration = setSelection(sampleProduct, configuration, 'catalogBuild', optionId)
+    } catch {
+      // The product photograph remains authoritative if the renderer reference fails.
+    }
+  }
+  return configuration
+}
+
+function buildShareUrl(build: StudioBuildDraft): string {
+  const url = new URL(window.location.href)
+  url.searchParams.set('studio', createStudioShareToken(build))
+  url.searchParams.delete('build')
+  return url.toString()
+}
+
+function downloadText(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const href = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = href
+  anchor.download = filename
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(href)
+}
+
+function ReferenceStage({
+  family,
+  reference,
+  build,
 }: {
-  group: OptionGroup
-  configuration: ConfigurationState
-  onChoose: (groupId: string, valueId: string) => void
+  family: StudioProductFamily
+  reference: StudioReference
+  build: StudioBuildDraft
+}) {
+  const p = build.personalization
+  const tooling = toolingLabels[p.toolingStyle]
+
+  return (
+    <div className="photo-stage" aria-label="Photographed product preview">
+      <img src={reference.image} alt={reference.imageAlt} />
+      {(p.textEnabled && p.text.trim()) || p.toolingStyle !== 'none' ? (
+        <div className="mock-personalization" aria-label="Personalization concept preview">
+          <span className="mock-label">CONCEPT PREVIEW · FINAL PLACEMENT CONFIRMED BY SHOP</span>
+          {p.textEnabled && p.text.trim() ? (
+            <strong className={`mock-text mock-text-${p.textStyle}`}>{p.text}</strong>
+          ) : null}
+          {p.toolingStyle !== 'none' ? <span>{tooling}</span> : null}
+          <small>{p.placement}</small>
+        </div>
+      ) : null}
+      <div className="photo-stage-meta">
+        <span>PHOTOGRAPHED SCORPION PRODUCT</span>
+        <strong>{family.shortTitle}</strong>
+      </div>
+    </div>
+  )
+}
+
+function ProductFamilyRail({
+  selectedId,
+  onSelect,
+}: {
+  selectedId: string
+  onSelect: (family: StudioProductFamily) => void
 }) {
   return (
-    <fieldset className="option-group">
-      <legend>{group.label}</legend>
-      <div className={`option-list ${group.values.some((value) => value.referenceImage) ? 'option-list-reference' : ''}`}>
-        {group.values.map((value) => {
-          const permission = isSelectionAllowed(sampleProduct, configuration, group.id, value.id)
-          const selected = configuration.selections[group.id] === value.id
+    <nav className="family-rail" aria-label="Customizable products">
+      {studioFamilies.map((family) => (
+        <button
+          type="button"
+          key={family.id}
+          className={selectedId === family.id ? 'is-selected' : ''}
+          onClick={() => onSelect(family)}
+        >
+          <img src={family.references[0].image} alt="" loading="lazy" />
+          <span>
+            <strong>{family.shortTitle}</strong>
+            <small>{family.references.length} starting build{family.references.length === 1 ? '' : 's'}</small>
+          </span>
+        </button>
+      ))}
+    </nav>
+  )
+}
 
-          return (
-            <button
-              type="button"
-              key={value.id}
-              className={`option-button ${value.referenceImage ? 'reference-option' : ''} ${selected ? 'is-selected' : ''}`}
-              disabled={!permission.allowed}
-              onClick={() => onChoose(group.id, value.id)}
-              title={!permission.allowed ? permission.reason : value.description}
-              aria-pressed={selected}
-            >
-              {value.referenceImage ? (
-                <img src={value.referenceImage.url} alt="" loading="lazy" className="option-reference-image" />
-              ) : value.swatch ? (
-                <span className="swatch" style={{ background: value.swatch }} aria-hidden="true" />
-              ) : null}
-              <span className="option-copy">
-                <strong>{value.label}</strong>
-                {value.commerce?.sku ? <small>{value.commerce.sku}</small> : null}
-              </span>
-            </button>
-          )
-        })}
+function ReferencePicker({
+  family,
+  selectedId,
+  onSelect,
+}: {
+  family: StudioProductFamily
+  selectedId: string
+  onSelect: (reference: StudioReference) => void
+}) {
+  return (
+    <fieldset className="studio-section">
+      <div className="section-title-row">
+        <legend>1. Starting build</legend>
+        <span>{family.references.length} Scorpion catalog reference{family.references.length === 1 ? '' : 's'}</span>
+      </div>
+      <div className="reference-grid">
+        {family.references.map((reference) => (
+          <button
+            type="button"
+            key={reference.id}
+            className={selectedId === reference.id ? 'reference-choice is-selected' : 'reference-choice'}
+            onClick={() => onSelect(reference)}
+            aria-pressed={selectedId === reference.id}
+          >
+            <img src={reference.image} alt="" loading="lazy" />
+            <span>
+              <strong>{reference.title}</strong>
+              <small>{reference.priceStatus === 'quote' ? 'Custom quote' : `Base ${formatMoney(reference.basePriceMinor)}`}</small>
+            </span>
+          </button>
+        ))}
       </div>
     </fieldset>
   )
 }
 
+function VariantPicker({
+  reference,
+  selectedId,
+  onSelect,
+}: {
+  reference: StudioReference
+  selectedId: string
+  onSelect: (variant: StudioVariant) => void
+}) {
+  const meaningfulVariants =
+    reference.variants.length > 1 ||
+    reference.variants.some((variant) => !['Default', 'Custom Order'].includes(variant.title))
+
+  if (!meaningfulVariants) return null
+
+  return (
+    <fieldset className="studio-section">
+      <div className="section-title-row">
+        <legend>2. Size / variant</legend>
+        <span>Live catalog identity</span>
+      </div>
+      <div className="variant-grid">
+        {reference.variants.map((variant) => (
+          <button
+            type="button"
+            key={variant.id}
+            className={selectedId === variant.id ? 'variant-choice is-selected' : 'variant-choice'}
+            onClick={() => onSelect(variant)}
+            aria-pressed={selectedId === variant.id}
+          >
+            <strong>{variant.title}</strong>
+            <small>{variant.sku}</small>
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+function PersonalizationEditor({
+  family,
+  build,
+  onChange,
+}: {
+  family: StudioProductFamily
+  build: StudioBuildDraft
+  onChange: (next: StudioBuildDraft['personalization']) => void
+}) {
+  const p = build.personalization
+  const update = (patch: Partial<StudioBuildDraft['personalization']>) => onChange({ ...p, ...patch })
+
+  return (
+    <fieldset className="studio-section personalization-section">
+      <div className="section-title-row">
+        <legend>3. Personalize</legend>
+        <span>Preferences are reviewed before production</span>
+      </div>
+
+      {family.personalization.tooling ? (
+        <div className="personalization-block">
+          <div className="field-heading">
+            <strong>Leather tooling request</strong>
+            <small>Choose a direction. Scorpion confirms feasibility and price.</small>
+          </div>
+          <div className="tooling-grid">
+            {(Object.keys(toolingLabels) as ToolingStyle[]).map((style) => (
+              <button
+                type="button"
+                key={style}
+                className={p.toolingStyle === style ? 'choice-chip is-selected' : 'choice-chip'}
+                onClick={() => update({ toolingStyle: style })}
+                aria-pressed={p.toolingStyle === style}
+              >
+                {toolingLabels[style]}
+              </button>
+            ))}
+          </div>
+          {p.toolingStyle !== 'none' ? (
+            <textarea
+              value={p.toolingNotes}
+              onChange={(event) => update({ toolingNotes: event.target.value })}
+              placeholder={p.toolingStyle === 'custom-concept' ? 'Describe the custom tooling concept…' : 'Optional tooling details, border ideas, motifs, depth, etc…'}
+              maxLength={500}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      {family.personalization.text ? (
+        <div className="personalization-block">
+          <label className="toggle-row">
+            <input
+              type="checkbox"
+              checked={p.textEnabled}
+              onChange={(event) => update({ textEnabled: event.target.checked })}
+            />
+            <span>
+              <strong>Add text / name / monogram</strong>
+              <small>Preview is conceptual; shop confirms exact tooling/font/placement.</small>
+            </span>
+          </label>
+
+          {p.textEnabled ? (
+            <>
+              <label className="field-label">
+                Personalization text
+                <input
+                  type="text"
+                  value={p.text}
+                  onChange={(event) => update({ text: event.target.value.slice(0, 40) })}
+                  placeholder="Name, initials, company, unit, etc."
+                  maxLength={40}
+                />
+                <small>{p.text.length}/40</small>
+              </label>
+              <div className="text-style-row">
+                {(Object.keys(textStyleLabels) as TextStyle[]).map((style) => (
+                  <button
+                    type="button"
+                    key={style}
+                    className={p.textStyle === style ? 'choice-chip is-selected' : 'choice-chip'}
+                    onClick={() => update({ textStyle: style })}
+                    aria-pressed={p.textStyle === style}
+                  >
+                    {textStyleLabels[style]}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="personalization-block">
+        <label className="field-label">
+          Requested placement
+          <select value={p.placement} onChange={(event) => update({ placement: event.target.value })}>
+            {family.personalization.placementOptions.map((placement) => (
+              <option key={placement} value={placement}>{placement}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {family.personalization.artwork ? (
+        <div className="personalization-block">
+          <label className="field-label">
+            Logo / artwork request
+            <textarea
+              value={p.artworkNotes}
+              onChange={(event) => update({ artworkNotes: event.target.value })}
+              placeholder="Describe a logo, emblem, patch, symbol, or artwork idea. File upload will be added with the order backend."
+              maxLength={700}
+            />
+          </label>
+        </div>
+      ) : null}
+
+      <div className="personalization-block">
+        <label className="field-label">
+          Build notes
+          <textarea
+            value={p.additionalNotes}
+            onChange={(event) => update({ additionalNotes: event.target.value })}
+            placeholder="Leather preferences, stitching, trim, hardware, fit notes, special use case, or anything the shop should know."
+            maxLength={1000}
+          />
+        </label>
+      </div>
+    </fieldset>
+  )
+}
+
+function OrderCapture({
+  build,
+  family,
+  reference,
+  variant,
+  customer,
+  setCustomer,
+  request,
+  setRequest,
+  setStatus,
+}: {
+  build: StudioBuildDraft
+  family: StudioProductFamily
+  reference: StudioReference
+  variant: StudioVariant
+  customer: CustomerDraft
+  setCustomer: (next: CustomerDraft) => void
+  request: StudioOrderRequest | null
+  setRequest: (next: StudioOrderRequest | null) => void
+  setStatus: (message: string) => void
+}) {
+  const issues = validateOrderDraft(build, customer)
+  const issueMap = Object.fromEntries(issues.map((issue) => [issue.path, issue.message]))
+
+  const prepareRequest = () => {
+    try {
+      const sourceUrl = buildShareUrl(build)
+      window.history.replaceState({}, '', sourceUrl)
+      const next = createOrderRequest({
+        build,
+        customer,
+        sourceUrl,
+        commerce: {
+          productTitle: family.title,
+          referenceTitle: reference.title,
+          shopifyProductId: reference.shopifyProductId,
+          merchandiseId: variant.id,
+          sku: variant.sku,
+          variantTitle: variant.title,
+          basePriceMinor: variant.priceMinor,
+          priceStatus: reference.priceStatus,
+        },
+      })
+      setRequest(next)
+      setStatus(`Order request ${next.requestId} prepared.`)
+
+      try {
+        const saved = JSON.parse(window.localStorage.getItem(REQUEST_STORAGE_KEY) ?? '[]') as StudioOrderRequest[]
+        window.localStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify([next, ...saved].slice(0, 20)))
+      } catch {
+        // The request still exists in memory if local storage is unavailable.
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Complete the required order details.')
+    }
+  }
+
+  const summary = request ? formatOrderSummary(request) : ''
+
+  const copySummary = async () => {
+    if (!request) return
+    try {
+      await navigator.clipboard.writeText(summary)
+      setStatus('Order request copied to the clipboard.')
+    } catch {
+      setStatus('Clipboard access was unavailable. Download the build sheet instead.')
+    }
+  }
+
+  const emailRequest = () => {
+    if (!request) return
+    const subject = encodeURIComponent(`Custom Leather Order Request — ${request.requestId}`)
+    const body = encodeURIComponent(summary)
+    window.location.href = `mailto:orders@scorpionwesternwear.com?subject=${subject}&body=${body}`
+  }
+
+  return (
+    <section className="order-capture" aria-label="Custom order request">
+      <div className="order-capture-heading">
+        <div>
+          <p className="eyebrow">ORDER CAPTURE</p>
+          <h2>Turn this build into a shop-ready request</h2>
+        </div>
+        <span>{createStudioBuildId(build)}</span>
+      </div>
+
+      <div className="order-form-grid">
+        <label>
+          Name *
+          <input
+            value={customer.name}
+            onChange={(event) => setCustomer({ ...customer, name: event.target.value })}
+            autoComplete="name"
+          />
+          {issueMap['customer.name'] ? <small className="field-error">{issueMap['customer.name']}</small> : null}
+        </label>
+        <label>
+          Company
+          <input
+            value={customer.company}
+            onChange={(event) => setCustomer({ ...customer, company: event.target.value })}
+            autoComplete="organization"
+          />
+        </label>
+        <label>
+          Email
+          <input
+            type="email"
+            value={customer.email}
+            onChange={(event) => setCustomer({ ...customer, email: event.target.value })}
+            autoComplete="email"
+          />
+          {issueMap['customer.email'] ? <small className="field-error">{issueMap['customer.email']}</small> : null}
+        </label>
+        <label>
+          Phone
+          <input
+            type="tel"
+            value={customer.phone}
+            onChange={(event) => setCustomer({ ...customer, phone: event.target.value })}
+            autoComplete="tel"
+          />
+        </label>
+        <label>
+          Preferred contact
+          <select
+            value={customer.preferredContact}
+            onChange={(event) => setCustomer({ ...customer, preferredContact: event.target.value as CustomerDraft['preferredContact'] })}
+          >
+            <option value="either">Either</option>
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+          </select>
+        </label>
+        <label>
+          Needed by
+          <input
+            type="date"
+            value={customer.neededBy}
+            onChange={(event) => setCustomer({ ...customer, neededBy: event.target.value })}
+          />
+        </label>
+      </div>
+
+      {issueMap['customer.contact'] ? <p className="field-error contact-error">{issueMap['customer.contact']}</p> : null}
+
+      <div className="order-action-row">
+        <button className="primary-action" type="button" onClick={prepareRequest}>
+          Create Order Request
+        </button>
+        <p>
+          This creates a structured Scorpion build sheet. Tooling, text, artwork, and quote-only products require shop confirmation before production.
+        </p>
+      </div>
+
+      {request ? (
+        <div className="request-ready">
+          <div className="request-ready-head">
+            <div>
+              <span>REQUEST READY</span>
+              <strong>{request.requestId}</strong>
+            </div>
+            <span>{request.commerce.sku}</span>
+          </div>
+          <pre>{summary}</pre>
+          <div className="request-actions">
+            <button type="button" onClick={copySummary}>Copy summary</button>
+            <button type="button" onClick={() => downloadText(`${request.requestId}.txt`, summary)}>Download build sheet</button>
+            <button type="button" className="request-send" onClick={emailRequest}>Email Scorpion</button>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
 export function App() {
-  const [configuration, setConfiguration] = useState<ConfigurationState>(loadInitialConfiguration)
-  const [status, setStatus] = useState<string>('')
+  const [build, setBuild] = useState<StudioBuildDraft>(loadInitialBuild)
+  const [customer, setCustomer] = useState<CustomerDraft>(loadCustomer)
+  const [request, setRequest] = useState<StudioOrderRequest | null>(null)
+  const [status, setStatus] = useState('')
   const [visorOpen, setVisorOpen] = useState(false)
   const [autoRotate, setAutoRotate] = useState(false)
   const [cameraPreset, setCameraPreset] = useState(sampleProduct.asset.defaultCameraPreset)
   const [assetIssues, setAssetIssues] = useState<ValidationIssue[]>([])
 
-  const showDevelopmentControls = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    return new URL(window.location.href).searchParams.get('debug') === '1'
-  }, [])
-
-  const resolved = useMemo(() => resolveConfiguration(sampleProduct, configuration), [configuration])
-  const price = useMemo(() => calculatePrice(sampleProduct, configuration), [configuration])
-
-  const customerGroups = useMemo(
-    () => sampleProduct.optionGroups.filter((group) => group.visibility !== 'development'),
-    [],
-  )
-  const developmentGroups = useMemo(
-    () => sampleProduct.optionGroups.filter((group) => group.visibility === 'development'),
-    [],
-  )
-
-  const catalogGroup = sampleProduct.optionGroups.find((group) => group.id === 'catalogBuild')
-  const selectedReference = catalogGroup?.values.find(
-    (value) => value.id === configuration.selections.catalogBuild,
-  )
-
-  const developmentMeasurement = sampleProduct.measurements.find((measurement) => measurement.status === 'development')
-  const developmentMeasurementValue = developmentMeasurement
-    ? configuration.measurements[developmentMeasurement.id]
-    : undefined
-  const developmentMeasurementValidation = developmentMeasurement
-    ? validateMeasurement(developmentMeasurement, developmentMeasurementValue)
-    : { valid: true as const }
-  const developmentFit = showDevelopmentControls
-    ? recommendFit(sampleProduct, configuration)
-    : undefined
-
-  const selectedOptions = useMemo(() => customerGroups.map((group) => {
-    const value = group.values.find((candidate) => candidate.id === configuration.selections[group.id])
-    return {
-      id: group.id,
-      label: group.label,
-      value: value?.label ?? configuration.selections[group.id],
-      code: value?.commerce?.sku ?? value?.manufacturingCode,
-    }
-  }), [configuration.selections, customerGroups])
+  const { family, reference, variant } = useMemo(() => resolveStudio(build), [build])
+  const hoodConfiguration = useMemo(() => selectedHoodConfiguration(reference), [reference])
+  const customWorkRequested =
+    build.personalization.toolingStyle !== 'none' ||
+    build.personalization.textEnabled ||
+    Boolean(build.personalization.artworkNotes.trim()) ||
+    Boolean(build.personalization.additionalNotes.trim())
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, serializeConfiguration(configuration))
+      window.localStorage.setItem(BUILD_STORAGE_KEY, JSON.stringify(build))
     } catch {
-      // Persistence is a convenience, not a core dependency.
+      // Optional persistence.
     }
-  }, [configuration])
+    setRequest(null)
+  }, [build])
 
-  const chooseOption = (groupId: string, valueId: string) => {
+  useEffect(() => {
     try {
-      setConfiguration((current) => setSelection(sampleProduct, current, groupId, valueId))
-      setStatus('')
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'That combination is not available.')
+      window.localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customer))
+    } catch {
+      // Optional persistence.
     }
+  }, [customer])
+
+  const chooseFamily = (nextFamily: StudioProductFamily) => {
+    const nextReference = nextFamily.references[0]
+    setBuild({
+      schemaVersion: 1,
+      familyId: nextFamily.id,
+      referenceId: nextReference.id,
+      variantId: nextReference.variants[0].id,
+      quantity: 1,
+      personalization: createDefaultPersonalization(
+        nextFamily.personalization.placementOptions.at(-1) ?? 'Shop recommendation',
+      ),
+    })
+    setCameraPreset(sampleProduct.asset.defaultCameraPreset)
+    setAutoRotate(false)
+    setVisorOpen(false)
+    setStatus('')
+  }
+
+  const chooseReference = (nextReference: StudioReference) => {
+    setBuild((current) => ({
+      ...current,
+      referenceId: nextReference.id,
+      variantId: nextReference.variants[0].id,
+    }))
+    setStatus('')
   }
 
   const shareBuild = async () => {
-    const token = createShareToken(configuration)
-    const url = new URL(window.location.href)
-    url.searchParams.set('build', token)
+    const url = buildShareUrl(build)
     window.history.replaceState({}, '', url)
-
     try {
-      await navigator.clipboard.writeText(url.toString())
-      setStatus('Build link copied. Anyone opening this URL will see this configuration.')
+      await navigator.clipboard.writeText(url)
+      setStatus('Shareable build link copied.')
     } catch {
-      setStatus('Build link is ready in the address bar. Copy the current URL to share it.')
+      setStatus('Shareable build is in the address bar. Copy the current URL.')
     }
   }
 
   const resetBuild = () => {
-    const fresh = createInitialConfiguration(sampleProduct)
-    setConfiguration(fresh)
-    setVisorOpen(false)
+    const next = defaultBuild()
+    setBuild(next)
+    setCustomer(defaultCustomer())
+    setRequest(null)
     setAutoRotate(false)
+    setVisorOpen(false)
     setCameraPreset(sampleProduct.asset.defaultCameraPreset)
-
-    try {
-      window.localStorage.removeItem(STORAGE_KEY)
-    } catch {
-      // Ignore unavailable storage.
-    }
-
     const url = new URL(window.location.href)
+    url.searchParams.delete('studio')
     url.searchParams.delete('build')
     window.history.replaceState({}, '', url)
-    setStatus('Build reset to the Scorpion starting configuration.')
-  }
-
-  const showCartPayload = () => {
-    const payload = buildMockCartLine(sampleProduct, configuration)
-    const configurationId = payload.attributes.find((item) => item.key === '_sls_configuration_id')?.value
-    const sku = selectedReference?.commerce?.sku
-    setStatus(`Shopify build prepared${sku ? ` for ${sku}` : ''}: ${configurationId}`)
-  }
-
-  const renderReference = (value: OptionValue | undefined) => {
-    if (!value?.referenceImage) return null
-
-    return (
-      <section className="reference-card" aria-label="Photographed Scorpion reference">
-        <div className="reference-image-wrap">
-          <img src={value.referenceImage.url} alt={value.referenceImage.alt} />
-        </div>
-        <div className="reference-copy">
-          <div className="reference-badges">
-            <span>SHOPIFY-LINKED</span>
-            <span>PHOTOGRAPHED REFERENCE</span>
-          </div>
-          <h3>{value.label}</h3>
-          <p>{value.description}</p>
-          <dl>
-            <div><dt>Scorpion SKU</dt><dd>{value.commerce?.sku ?? 'Pending'}</dd></div>
-            <div><dt>Store variant</dt><dd>{configuration.merchandiseId.split('/').at(-1)}</dd></div>
-          </dl>
-        </div>
-      </section>
-    )
+    setStatus('Studio reset.')
   }
 
   return (
-    <main className="studio-shell">
+    <main className="studio-shell multi-studio">
       <header className="studio-header">
         <div>
           <p className="eyebrow">SCORPION WESTERN WEAR</p>
-          <h1>Leather Studio</h1>
+          <h1>Custom Leather Studio</h1>
           <p className="studio-subtitle">
-            Build from photographed Scorpion configurations now; the production digital twin will replace the development geometry without changing the commerce engine.
+            Select a real Scorpion leather product, personalize the concept, choose the catalog variant, and produce a structured custom-order request for the shop.
           </p>
         </div>
         <div className="header-build">
-          <div className="prototype-badge">3D DIGITAL TWIN IN DEVELOPMENT</div>
-          <div className="configuration-id" aria-label="Configuration identifier">
+          <div className="prototype-badge">ORDER STUDIO · V0.4</div>
+          <div className="configuration-id">
             <span>BUILD</span>
-            <strong>{resolved.configurationId}</strong>
+            <strong>{createStudioBuildId(build)}</strong>
           </div>
         </div>
       </header>
 
+      <ProductFamilyRail selectedId={family.id} onSelect={chooseFamily} />
+
       <section className="studio-grid">
         <div className="viewer-column">
-          <div className="viewer-panel" aria-label="Interactive 3D product viewer">
-            <ThreeProductViewer
-              product={sampleProduct}
-              manifest={sampleManifest}
-              materials={sampleMaterials}
-              selections={configuration.selections}
-              animationStates={{ 'visor.open': visorOpen }}
-              cameraPreset={cameraPreset}
-              autoRotate={autoRotate}
-              onAssetIssues={setAssetIssues}
-            />
+          {family.supports3D ? (
+            <div className="viewer-panel" aria-label="Interactive 3D product viewer">
+              <ThreeProductViewer
+                product={sampleProduct}
+                manifest={sampleManifest}
+                materials={sampleMaterials}
+                selections={hoodConfiguration.selections}
+                animationStates={{ 'visor.open': visorOpen }}
+                cameraPreset={cameraPreset}
+                autoRotate={autoRotate}
+                onAssetIssues={setAssetIssues}
+              />
 
-            <div className="view-selector" aria-label="Product views">
-              {Object.entries(sampleManifest.cameraPresets).map(([key, preset]) => (
-                <button
-                  type="button"
-                  key={key}
-                  className={cameraPreset === key ? 'is-active' : ''}
-                  onClick={() => {
-                    setCameraPreset(key)
-                    setAutoRotate(false)
-                  }}
-                >
-                  {preset.label ?? key}
+              <div className="view-selector" aria-label="Product views">
+                {Object.entries(sampleManifest.cameraPresets).map(([key, preset]) => (
+                  <button
+                    type="button"
+                    key={key}
+                    className={cameraPreset === key ? 'is-active' : ''}
+                    onClick={() => {
+                      setCameraPreset(key)
+                      setAutoRotate(false)
+                    }}
+                  >
+                    {preset.label ?? key}
+                  </button>
+                ))}
+              </div>
+
+              <div className="viewer-actions">
+                <button type="button" className={autoRotate ? 'is-active' : ''} onClick={() => setAutoRotate((value) => !value)}>
+                  {autoRotate ? 'Stop spin' : 'Auto spin'}
                 </button>
-              ))}
-            </div>
+                <button type="button" onClick={() => setVisorOpen((open) => !open)}>
+                  {visorOpen ? 'Close visor' : 'Open visor'}
+                </button>
+              </div>
 
-            <div className="viewer-actions">
-              <button
-                type="button"
-                className={autoRotate ? 'is-active' : ''}
-                onClick={() => setAutoRotate((value) => !value)}
-              >
-                {autoRotate ? 'Stop spin' : 'Auto spin'}
-              </button>
-              <button type="button" onClick={() => setVisorOpen((open) => !open)}>
-                {visorOpen ? 'Close visor' : 'Open visor'}
-              </button>
+              <div className="viewer-caption">Development digital twin · photographed product is the visual authority</div>
+              <div className={`asset-status ${assetIssues.length ? 'has-issues' : ''}`}>
+                {assetIssues.length ? `${assetIssues.length} asset issue${assetIssues.length === 1 ? '' : 's'}` : '3D contract validated'}
+              </div>
             </div>
+          ) : (
+            <ReferenceStage family={family} reference={reference} build={build} />
+          )}
 
-            <div className="viewer-caption">Development 3D · Drag to rotate · Scroll or pinch to zoom</div>
-            <div className={`asset-status ${assetIssues.length ? 'has-issues' : ''}`}>
-              {assetIssues.length
-                ? `${assetIssues.length} asset contract issue${assetIssues.length === 1 ? '' : 's'}`
-                : 'Asset contract validated'}
+          {family.supports3D ? <ReferenceStage family={family} reference={reference} build={build} /> : null}
+
+          <section className="viewer-build-card">
+            <div>
+              <span>SELECTED SCORPION PRODUCT</span>
+              <h2>{reference.title}</h2>
+              <p>{family.description}</p>
             </div>
-          </div>
+            <dl>
+              <div><dt>SKU</dt><dd>{variant.sku}</dd></div>
+              <div><dt>Variant</dt><dd>{variant.title}</dd></div>
+              <div>
+                <dt>Base price</dt>
+                <dd>{reference.priceStatus === 'quote' ? 'Quote required' : formatMoney(variant.priceMinor)}</dd>
+              </div>
+              <div><dt>Customization</dt><dd>{customWorkRequested ? 'Custom quote' : 'Available to request'}</dd></div>
+            </dl>
+          </section>
         </div>
 
-        <aside className="controls-panel">
+        <aside className="controls-panel multi-controls">
           <div className="product-heading">
             <div className="product-kicker">
-              <p className="eyebrow">CONFIGURE FROM REAL CATALOG REFERENCES</p>
-              <span>V0.3</span>
+              <p className="eyebrow">CUSTOMIZE</p>
+              <span>{family.title}</span>
             </div>
-            <h2>{sampleProduct.name}</h2>
+            <h2>{reference.title}</h2>
             <p>
-              These four starting builds are linked to actual Scorpion Shopify products and SKUs. The 3D geometry remains temporary; the photographed reference is the visual authority.
+              Start with a real Scorpion catalog item. Tooling, lettering, artwork, non-stock modifications, and quote-only products are submitted as requests for shop confirmation.
             </p>
           </div>
 
-          {renderReference(selectedReference)}
+          <ReferencePicker family={family} selectedId={reference.id} onSelect={chooseReference} />
 
-          {customerGroups.map((group) => (
-            <OptionControl
-              key={group.id}
-              group={group}
-              configuration={configuration}
-              onChoose={chooseOption}
-            />
-          ))}
+          <VariantPicker
+            reference={reference}
+            selectedId={variant.id}
+            onSelect={(nextVariant) => setBuild((current) => ({ ...current, variantId: nextVariant.id }))}
+          />
 
-          <section className="fit-pending">
-            <div>
-              <span className="eyebrow">FIT SYSTEM</span>
-              <h3>Measurement rules pending physical verification</h3>
+          <PersonalizationEditor
+            family={family}
+            build={build}
+            onChange={(personalization) => setBuild((current) => ({ ...current, personalization }))}
+          />
+
+          <fieldset className="studio-section quantity-section">
+            <div className="section-title-row">
+              <legend>4. Quantity</legend>
+              <span>1–99 pieces</span>
             </div>
-            <p>
-              We are not publishing invented size recommendations. Final measurement ranges will be enabled after the real Scorpion hood is measured and Scorpion confirms the fitting rules.
-            </p>
-          </section>
-
-          {showDevelopmentControls ? (
-            <section className="engineering-panel">
-              <div className="section-heading">
-                <span>ENGINEERING CONTROLS</span>
-                <strong>?debug=1</strong>
-              </div>
-              {developmentGroups.map((group) => (
-                <OptionControl
-                  key={group.id}
-                  group={group}
-                  configuration={configuration}
-                  onChoose={chooseOption}
-                />
-              ))}
-              {developmentMeasurement ? (
-                <fieldset className="option-group measurement-group">
-                  <legend>Prototype fit input</legend>
-                  <label htmlFor="head-circumference">{developmentMeasurement.label}</label>
-                  <div className="measurement-row">
-                    <input
-                      id="head-circumference"
-                      type="number"
-                      inputMode="decimal"
-                      min={developmentMeasurement.min}
-                      max={developmentMeasurement.max}
-                      step="0.01"
-                      value={developmentMeasurementValue ?? ''}
-                      onChange={(event) => {
-                        const next = event.target.value === '' ? undefined : Number(event.target.value)
-                        setConfiguration((current) => setMeasurement(sampleProduct, current, developmentMeasurement.id, next))
-                        setStatus('')
-                      }}
-                    />
-                    <span>{developmentMeasurement.unit}</span>
-                  </div>
-                  <p className="helper-text">{developmentMeasurement.instructions}</p>
-                  {!developmentMeasurementValidation.valid && developmentMeasurementValue !== undefined ? (
-                    <p className="validation">{developmentMeasurementValidation.message}</p>
-                  ) : null}
-                  {developmentFit ? (
-                    <div className="fit-result">
-                      <strong>Prototype recommendation {developmentFit.size}</strong>
-                      <span>{developmentFit.message}</span>
-                    </div>
-                  ) : null}
-                </fieldset>
-              ) : null}
-            </section>
-          ) : null}
-
-          <section className="build-spec" aria-label="Current build specification">
-            <div className="section-heading">
-              <span>BUILD SPECIFICATION</span>
-              <strong>{resolved.configurationId}</strong>
+            <div className="quantity-control">
+              <button
+                type="button"
+                onClick={() => setBuild((current) => ({ ...current, quantity: Math.max(1, current.quantity - 1) }))}
+                aria-label="Decrease quantity"
+              >
+                −
+              </button>
+              <input
+                aria-label="Quantity"
+                type="number"
+                min={1}
+                max={99}
+                value={build.quantity}
+                onChange={(event) => {
+                  const value = Math.max(1, Math.min(99, Number(event.target.value) || 1))
+                  setBuild((current) => ({ ...current, quantity: value }))
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setBuild((current) => ({ ...current, quantity: Math.min(99, current.quantity + 1) }))}
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
             </div>
-            <div className="spec-grid">
-              {selectedOptions.map((option) => (
-                <div className="spec-row" key={option.id}>
-                  <span>{option.label}</span>
-                  <div>
-                    <strong>{option.value}</strong>
-                    {option.code ? <small>{option.code}</small> : null}
-                  </div>
-                </div>
-              ))}
-              <div className="spec-row">
-                <span>Shopify merchandise</span>
-                <div><strong>{configuration.merchandiseId.split('/').at(-1)}</strong></div>
-              </div>
-            </div>
-          </section>
+          </fieldset>
 
-          <section className="summary-panel" aria-label="Build summary">
+          <section className="studio-summary" aria-label="Build summary">
             <div className="summary-price">
-              <span>{sampleProduct.commerce.priceStatus === 'test' ? 'Catalog test price' : 'Current build'}</span>
-              <strong data-testid="build-total">{formatMoney(price.total, price.currency)}</strong>
+              <span>{reference.priceStatus === 'quote' ? 'Base product' : 'Catalog base'}</span>
+              <strong data-testid="base-price">
+                {reference.priceStatus === 'quote' ? 'QUOTE' : formatMoney(variant.priceMinor)}
+              </strong>
             </div>
-
-            {sampleProduct.commerce.priceStatus === 'test' ? (
-              <div className="price-warning">
-                <strong>NOT APPROVED RETAIL PRICING</strong>
-                <span>{sampleProduct.commerce.priceNote}</span>
-              </div>
-            ) : null}
-
-            <button className="primary-action" type="button" onClick={showCartPayload}>Prepare Shopify Build</button>
+            <div className="summary-notice">
+              {reference.priceStatus === 'quote'
+                ? 'This Shopify record currently carries a development/test price. The customer-facing studio does not present it as retail pricing.'
+                : 'Current catalog base price shown. Any custom tooling, text, artwork, material changes, or shop modifications require a separate quote.'}
+            </div>
+            <div className="summary-spec">
+              <div><span>SKU</span><strong>{variant.sku}</strong></div>
+              <div><span>Qty</span><strong>{build.quantity}</strong></div>
+              <div><span>Tooling</span><strong>{toolingLabels[build.personalization.toolingStyle]}</strong></div>
+              <div><span>Text</span><strong>{build.personalization.textEnabled ? build.personalization.text || 'Pending' : 'None'}</strong></div>
+              <div><span>Placement</span><strong>{build.personalization.placement}</strong></div>
+            </div>
             <div className="secondary-actions">
               <button type="button" onClick={shareBuild}>Share build</button>
-              <button type="button" onClick={resetBuild}>Reset</button>
+              <button type="button" onClick={resetBuild}>Reset studio</button>
             </div>
             <p className="status" role="status" aria-live="polite">
-              {status || 'Your selected Scorpion catalog build is automatically saved on this device.'}
+              {status || 'Build changes save automatically on this device.'}
             </p>
           </section>
         </aside>
       </section>
+
+      <OrderCapture
+        build={build}
+        family={family}
+        reference={reference}
+        variant={variant}
+        customer={customer}
+        setCustomer={setCustomer}
+        request={request}
+        setRequest={setRequest}
+        setStatus={setStatus}
+      />
     </main>
   )
 }
