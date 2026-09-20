@@ -22,8 +22,8 @@ const product: ProductDefinition = {
   asset: { manifestUrl: '/m.json', defaultCameraPreset: 'hero' },
   optionGroups: [
     { id: 'leather', label: 'Leather', type: 'choice', required: true, defaultValue: 'brown', values: [
-      { id: 'brown', label: 'Brown', priceModifier: 0 },
-      { id: 'tan', label: 'Tan', priceModifier: 100 },
+      { id: 'brown', label: 'Brown', priceModifier: 0, commerce: { merchandiseId: 'variant-brown', sku: 'BROWN' } },
+      { id: 'tan', label: 'Tan', priceModifier: 100, commerce: { merchandiseId: 'variant-tan', sku: 'TAN' } },
     ] },
     { id: 'guard', label: 'Guard', type: 'choice', required: true, defaultValue: 'standard', values: [
       { id: 'standard', label: 'Standard', priceModifier: 0 },
@@ -39,6 +39,13 @@ describe('configurator core', () => {
   it('creates deterministic configuration IDs', () => {
     const config = createInitialConfiguration(product)
     expect(createConfigurationId(config)).toBe(createConfigurationId(config))
+  })
+
+  it('resolves selected Shopify merchandise identity', () => {
+    let config = createInitialConfiguration(product)
+    expect(config.merchandiseId).toBe('variant-brown')
+    config = setSelection(product, config, 'leather', 'tan')
+    expect(config.merchandiseId).toBe('variant-tan')
   })
 
   it('rejects incompatible values in either selection order', () => {
