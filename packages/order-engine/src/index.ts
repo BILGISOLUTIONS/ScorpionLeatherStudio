@@ -1,0 +1,251 @@
+export type ToolingStyle =
+  | 'none'
+  | 'western-floral'
+  | 'basket-weave'
+  | 'geometric'
+  | 'border'
+  | 'custom-concept'
+
+export type TextStyle = 'block' | 'western' | 'script' | 'monogram' | 'shop-choice'
+
+export interface StudioPersonalization {
+  toolingStyle: ToolingStyle
+  toolingNotes: string
+  textEnabled: boolean
+  text: string
+  textStyle: TextStyle
+  placement: string
+  artworkNotes: string
+  additionalNotes: string
+}
+
+export interface StudioBuildDraft {
+  schemaVersion: 1
+  familyId: string
+  referenceId: string
+  variantId: string
+  quantity: number
+  personalization: StudioPersonalization
+  hoodConfiguration?: unknown
+}
+
+export interface CustomerDraft {
+  name: string
+  email: string
+  phone: string
+  company: string
+  preferredContact: 'email' | 'phone' | 'either'
+  neededBy: string
+}
+
+export interface CommerceResolution {
+  productTitle: string
+  referenceTitle: string
+  shopifyProductId: string
+  merchandiseId: string
+  sku: string
+  variantTitle: string
+  basePriceMinor: number
+  priceStatus: 'catalog' | 'quote'
+}
+
+export interface StudioOrderRequest {
+  schemaVersion: 1
+  requestId: string
+  buildId: string
+  createdAt: string
+  sourceUrl: string
+  customer: CustomerDraft
+  build: StudioBuildDraft
+  commerce: CommerceResolution
+  pricing: {
+    currency: 'USD'
+    basePriceMinor: number
+    basePriceStatus: 'catalog' | 'quote'
+    personalizationRequiresQuote: boolean
+  }
+}
+
+export interface DraftIssue {
+  path: string
+  message: string
+}
+
+export function createDefaultPersonalization(placement = 'Shop recommendation'): StudioPersonalization {
+  return {
+    toolingStyle: 'none',
+    toolingNotes: '',
+    textEnabled: false,
+    text: '',
+    textStyle: 'western',
+    placement,
+    artworkNotes: '',
+    additionalNotes: '',
+  }
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+function fnv1a(input: string): string {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0').toUpperCase()
+}
+
+function encodeBase64Url(value: string): string {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/u, '')
+}
+
+function decodeBase64Url(value: string): string {
+  const base64 = value.replaceAll('-', '+').replaceAll('_', '/')
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+  const binary = atob(padded)
+  return new TextDecoder().decode(Uint8Array.from(binary, (character) => character.charCodeAt(0)))
+}
+
+export function createStudioBuildId(build: StudioBuildDraft): string {
+  return `SLS-${fnv1a(stableJson(build))}`
+}
+
+export function createStudioShareToken(build: StudioBuildDraft): string {
+  return encodeBase64Url(stableJson(build))
+}
+
+export function restoreStudioShareToken(token: string): StudioBuildDraft {
+  try {
+    const parsed = JSON.parse(decodeBase64Url(token)) as StudioBuildDraft
+    if (
+      parsed.schemaVersion !== 1 ||
+      typeof parsed.familyId !== 'string' ||
+      typeof parsed.referenceId !== 'string' ||
+      typeof parsed.variantId !== 'string' ||
+      !Number.isInteger(parsed.quantity) ||
+      parsed.quantity < 1 ||
+      typeof parsed.personalization !== 'object' ||
+      !parsed.personalization
+    ) {
+      throw new Error('invalid')
+    }
+    return parsed
+  } catch {
+    throw new Error('This shared Scorpion build is invalid or incompatible.')
+  }
+}
+
+export function validateOrderDraft(build: StudioBuildDraft, customer: CustomerDraft): DraftIssue[] {
+  const issues: DraftIssue[] = []
+
+  if (!customer.name.trim()) {
+    issues.push({ path: 'customer.name', message: 'Name is required.' })
+  }
+  if (!customer.email.trim() && !customer.phone.trim()) {
+    issues.push({ path: 'customer.contact', message: 'Enter an email address or phone number.' })
+  }
+  if (customer.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(customer.email.trim())) {
+    issues.push({ path: 'customer.email', message: 'Enter a valid email address.' })
+  }
+  if (!Number.isInteger(build.quantity) || build.quantity < 1 || build.quantity > 99) {
+    issues.push({ path: 'build.quantity', message: 'Quantity must be between 1 and 99.' })
+  }
+  if (build.personalization.textEnabled && !build.personalization.text.trim()) {
+    issues.push({ path: 'build.personalization.text', message: 'Enter the text you want personalized.' })
+  }
+  if (build.personalization.text.length > 40) {
+    issues.push({ path: 'build.personalization.text', message: 'Personalization text must be 40 characters or fewer.' })
+  }
+  if (build.personalization.toolingStyle === 'custom-concept' && !build.personalization.toolingNotes.trim()) {
+    issues.push({ path: 'build.personalization.toolingNotes', message: 'Describe the custom tooling concept.' })
+  }
+
+  return issues
+}
+
+function requestId(now: Date): string {
+  const stamp = now.toISOString().replace(/[-:TZ.]/gu, '').slice(0, 14)
+  const random = crypto.randomUUID().replaceAll('-', '').slice(0, 6).toUpperCase()
+  return `SC-REQ-${stamp}-${random}`
+}
+
+export function createOrderRequest(args: {
+  build: StudioBuildDraft
+  customer: CustomerDraft
+  commerce: CommerceResolution
+  sourceUrl: string
+  now?: Date
+}): StudioOrderRequest {
+  const issues = validateOrderDraft(args.build, args.customer)
+  if (issues.length) throw new Error(issues[0].message)
+
+  const now = args.now ?? new Date()
+  return {
+    schemaVersion: 1,
+    requestId: requestId(now),
+    buildId: createStudioBuildId(args.build),
+    createdAt: now.toISOString(),
+    sourceUrl: args.sourceUrl,
+    customer: {
+      ...args.customer,
+      name: args.customer.name.trim(),
+      email: args.customer.email.trim(),
+      phone: args.customer.phone.trim(),
+      company: args.customer.company.trim(),
+    },
+    build: args.build,
+    commerce: args.commerce,
+    pricing: {
+      currency: 'USD',
+      basePriceMinor: args.commerce.basePriceMinor,
+      basePriceStatus: args.commerce.priceStatus,
+      personalizationRequiresQuote: true,
+    },
+  }
+}
+
+export function formatOrderSummary(request: StudioOrderRequest): string {
+  const p = request.build.personalization
+  const lines = [
+    'SCORPION WESTERN WEAR — CUSTOM ORDER REQUEST',
+    `Request: ${request.requestId}`,
+    `Build: ${request.buildId}`,
+    '',
+    `Customer: ${request.customer.name}`,
+    request.customer.company ? `Company: ${request.customer.company}` : '',
+    request.customer.email ? `Email: ${request.customer.email}` : '',
+    request.customer.phone ? `Phone: ${request.customer.phone}` : '',
+    `Preferred contact: ${request.customer.preferredContact}`,
+    request.customer.neededBy ? `Needed by: ${request.customer.neededBy}` : '',
+    '',
+    `Product: ${request.commerce.productTitle}`,
+    `Starting build: ${request.commerce.referenceTitle}`,
+    `Variant: ${request.commerce.variantTitle}`,
+    `SKU: ${request.commerce.sku}`,
+    `Quantity: ${request.build.quantity}`,
+    '',
+    `Tooling request: ${p.toolingStyle}`,
+    p.toolingNotes ? `Tooling notes: ${p.toolingNotes}` : '',
+    `Text personalization: ${p.textEnabled ? p.text : 'None'}`,
+    p.textEnabled ? `Text style: ${p.textStyle}` : '',
+    `Requested placement: ${p.placement}`,
+    p.artworkNotes ? `Logo/artwork notes: ${p.artworkNotes}` : '',
+    p.additionalNotes ? `Additional notes: ${p.additionalNotes}` : '',
+    '',
+    `Base price status: ${request.commerce.priceStatus === 'catalog' ? 'Current catalog base price' : 'Quote required'}`,
+    'Custom tooling/text/artwork pricing: Quote required',
+    '',
+    `Source build: ${request.sourceUrl}`,
+  ]
+  return lines.filter((line, index, all) => line || (index > 0 && all[index - 1] !== '')).join('\n')
+}
