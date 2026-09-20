@@ -1,0 +1,32 @@
+---
+description: Core architecture and quality rules for Scorpion Leather Studio
+alwaysApply: true
+---
+
+# Scorpion Leather Studio
+
+Read @AGENTS.md before substantial work.
+
+Also treat these files as source-of-truth contracts:
+- @docs/ARCHITECTURE.md
+- @docs/PRODUCT-SCHEMA.md
+- @docs/ASSET-MANIFEST.md
+- @docs/3D-ASSET-STANDARD.md
+- @docs/SHOPIFY-INTEGRATION.md
+- @docs/MVP-ACCEPTANCE.md
+- @docs/DEVELOPMENT-PLAN.md
+
+## Required behavior
+
+- Preserve separation between domain state, pricing, fitting, renderer, UI, assets, and Shopify.
+- Do not put product business rules inside presentation components.
+- Keep product configuration data-driven.
+- Keep Three.js objects out of canonical business state.
+- Do not make Shopify variant explosion the configuration model.
+- Do not trust browser-calculated totals as the final production authority.
+- Do not couple runtime behavior to placeholder mesh names.
+- Prefer deterministic mechanical animation over decorative animation.
+- Treat mobile performance as a release requirement.
+- Do not claim tests or browser checks were performed unless you actually ran them.
+
+When a requested change conflicts with a repository contract, flag the conflict and update the contract deliberately rather than silently bypassing it.
