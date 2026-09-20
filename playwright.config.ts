@@ -5,6 +5,8 @@ export default defineConfig({
   outputDir: 'playwright-output/test-results',
   reporter: [['line']],
   retries: 0,
+  workers: 1,
+  timeout: 60_000,
   use: {
     baseURL: 'http://127.0.0.1:4173',
     trace: 'retain-on-failure',
