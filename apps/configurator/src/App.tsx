@@ -468,6 +468,8 @@ function OrderCapture({
 }) {
   const issues = validateOrderDraft(build, customer)
   const issueMap = Object.fromEntries(issues.map((issue) => [issue.path, issue.message]))
+  const [deliveryState, setDeliveryState] = useState<'idle' | 'sending' | 'sent' | 'unavailable' | 'failed'>('idle')
+  const [website, setWebsite] = useState('')
 
   const prepareRequest = () => {
     try {
@@ -489,6 +491,7 @@ function OrderCapture({
         },
       })
       setRequest(next)
+      setDeliveryState('idle')
       setStatus(`Order request ${next.requestId} prepared.`)
 
       try {
@@ -514,6 +517,39 @@ function OrderCapture({
     }
   }
 
+  const sendRequest = async () => {
+    if (!request || deliveryState === 'sending') return
+    setDeliveryState('sending')
+    setStatus('Sending custom order request to Scorpion…')
+
+    try {
+      const response = await fetch('/api/order-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request, website }),
+      })
+      const payload = await response.json().catch(() => ({})) as { accepted?: boolean; code?: string; deliveryId?: string }
+
+      if (response.ok && payload.accepted) {
+        setDeliveryState('sent')
+        setStatus(`Request ${request.requestId} sent to Scorpion successfully.`)
+        return
+      }
+
+      if (response.status === 503 && payload.code === 'ORDER_TRANSPORT_NOT_CONFIGURED') {
+        setDeliveryState('unavailable')
+        setStatus('Direct delivery is not configured on this deployment yet. Use the email fallback below.')
+        return
+      }
+
+      setDeliveryState('failed')
+      setStatus('The server could not deliver this request. Your build sheet is still safe; use the email fallback.')
+    } catch {
+      setDeliveryState('failed')
+      setStatus('Could not reach the order server. Your build sheet is still safe; use the email fallback.')
+    }
+  }
+
   const emailRequest = () => {
     if (!request) return
     const subject = encodeURIComponent(`Custom Leather Order Request — ${request.requestId}`)
@@ -530,6 +566,16 @@ function OrderCapture({
         </div>
         <span>{createStudioBuildId(build)}</span>
       </div>
+
+      <label className="hp-field" aria-hidden="true">
+        Website
+        <input
+          tabIndex={-1}
+          autoComplete="off"
+          value={website}
+          onChange={(event) => setWebsite(event.target.value)}
+        />
+      </label>
 
       <div className="order-form-grid">
         <label>
@@ -613,7 +659,15 @@ function OrderCapture({
           <div className="request-actions">
             <button type="button" onClick={copySummary}>Copy summary</button>
             <button type="button" onClick={() => downloadText(`${request.requestId}.txt`, summary)}>Download build sheet</button>
-            <button type="button" className="request-send" onClick={emailRequest}>Email Scorpion</button>
+            <button
+              type="button"
+              className="request-send"
+              onClick={sendRequest}
+              disabled={deliveryState === 'sending' || deliveryState === 'sent'}
+            >
+              {deliveryState === 'sending' ? 'Sending…' : deliveryState === 'sent' ? 'Sent to Scorpion' : 'Send to Scorpion'}
+            </button>
+            <button type="button" onClick={emailRequest}>Email fallback</button>
           </div>
         </div>
       ) : null}
@@ -720,7 +774,7 @@ export function App() {
           </p>
         </div>
         <div className="header-build">
-          <div className="prototype-badge">ORDER STUDIO · V0.4</div>
+          <div className="prototype-badge">ORDER STUDIO · V0.5</div>
           <div className="configuration-id">
             <span>BUILD</span>
             <strong>{createStudioBuildId(build)}</strong>
