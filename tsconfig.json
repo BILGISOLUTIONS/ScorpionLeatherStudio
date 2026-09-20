@@ -2,7 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -17,13 +21,34 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@sls/product-schema": ["packages/product-schema/src/index.ts"],
-      "@sls/configurator-core": ["packages/configurator-core/src/index.ts"],
-      "@sls/pricing-engine": ["packages/pricing-engine/src/index.ts"],
-      "@sls/fitting-engine": ["packages/fitting-engine/src/index.ts"],
-      "@sls/shopify-adapter": ["packages/shopify-adapter/src/index.ts"],
-      "@sls/three-renderer": ["packages/three-renderer/src/index.tsx"]
+      "@sls/product-schema": [
+        "packages/product-schema/src/index.ts"
+      ],
+      "@sls/configurator-core": [
+        "packages/configurator-core/src/index.ts"
+      ],
+      "@sls/pricing-engine": [
+        "packages/pricing-engine/src/index.ts"
+      ],
+      "@sls/fitting-engine": [
+        "packages/fitting-engine/src/index.ts"
+      ],
+      "@sls/shopify-adapter": [
+        "packages/shopify-adapter/src/index.ts"
+      ],
+      "@sls/three-renderer": [
+        "packages/three-renderer/src/index.tsx"
+      ],
+      "@sls/order-engine": [
+        "packages/order-engine/src/index.ts"
+      ]
     }
   },
-  "include": ["apps/**/*.ts", "apps/**/*.tsx", "packages/**/*.ts", "packages/**/*.tsx"]
+  "include": [
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "api/**/*.ts"
+  ]
 }
