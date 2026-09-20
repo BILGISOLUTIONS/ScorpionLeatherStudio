@@ -16,14 +16,14 @@ test('configurator renders, persists, shares, and prepares the live build', asyn
   await expect(page.getByRole('heading', { name: 'Leather Studio' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Custom Leather Welding Hood' })).toBeVisible()
   await expect(page.locator('canvas')).toBeVisible()
-  await expect(page.getByText('Asset contract validated')).toBeVisible()
+  await expect(page.getByText('Asset contract validated')).toHaveText('Asset contract validated')
 
   await expect(page.getByTestId('build-total')).toHaveText('$207.00')
   await page.getByRole('button', { name: /Black Full Grain/i }).click()
   await expect(page.getByTestId('build-total')).toHaveText('$219.00')
 
   await page.getByRole('button', { name: 'Front' }).click()
-  await page.getByRole('button', { name: 'Visor' }).click()
+  await page.getByRole('button', { name: 'Visor', exact: true }).click()
   await page.getByRole('button', { name: 'Auto spin' }).click()
   await expect(page.getByRole('button', { name: 'Stop spin' })).toBeVisible()
 
