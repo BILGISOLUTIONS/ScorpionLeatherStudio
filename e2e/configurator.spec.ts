@@ -22,13 +22,24 @@ test('configurator renders, persists, shares, and prepares the live build', asyn
   await page.getByRole('button', { name: /Black Full Grain/i }).click()
   await expect(page.getByTestId('build-total')).toHaveText('$219.00')
 
-  await page.getByRole('button', { name: 'Front' }).click()
-  await page.getByRole('button', { name: 'Visor', exact: true }).click()
-  await page.getByRole('button', { name: 'Auto spin' }).click()
-  await expect(page.getByRole('button', { name: 'Stop spin' })).toBeVisible()
-
   await page.getByRole('button', { name: 'Open visor' }).click()
   await expect(page.getByRole('button', { name: 'Close visor' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close visor' }).click()
+  await expect(page.getByRole('button', { name: 'Open visor' })).toBeVisible()
+
+  const frontView = page.getByRole('button', { name: 'Front', exact: true })
+  await frontView.click()
+  await expect(frontView).toHaveClass(/is-active/)
+
+  const visorView = page.getByRole('button', { name: 'Visor', exact: true })
+  await visorView.click()
+  await expect(visorView).toHaveClass(/is-active/)
+
+  await page.getByRole('button', { name: 'Auto spin' }).click()
+  const stopSpin = page.getByRole('button', { name: 'Stop spin' })
+  await expect(stopSpin).toBeVisible()
+  await stopSpin.click()
+  await expect(page.getByRole('button', { name: 'Auto spin' })).toBeVisible()
 
   const measurement = page.getByLabel('Head circumference')
   await measurement.fill('23.5')
