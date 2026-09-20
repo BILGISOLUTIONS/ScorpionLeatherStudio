@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { createConfigurationId, createInitialConfiguration, isSelectionAllowed, setSelection } from './index'
+import {
+  createConfigurationId,
+  createInitialConfiguration,
+  createShareToken,
+  isSelectionAllowed,
+  restoreShareToken,
+  setMeasurement,
+  setSelection,
+} from './index'
 import type { ProductDefinition } from '@sls/product-schema'
 
 const product: ProductDefinition = {
@@ -23,7 +31,7 @@ const product: ProductDefinition = {
     ] },
   ],
   compatibilityRules: [{ id: 'r1', when: [{ groupId: 'leather', equals: 'tan' }], disallow: { groupId: 'guard', valueId: 'extended' }, reason: 'No.' }],
-  measurements: [],
+  measurements: [{ id: 'head', label: 'Head', unit: 'in', min: 20, max: 27, required: true, instructions: 'Measure.' }],
   sizeRecommendations: [],
 }
 
@@ -43,5 +51,19 @@ describe('configurator core', () => {
     config = setSelection(product, config, 'guard', 'extended')
     expect(isSelectionAllowed(product, config, 'leather', 'tan')).toEqual({ allowed: false, reason: 'No.' })
     expect(() => setSelection(product, config, 'leather', 'tan')).toThrow('No.')
+  })
+
+  it('round-trips a share token without changing the build identity', () => {
+    let config = createInitialConfiguration(product)
+    config = setSelection(product, config, 'leather', 'tan')
+    config = setMeasurement(product, config, 'head', 23.5)
+
+    const restored = restoreShareToken(product, createShareToken(config))
+    expect(restored).toEqual(config)
+    expect(createConfigurationId(restored)).toBe(createConfigurationId(config))
+  })
+
+  it('rejects malformed share tokens', () => {
+    expect(() => restoreShareToken(product, 'not-a-valid-build')).toThrow('shared build link')
   })
 })
