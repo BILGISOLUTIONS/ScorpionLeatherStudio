@@ -1,8 +1,14 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Html, OrbitControls, useGLTF } from '@react-three/drei'
+import { ContactShadows, Html, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-import type { AssetManifest, MaterialVariant, ProductDefinition } from '@sls/product-schema'
+import {
+  validateAssetManifest,
+  type AssetManifest,
+  type MaterialVariant,
+  type ProductDefinition,
+  type ValidationIssue,
+} from '@sls/product-schema'
 
 export interface ThreeProductViewerProps {
   product: ProductDefinition
@@ -10,6 +16,9 @@ export interface ThreeProductViewerProps {
   materials: Record<string, MaterialVariant>
   selections: Record<string, string>
   animationStates?: Record<string, boolean>
+  cameraPreset?: string
+  autoRotate?: boolean
+  onAssetIssues?: (issues: ValidationIssue[]) => void
 }
 
 function LoadingFallback() {
@@ -30,6 +39,79 @@ function useReducedMotion(): boolean {
     return () => query.removeEventListener('change', update)
   }, [])
   return reduced
+}
+
+function createMaterial(variant: MaterialVariant): THREE.MeshPhysicalMaterial {
+  const transparent = variant.kind === 'glass' || (variant.opacity ?? 1) < 1
+  return new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(variant.color),
+    roughness: variant.roughness,
+    metalness: variant.metalness,
+    opacity: variant.opacity ?? 1,
+    transparent,
+    transmission: variant.transmission ?? 0,
+    clearcoat: variant.clearcoat ?? 0,
+    clearcoatRoughness: variant.clearcoatRoughness ?? 0,
+    sheen: variant.sheen ?? 0,
+    sheenRoughness: variant.sheenRoughness ?? 1,
+    side: variant.kind === 'glass' ? THREE.DoubleSide : THREE.FrontSide,
+    depthWrite: !transparent,
+  })
+}
+
+function configureTexture(texture: THREE.Texture, variant: MaterialVariant, colorTexture = false) {
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  const repeat = variant.textureRepeat ?? [1, 1]
+  texture.repeat.set(repeat[0], repeat[1])
+  texture.anisotropy = 4
+  if (colorTexture) texture.colorSpace = THREE.SRGBColorSpace
+}
+
+function hydrateMaterialTextures(material: THREE.MeshPhysicalMaterial, variant: MaterialVariant) {
+  if (!variant.textures) return () => undefined
+
+  const loader = new THREE.TextureLoader()
+  const loaded: THREE.Texture[] = []
+  let disposed = false
+
+  const load = (
+    url: string | undefined,
+    assign: (texture: THREE.Texture) => void,
+    colorTexture = false,
+  ) => {
+    if (!url) return
+    loader.load(
+      url,
+      (texture) => {
+        if (disposed) {
+          texture.dispose()
+          return
+        }
+        configureTexture(texture, variant, colorTexture)
+        loaded.push(texture)
+        assign(texture)
+        material.needsUpdate = true
+      },
+      undefined,
+      () => undefined,
+    )
+  }
+
+  load(variant.textures.baseColor, (texture) => { material.map = texture }, true)
+  load(variant.textures.normal, (texture) => {
+    material.normalMap = texture
+    const normalScale = variant.normalScale ?? 1
+    material.normalScale.set(normalScale, normalScale)
+  })
+  load(variant.textures.roughness, (texture) => { material.roughnessMap = texture })
+  load(variant.textures.metalness, (texture) => { material.metalnessMap = texture })
+  load(variant.textures.ambientOcclusion, (texture) => { material.aoMap = texture })
+
+  return () => {
+    disposed = true
+    for (const texture of loaded) texture.dispose()
+  }
 }
 
 function MechanicalAnimations({
@@ -55,7 +137,7 @@ function MechanicalAnimations({
   useFrame((_, delta) => {
     for (const { key, definition, object } of targets) {
       const target = stateRef.current[key] ? definition.to : definition.from
-      const [axis] = definition.property.split('.').slice(-1) as ['x' | 'y' | 'z']
+      const axis = definition.property.split('.').at(-1) as 'x' | 'y' | 'z'
       if (reducedMotion) {
         object.rotation[axis] = target
       } else {
@@ -68,14 +150,34 @@ function MechanicalAnimations({
   return null
 }
 
-function ProductModel({ product, manifest, materials, selections, animationStates = {} }: ThreeProductViewerProps) {
+function ProductModel({
+  product,
+  manifest,
+  materials,
+  selections,
+  animationStates = {},
+  onAssetIssues,
+}: ThreeProductViewerProps) {
   const gltf = useGLTF(manifest.model)
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene])
 
   useEffect(() => {
-    const createdMaterials: THREE.Material[] = []
+    const names: string[] = []
+    scene.traverse((object) => {
+      if (object.name) names.push(object.name)
+      if (object instanceof THREE.Mesh) {
+        object.castShadow = true
+        object.receiveShadow = true
+      }
+    })
+    onAssetIssues?.(validateAssetManifest(manifest, Object.keys(materials), names))
+  }, [manifest, materials, onAssetIssues, scene])
+
+  useEffect(() => {
+    const createdMaterials: THREE.MeshPhysicalMaterial[] = []
+    const textureCleanups: Array<() => void> = []
     const activeComponents = new Map<string, string>()
-    const selectedMaterialVariants = new Map<string, string>()
+    const selectedMaterialVariants = new Map<string, string>(Object.entries(manifest.defaultMaterialVariants ?? {}))
 
     for (const group of product.optionGroups) {
       const selectedValue = group.values.find((value) => value.id === selections[group.id])
@@ -102,23 +204,30 @@ function ProductModel({ product, manifest, materials, selections, animationState
       if (!variantId) continue
       const variant = materials[variantId]
       if (!variant) continue
+
+      const material = createMaterial(variant)
+      createdMaterials.push(material)
+      textureCleanups.push(hydrateMaterialTextures(material, variant))
+
       for (const nodeName of nodeNames) {
         const node = scene.getObjectByName(nodeName)
-        if (!(node instanceof THREE.Mesh)) continue
-        const material = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(variant.color),
-          roughness: variant.roughness,
-          metalness: variant.metalness,
-        })
-        createdMaterials.push(material)
-        node.material = material
+        if (node instanceof THREE.Mesh) node.material = material
       }
     }
 
     return () => {
+      for (const cleanup of textureCleanups) cleanup()
       for (const material of createdMaterials) material.dispose()
     }
-  }, [manifest.components, manifest.materialSlots, materials, product.optionGroups, scene, selections])
+  }, [
+    manifest.components,
+    manifest.defaultMaterialVariants,
+    manifest.materialSlots,
+    materials,
+    product.optionGroups,
+    scene,
+    selections,
+  ])
 
   return (
     <>
@@ -128,42 +237,92 @@ function ProductModel({ product, manifest, materials, selections, animationState
   )
 }
 
-function CameraPreset({ manifest, presetName }: { manifest: AssetManifest; presetName: string }) {
+function CameraTransition({
+  manifest,
+  presetName,
+}: {
+  manifest: AssetManifest
+  presetName: string
+}) {
   const { camera } = useThree()
+  const reducedMotion = useReducedMotion()
+  const destination = useRef(new THREE.Vector3())
+  const target = useRef(new THREE.Vector3())
+  const active = useRef(true)
+
   useEffect(() => {
     const preset = manifest.cameraPresets[presetName]
     if (!preset) return
-    camera.position.set(...preset.position)
+    destination.current.set(...preset.position)
+    target.current.set(...preset.target)
+    active.current = true
+
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.fov = preset.fov
       camera.updateProjectionMatrix()
     }
-    camera.lookAt(...preset.target)
-  }, [camera, manifest.cameraPresets, presetName])
+
+    if (reducedMotion) {
+      camera.position.copy(destination.current)
+      camera.lookAt(target.current)
+      active.current = false
+    }
+  }, [camera, manifest.cameraPresets, presetName, reducedMotion])
+
+  useFrame((_, delta) => {
+    if (!active.current || reducedMotion) return
+    const alpha = 1 - Math.exp(-7 * delta)
+    camera.position.lerp(destination.current, alpha)
+    camera.lookAt(target.current)
+    if (camera.position.distanceTo(destination.current) < 0.002) {
+      camera.position.copy(destination.current)
+      active.current = false
+    }
+  })
+
   return null
 }
 
 export function ThreeProductViewer(props: ThreeProductViewerProps) {
-  const preset = props.product.asset.defaultCameraPreset
-  const target = props.manifest.cameraPresets[preset]?.target ?? [0, 0, 0]
+  const presetName = props.cameraPreset ?? props.product.asset.defaultCameraPreset
+  const preset = props.manifest.cameraPresets[presetName] ?? props.manifest.cameraPresets[props.product.asset.defaultCameraPreset]
+  const initial = props.manifest.cameraPresets[props.product.asset.defaultCameraPreset]
 
   return (
-    <Canvas dpr={[1, 1.75]} shadows gl={{ antialias: true, powerPreference: 'high-performance' }}>
-      <color attach="background" args={['#111111']} />
-      <ambientLight intensity={1.15} />
-      <directionalLight position={[3, 4, 5]} intensity={2.1} castShadow />
-      <directionalLight position={[-3, 1.5, -2]} intensity={0.65} />
+    <Canvas
+      camera={{ position: initial?.position ?? [0.48, 0.28, 0.68], fov: initial?.fov ?? 35 }}
+      dpr={[1, 1.75]}
+      shadows
+      gl={{ antialias: true, powerPreference: 'high-performance' }}
+    >
+      <color attach="background" args={['#0e0e0d']} />
+      <ambientLight intensity={0.9} />
+      <directionalLight position={[3.2, 4.2, 4.8]} intensity={2.35} castShadow />
+      <directionalLight position={[-3, 1.5, -2]} intensity={0.72} />
+      <directionalLight position={[0, -1.5, 2.5]} intensity={0.22} />
+
       <Suspense fallback={<LoadingFallback />}>
         <ProductModel {...props} />
+        <ContactShadows
+          position={[0, -0.34, 0]}
+          opacity={0.52}
+          scale={1.2}
+          blur={2.6}
+          far={1.2}
+          frames={1}
+        />
       </Suspense>
-      <CameraPreset manifest={props.manifest} presetName={preset} />
+
+      <CameraTransition manifest={props.manifest} presetName={presetName} />
       <OrbitControls
-        target={target}
+        target={preset?.target ?? [0, 0, 0]}
         enablePan={false}
         minDistance={0.38}
         maxDistance={1.6}
         minPolarAngle={0.35}
         maxPolarAngle={2.55}
+        autoRotate={props.autoRotate ?? false}
+        autoRotateSpeed={0.65}
         makeDefault
       />
     </Canvas>
