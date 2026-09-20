@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "assetId": "placeholder-welding-hood-v1",
+  "assetId": "placeholder-welding-hood-v2",
   "model": "/models/placeholder-welding-hood.gltf",
   "units": "meters",
   "upAxis": "Y",
@@ -10,6 +10,11 @@
     "LeatherPrimary": ["Shell_Main", "NeckGuard_Standard", "NeckGuard_Extended"],
     "HardwarePrimary": ["Visor_Frame", "Rivets"],
     "Lens": ["Visor_Lens"]
+  },
+  "defaultMaterialVariants": {
+    "LeatherPrimary": "SCL-002",
+    "HardwarePrimary": "SCH-002",
+    "Lens": "SGL-001"
   },
   "components": {
     "neckGuard.standard": ["NeckGuard_Standard"],
@@ -26,7 +31,9 @@
     }
   },
   "cameraPresets": {
-    "hero": {"target": [0, 0.05, 0], "position": [0.48, 0.28, 0.68], "fov": 35},
-    "rear": {"target": [0, 0.05, 0], "position": [0, 0.22, -0.82], "fov": 35}
+    "hero": {"label": "Hero", "target": [0, 0.04, 0], "position": [0.48, 0.28, 0.68], "fov": 35},
+    "front": {"label": "Front", "target": [0, 0.04, 0], "position": [0, 0.08, 0.82], "fov": 34},
+    "rear": {"label": "Rear", "target": [0, 0.04, 0], "position": [0, 0.08, -0.82], "fov": 34},
+    "detail": {"label": "Visor", "target": [0, 0.12, 0.13], "position": [0.34, 0.24, 0.48], "fov": 27}
   }
 }
