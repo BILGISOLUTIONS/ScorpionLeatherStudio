@@ -1,0 +1,25 @@
+{
+  "name": "@sls/configurator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p ../../tsconfig.json --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.1.0",
+    "@sls/configurator-core": "*",
+    "@sls/fitting-engine": "*",
+    "@sls/pricing-engine": "*",
+    "@sls/product-schema": "*",
+    "@sls/shopify-adapter": "*",
+    "@sls/three-renderer": "*",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "three": "^0.176.0",
+    "zustand": "^5.0.3"
+  }
+}

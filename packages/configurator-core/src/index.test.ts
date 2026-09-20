@@ -1,0 +1,47 @@
+import { describe, expect, it } from 'vitest'
+import { createConfigurationId, createInitialConfiguration, isSelectionAllowed, setSelection } from './index'
+import type { ProductDefinition } from '@sls/product-schema'
+
+const product: ProductDefinition = {
+  schemaVersion: 1,
+  id: 'p1',
+  handle: 'p1',
+  name: 'P1',
+  category: 'test',
+  currency: 'USD',
+  basePrice: 10000,
+  commerce: { defaultMerchandiseId: 'variant', variantStrategy: 'inventory-only' },
+  asset: { manifestUrl: '/m.json', defaultCameraPreset: 'hero' },
+  optionGroups: [
+    { id: 'leather', label: 'Leather', type: 'choice', required: true, defaultValue: 'brown', values: [
+      { id: 'brown', label: 'Brown', priceModifier: 0 },
+      { id: 'tan', label: 'Tan', priceModifier: 100 },
+    ] },
+    { id: 'guard', label: 'Guard', type: 'choice', required: true, defaultValue: 'standard', values: [
+      { id: 'standard', label: 'Standard', priceModifier: 0 },
+      { id: 'extended', label: 'Extended', priceModifier: 500 },
+    ] },
+  ],
+  compatibilityRules: [{ id: 'r1', when: [{ groupId: 'leather', equals: 'tan' }], disallow: { groupId: 'guard', valueId: 'extended' }, reason: 'No.' }],
+  measurements: [],
+  sizeRecommendations: [],
+}
+
+describe('configurator core', () => {
+  it('creates deterministic configuration IDs', () => {
+    const config = createInitialConfiguration(product)
+    expect(createConfigurationId(config)).toBe(createConfigurationId(config))
+  })
+
+  it('rejects incompatible values in either selection order', () => {
+    let config = createInitialConfiguration(product)
+    config = setSelection(product, config, 'leather', 'tan')
+    expect(isSelectionAllowed(product, config, 'guard', 'extended')).toEqual({ allowed: false, reason: 'No.' })
+    expect(() => setSelection(product, config, 'guard', 'extended')).toThrow('No.')
+
+    config = createInitialConfiguration(product)
+    config = setSelection(product, config, 'guard', 'extended')
+    expect(isSelectionAllowed(product, config, 'leather', 'tan')).toEqual({ allowed: false, reason: 'No.' })
+    expect(() => setSelection(product, config, 'leather', 'tan')).toThrow('No.')
+  })
+})
