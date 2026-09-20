@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows, Html, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import {
   validateAssetManifest,
   type AssetManifest,
@@ -237,25 +238,28 @@ function ProductModel({
   )
 }
 
-function CameraTransition({
+function CameraRig({
   manifest,
   presetName,
+  autoRotate,
 }: {
   manifest: AssetManifest
   presetName: string
+  autoRotate: boolean
 }) {
   const { camera } = useThree()
   const reducedMotion = useReducedMotion()
+  const controls = useRef<OrbitControlsImpl>(null)
   const destination = useRef(new THREE.Vector3())
-  const target = useRef(new THREE.Vector3())
-  const active = useRef(true)
+  const destinationTarget = useRef(new THREE.Vector3())
+  const transitioning = useRef(true)
 
   useEffect(() => {
     const preset = manifest.cameraPresets[presetName]
     if (!preset) return
+
     destination.current.set(...preset.position)
-    target.current.set(...preset.target)
-    active.current = true
+    destinationTarget.current.set(...preset.target)
 
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.fov = preset.fov
@@ -264,28 +268,63 @@ function CameraTransition({
 
     if (reducedMotion) {
       camera.position.copy(destination.current)
-      camera.lookAt(target.current)
-      active.current = false
+      if (controls.current) {
+        controls.current.target.copy(destinationTarget.current)
+        controls.current.update()
+      } else {
+        camera.lookAt(destinationTarget.current)
+      }
+      transitioning.current = false
+    } else {
+      transitioning.current = true
     }
   }, [camera, manifest.cameraPresets, presetName, reducedMotion])
 
   useFrame((_, delta) => {
-    if (!active.current || reducedMotion) return
+    if (!transitioning.current || reducedMotion) return
+
     const alpha = 1 - Math.exp(-7 * delta)
     camera.position.lerp(destination.current, alpha)
-    camera.lookAt(target.current)
-    if (camera.position.distanceTo(destination.current) < 0.002) {
+
+    if (controls.current) {
+      controls.current.target.lerp(destinationTarget.current, alpha)
+      controls.current.update()
+    } else {
+      camera.lookAt(destinationTarget.current)
+    }
+
+    const positionDone = camera.position.distanceTo(destination.current) < 0.002
+    const targetDone = !controls.current || controls.current.target.distanceTo(destinationTarget.current) < 0.002
+
+    if (positionDone && targetDone) {
       camera.position.copy(destination.current)
-      active.current = false
+      if (controls.current) {
+        controls.current.target.copy(destinationTarget.current)
+        controls.current.update()
+      } else {
+        camera.lookAt(destinationTarget.current)
+      }
+      transitioning.current = false
     }
   })
 
-  return null
+  return (
+    <OrbitControls
+      ref={controls}
+      enablePan={false}
+      minDistance={0.38}
+      maxDistance={1.6}
+      minPolarAngle={0.35}
+      maxPolarAngle={2.55}
+      autoRotate={autoRotate}
+      autoRotateSpeed={0.65}
+      makeDefault
+    />
+  )
 }
 
 export function ThreeProductViewer(props: ThreeProductViewerProps) {
   const presetName = props.cameraPreset ?? props.product.asset.defaultCameraPreset
-  const preset = props.manifest.cameraPresets[presetName] ?? props.manifest.cameraPresets[props.product.asset.defaultCameraPreset]
   const initial = props.manifest.cameraPresets[props.product.asset.defaultCameraPreset]
 
   return (
@@ -313,17 +352,10 @@ export function ThreeProductViewer(props: ThreeProductViewerProps) {
         />
       </Suspense>
 
-      <CameraTransition manifest={props.manifest} presetName={presetName} />
-      <OrbitControls
-        target={preset?.target ?? [0, 0, 0]}
-        enablePan={false}
-        minDistance={0.38}
-        maxDistance={1.6}
-        minPolarAngle={0.35}
-        maxPolarAngle={2.55}
+      <CameraRig
+        manifest={props.manifest}
+        presetName={presetName}
         autoRotate={props.autoRotate ?? false}
-        autoRotateSpeed={0.65}
-        makeDefault
       />
     </Canvas>
   )
