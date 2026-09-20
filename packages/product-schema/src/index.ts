@@ -9,6 +9,17 @@ export interface VisualDirective {
   componentValue?: string
 }
 
+export interface OptionReferenceImage {
+  url: string
+  alt: string
+}
+
+export interface OptionCommerceReference {
+  shopifyProductId?: string
+  merchandiseId?: string
+  sku?: string
+}
+
 export interface OptionValue {
   id: string
   label: string
@@ -17,6 +28,8 @@ export interface OptionValue {
   swatch?: string
   visual?: VisualDirective
   manufacturingCode?: string
+  referenceImage?: OptionReferenceImage
+  commerce?: OptionCommerceReference
 }
 
 export interface OptionGroup {
@@ -25,6 +38,7 @@ export interface OptionGroup {
   type: OptionControlType
   required: boolean
   defaultValue: string
+  visibility?: 'customer' | 'development'
   values: OptionValue[]
 }
 
@@ -47,6 +61,7 @@ export interface MeasurementDefinition {
   min: number
   max: number
   required: boolean
+  status?: 'confirmed' | 'development'
   instructions: string
 }
 
@@ -71,6 +86,8 @@ export interface ProductDefinition {
     shopifyProductId?: string
     defaultMerchandiseId: string
     variantStrategy: 'inventory-only' | 'selected-options'
+    priceStatus?: 'approved' | 'test' | 'quote'
+    priceNote?: string
   }
   asset: { manifestUrl: string; defaultCameraPreset: string }
   optionGroups: OptionGroup[]
