@@ -3,5 +3,10 @@
   "framework": "vite",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
-  "outputDirectory": "apps/configurator/dist"
+  "outputDirectory": "apps/configurator/dist",
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 10
+    }
+  }
 }
