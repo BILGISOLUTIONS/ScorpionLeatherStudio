@@ -1,0 +1,14 @@
+{
+  "name": "@sls/three-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.tsx",
+  "dependencies": {
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.1.0",
+    "@sls/product-schema": "*",
+    "react": "^19.1.0",
+    "three": "^0.176.0"
+  }
+}
