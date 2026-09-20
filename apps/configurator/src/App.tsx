@@ -288,8 +288,6 @@ export function App() {
                 : 'Asset contract validated'}
             </div>
           </div>
-
-          {renderReference(selectedReference)}
         </div>
 
         <aside className="controls-panel">
@@ -303,6 +301,8 @@ export function App() {
               These four starting builds are linked to actual Scorpion Shopify products and SKUs. The 3D geometry remains temporary; the photographed reference is the visual authority.
             </p>
           </div>
+
+          {renderReference(selectedReference)}
 
           {customerGroups.map((group) => (
             <OptionControl
