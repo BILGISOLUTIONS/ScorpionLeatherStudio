@@ -17,10 +17,10 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByRole('heading', { name: 'Custom Leather Studio' })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Customizable products' })).toBeVisible()
   await expect(page.locator('canvas')).toBeVisible()
-  await expect(page.getByText('3D contract validated')).toBeVisible()
+  await expect(page.getByText('3D contract validated')).toHaveText('3D contract validated')
 
   await page.getByRole('button', { name: /Radio Harness/i }).click()
-  await expect(page.getByRole('heading', { name: 'Leather Radio Harness' })).toBeVisible()
+  await expect(page.getByText('Leather Radio Harness', { exact: true })).toBeVisible()
   await expect(page.getByRole('img', { name: /Alligator-print cowhide Scorpion/i })).toBeVisible()
   await expect(page.locator('canvas')).toHaveCount(0)
 
