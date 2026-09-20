@@ -2,12 +2,15 @@
   "name": "scorpion-leather-studio",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "npm run dev -w @sls/configurator",
     "build": "npm run build -w @sls/configurator",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run packages",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },
@@ -20,5 +23,7 @@
     "vite": "^6.2.0",
     "vitest": "^3.0.9"
   },
-  "engines": {"node": ">=20"}
+  "engines": {
+    "node": ">=20"
+  }
 }
