@@ -133,17 +133,73 @@ function normalizeBuild(input: StudioBuildDraft): StudioBuildDraft {
   }
 }
 
+function buildFromCatalogTarget(url: URL): StudioBuildDraft | null {
+  const productHandle = url.searchParams.get('product')?.trim()
+  const familyId = url.searchParams.get('family')?.trim()
+  const referenceId = url.searchParams.get('reference')?.trim()
+  const variantTarget = url.searchParams.get('variant')?.trim()
+
+  let family: StudioProductFamily | undefined
+  let reference: StudioReference | undefined
+
+  if (productHandle) {
+    for (const candidateFamily of studioFamilies) {
+      const candidateReference = candidateFamily.references.find((item) => item.handle === productHandle)
+      if (candidateReference) {
+        family = candidateFamily
+        reference = candidateReference
+        break
+      }
+    }
+  }
+
+  if (!family && familyId) {
+    family = studioFamilies.find((item) => item.id === familyId)
+    if (family) {
+      reference = referenceId
+        ? family.references.find((item) => item.id === referenceId)
+        : family.references[0]
+    }
+  }
+
+  if (!family || !reference) return null
+
+  const variant = variantTarget
+    ? reference.variants.find((item) =>
+        item.id === variantTarget ||
+        item.id.endsWith(`/${variantTarget}`) ||
+        item.sku === variantTarget ||
+        item.title.toLowerCase() === variantTarget.toLowerCase(),
+      ) ?? reference.variants[0]
+    : reference.variants[0]
+
+  return {
+    schemaVersion: 1,
+    familyId: family.id,
+    referenceId: reference.id,
+    variantId: variant.id,
+    quantity: 1,
+    personalization: createDefaultPersonalization(
+      family.personalization.placementOptions.at(-1) ?? 'Shop recommendation',
+    ),
+  }
+}
+
 function loadInitialBuild(): StudioBuildDraft {
   if (typeof window === 'undefined') return defaultBuild()
 
-  const token = new URL(window.location.href).searchParams.get('studio')
+  const url = new URL(window.location.href)
+  const token = url.searchParams.get('studio')
   if (token) {
     try {
       return normalizeBuild(restoreStudioShareToken(token))
     } catch {
-      // Fall through to local state.
+      // Fall through to an explicit catalog target or local state.
     }
   }
+
+  const targetedBuild = buildFromCatalogTarget(url)
+  if (targetedBuild) return targetedBuild
 
   try {
     const saved = window.localStorage.getItem(BUILD_STORAGE_KEY)
@@ -153,6 +209,11 @@ function loadInitialBuild(): StudioBuildDraft {
   }
 
   return defaultBuild()
+}
+
+function embeddedMode(): boolean {
+  if (typeof window === 'undefined') return false
+  return new URL(window.location.href).searchParams.get('embed') === '1'
 }
 
 function defaultCustomer(): CustomerDraft {
@@ -833,6 +894,7 @@ function OrderCapture({
 }
 
 export function App() {
+  const [embedded] = useState(embeddedMode)
   const [build, setBuild] = useState<StudioBuildDraft>(loadInitialBuild)
   const [customer, setCustomer] = useState<CustomerDraft>(loadCustomer)
   const [request, setRequest] = useState<StudioOrderRequest | null>(null)
@@ -859,6 +921,44 @@ export function App() {
     }
     setRequest(null)
   }, [build])
+
+  useEffect(() => {
+    if (!embedded || window.parent === window) return
+
+    let frame = 0
+    const sendHeight = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const height = Math.max(
+          document.documentElement.scrollHeight,
+          document.body.scrollHeight,
+          document.documentElement.offsetHeight,
+        )
+        window.parent.postMessage({
+          type: 'scorpion-leather-studio:resize',
+          version: 1,
+          height: Math.ceil(height),
+        }, '*')
+      })
+    }
+
+    const observer = new ResizeObserver(sendHeight)
+    observer.observe(document.documentElement)
+    observer.observe(document.body)
+    window.addEventListener('resize', sendHeight)
+    sendHeight()
+
+    window.parent.postMessage({
+      type: 'scorpion-leather-studio:ready',
+      version: 1,
+    }, '*')
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', sendHeight)
+      cancelAnimationFrame(frame)
+    }
+  }, [embedded])
 
   useEffect(() => {
     try {
@@ -939,7 +1039,7 @@ export function App() {
   }
 
   return (
-    <main className="studio-shell multi-studio">
+    <main className={`studio-shell multi-studio ${embedded ? 'is-embedded' : ''}`}>
       <header className="studio-header">
         <div>
           <p className="eyebrow">SCORPION WESTERN WEAR</p>
@@ -949,7 +1049,7 @@ export function App() {
           </p>
         </div>
         <div className="header-build">
-          <div className="prototype-badge">ORDER STUDIO · V0.6</div>
+          <div className="prototype-badge">ORDER STUDIO · V0.7</div>
           <div className="configuration-id">
             <span>BUILD</span>
             <strong>{createStudioBuildId(build)}</strong>
