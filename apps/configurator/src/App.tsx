@@ -31,6 +31,7 @@ import {
 const BUILD_STORAGE_KEY = 'scorpion-leather-studio:v004-build'
 const CUSTOMER_STORAGE_KEY = 'scorpion-leather-studio:v004-customer'
 const REQUEST_STORAGE_KEY = 'scorpion-leather-studio:v004-requests'
+const ARTWORK_SESSION_KEY = 'scorpion-leather-studio:v006-artwork'
 
 const hoodReferenceMap: Record<string, string> = {
   'hood-dark-yellow': 'dark-textured-yellow-trim',
@@ -65,6 +66,19 @@ interface ArtworkAttachment {
 
 const ARTWORK_MAX_BYTES = 2 * 1024 * 1024
 const ARTWORK_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf'])
+
+function loadSessionArtwork(buildId: string): ArtworkAttachment | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.sessionStorage.getItem(ARTWORK_SESSION_KEY)
+    if (!raw) return null
+    const stored = JSON.parse(raw) as { buildId?: string; artwork?: ArtworkAttachment }
+    if (stored.buildId !== buildId || !stored.artwork) return null
+    return stored.artwork
+  } catch {
+    return null
+  }
+}
 
 async function readArtworkFile(file: File): Promise<ArtworkAttachment> {
   if (!ARTWORK_TYPES.has(file.type)) {
@@ -808,7 +822,7 @@ export function App() {
   const [build, setBuild] = useState<StudioBuildDraft>(loadInitialBuild)
   const [customer, setCustomer] = useState<CustomerDraft>(loadCustomer)
   const [request, setRequest] = useState<StudioOrderRequest | null>(null)
-  const [artwork, setArtwork] = useState<ArtworkAttachment | null>(null)
+  const [artwork, setArtwork] = useState<ArtworkAttachment | null>(() => loadSessionArtwork(createStudioBuildId(build)))
   const [status, setStatus] = useState('')
   const [visorOpen, setVisorOpen] = useState(false)
   const [autoRotate, setAutoRotate] = useState(false)
@@ -839,6 +853,21 @@ export function App() {
       // Optional persistence.
     }
   }, [customer])
+
+  useEffect(() => {
+    try {
+      if (artwork) {
+        window.sessionStorage.setItem(ARTWORK_SESSION_KEY, JSON.stringify({
+          buildId: createStudioBuildId(build),
+          artwork,
+        }))
+      } else {
+        window.sessionStorage.removeItem(ARTWORK_SESSION_KEY)
+      }
+    } catch {
+      // Artwork persistence is best-effort. The request still works without it.
+    }
+  }, [artwork, build])
 
   const chooseFamily = (nextFamily: StudioProductFamily) => {
     const nextReference = nextFamily.references[0]
