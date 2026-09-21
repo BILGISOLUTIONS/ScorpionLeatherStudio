@@ -1793,3 +1793,203 @@ input:focus-visible {
 .request-actions .request-send:disabled {
   filter: none;
 }
+
+
+/* V0.6 — tooling concepts, artwork intake, fulfillment packet */
+.tooling-concept {
+  position: absolute;
+  z-index: 2;
+  inset: 14% 13% 16%;
+  pointer-events: none;
+  opacity: .28;
+  border-radius: 16px;
+  mix-blend-mode: screen;
+  filter: sepia(.85) saturate(.65);
+}
+
+.tooling-western-floral {
+  background:
+    radial-gradient(circle at 25% 32%, transparent 0 12%, rgba(220,180,104,.72) 13% 15%, transparent 16% 24%),
+    radial-gradient(circle at 68% 44%, transparent 0 10%, rgba(220,180,104,.72) 11% 13%, transparent 14% 22%),
+    radial-gradient(ellipse at 45% 68%, transparent 0 14%, rgba(220,180,104,.62) 15% 17%, transparent 18% 30%),
+    repeating-radial-gradient(ellipse at 50% 50%, transparent 0 18px, rgba(220,180,104,.28) 19px 20px, transparent 21px 36px);
+  border: 2px solid rgba(220,180,104,.55);
+}
+
+.tooling-basket-weave {
+  background:
+    repeating-linear-gradient(45deg, rgba(220,180,104,.55) 0 3px, transparent 3px 22px),
+    repeating-linear-gradient(-45deg, rgba(220,180,104,.38) 0 3px, transparent 3px 22px);
+  border: 2px solid rgba(220,180,104,.5);
+}
+
+.tooling-geometric {
+  background:
+    repeating-conic-gradient(from 45deg, rgba(220,180,104,.56) 0 10deg, transparent 10deg 45deg) 0 0 / 38px 38px;
+  border: 2px solid rgba(220,180,104,.5);
+}
+
+.tooling-border {
+  inset: 10% 9% 12%;
+  border: 5px double rgba(220,180,104,.65);
+  box-shadow: inset 0 0 0 10px rgba(220,180,104,.08);
+}
+
+.tooling-custom-concept {
+  border: 2px dashed rgba(220,180,104,.68);
+  background: repeating-linear-gradient(135deg, rgba(220,180,104,.14) 0 8px, transparent 8px 18px);
+}
+
+.mock-artwork {
+  max-width: min(48%, 210px);
+  max-height: 110px;
+  object-fit: contain;
+  border: 1px solid rgba(238,216,167,.45);
+  background: rgba(255,255,255,.9);
+  padding: 7px;
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,.45));
+}
+
+.mock-file {
+  display: inline-block;
+  max-width: 90%;
+  padding: 5px 8px;
+  border: 1px solid rgba(211,173,97,.42);
+  background: rgba(16,12,7,.74);
+  color: #e4d5b8 !important;
+  overflow-wrap: anywhere;
+}
+
+.artwork-upload {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 11px;
+  cursor: pointer;
+}
+
+.artwork-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.artwork-upload span {
+  display: inline-grid;
+  place-items: center;
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid #64553d;
+  background: #17140f;
+  color: #e0d4be;
+  font-size: .72rem;
+  font-weight: 750;
+}
+
+.artwork-upload:hover span {
+  border-color: var(--gold);
+  background: #1d1810;
+}
+
+.artwork-file-card {
+  display: grid;
+  grid-template-columns: 62px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 9px;
+  border: 1px solid #3b352a;
+  background: #0f0f0d;
+}
+
+.artwork-file-card img,
+.artwork-pdf {
+  width: 62px;
+  height: 52px;
+  object-fit: contain;
+  border: 1px solid #302c24;
+  background: #fff;
+}
+
+.artwork-pdf {
+  display: grid;
+  place-items: center;
+  background: #221611;
+  color: #d9a477;
+  font-weight: 900;
+  font-size: .72rem;
+}
+
+.artwork-file-card > div:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.artwork-file-card strong {
+  color: #e0d8ca;
+  font-size: .72rem;
+  overflow-wrap: anywhere;
+}
+
+.artwork-file-card small {
+  color: #81796c;
+  font-size: .62rem;
+}
+
+.artwork-file-card button {
+  min-height: 34px;
+  border: 1px solid #443b30;
+  background: #15120f;
+  color: #c8bcaa;
+  padding: 0 9px;
+  cursor: pointer;
+  font-size: .67rem;
+}
+
+.request-acknowledgement {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 15px;
+  border-top: 1px solid #302b22;
+  background: #12100d;
+  color: #b7ae9f;
+  font-size: .7rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.request-acknowledgement input {
+  width: 17px;
+  height: 17px;
+  margin: 1px 0 0;
+  accent-color: var(--gold);
+}
+
+@media (max-width: 620px) {
+  .tooling-concept {
+    inset: 13% 8% 14%;
+  }
+
+  .mock-artwork {
+    max-width: 55%;
+    max-height: 90px;
+  }
+
+  .artwork-file-card {
+    grid-template-columns: 54px minmax(0,1fr);
+  }
+
+  .artwork-file-card img,
+  .artwork-pdf {
+    width: 54px;
+    height: 48px;
+  }
+
+  .artwork-file-card button {
+    grid-column: 1 / -1;
+  }
+}
