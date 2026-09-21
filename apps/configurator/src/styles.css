@@ -1993,3 +1993,27 @@ input:focus-visible {
     grid-column: 1 / -1;
   }
 }
+
+
+/* Variable-length product family rail */
+.family-rail {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(145px, 1fr);
+}
+
+@media (max-width: 1250px) {
+  .family-rail {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(145px, 180px);
+  }
+}
+
+@media (max-width: 620px) {
+  .family-rail {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 142px;
+  }
+}
