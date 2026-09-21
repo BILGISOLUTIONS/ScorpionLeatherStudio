@@ -42,7 +42,7 @@ test('multi-product studio builds and captures a customized order request', asyn
     mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=', 'base64'),
   })
-  await expect(page.getByText('crew-logo.png')).toBeVisible()
+  await expect(page.getByText('crew-logo.png', { exact: true })).toBeVisible()
 
   await page.getByRole('spinbutton', { name: 'Quantity' }).fill('2')
 
