@@ -56,6 +56,7 @@ describe('order engine', () => {
         sku: 'SC-LRH-BLK-XL-002',
         variantTitle: 'X-Large',
         basePriceMinor: 35000,
+        listedInventoryQuantity: 4,
         priceStatus: 'catalog',
       },
     })
@@ -63,6 +64,8 @@ describe('order engine', () => {
     expect(request.buildId).toBe(createStudioBuildId(build))
     expect(request.commerce.sku).toBe('SC-LRH-BLK-XL-002')
     expect(request.pricing.personalizationRequiresQuote).toBe(true)
+    expect(request.pricing.baseSubtotalMinor).toBe(70000)
+    expect(request.commerce.listedInventoryQuantity).toBe(4)
     expect(request.requestId).toMatch(/^SC-REQ-/u)
   })
 })
