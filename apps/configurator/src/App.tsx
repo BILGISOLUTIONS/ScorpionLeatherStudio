@@ -567,6 +567,10 @@ function OrderCapture({
   const [website, setWebsite] = useState('')
   const [acknowledged, setAcknowledged] = useState(false)
 
+  useEffect(() => {
+    setAcknowledged(false)
+  }, [request?.requestId])
+
   const prepareRequest = () => {
     try {
       const sourceUrl = buildShareUrl(build)
@@ -578,6 +582,7 @@ function OrderCapture({
         commerce: {
           productTitle: family.title,
           referenceTitle: reference.title,
+          referenceImageUrl: reference.image,
           shopifyProductId: reference.shopifyProductId,
           merchandiseId: variant.id,
           sku: variant.sku,
@@ -660,11 +665,13 @@ function OrderCapture({
 
   const printPacket = () => {
     if (!request) return
-    const popup = window.open('', '_blank', 'noopener,noreferrer')
+    const popup = window.open('', '_blank')
     if (!popup) {
       setStatus('The browser blocked the print packet. Allow popups for this site and try again.')
       return
     }
+
+    try { popup.opener = null } catch { /* best-effort opener isolation */ }
 
     const escape = (value: string) => value
       .replaceAll('&', '&amp;')
@@ -681,6 +688,7 @@ function OrderCapture({
     </style></head><body>
       <h1>Scorpion Western Wear — Custom Order Packet</h1>
       <small>${escape(request.requestId)} · ${escape(request.buildId)}</small>
+      ${request.commerce.referenceImageUrl ? `<img src="${escape(request.commerce.referenceImageUrl)}" alt="Photographed Scorpion product reference">` : ''}
       <div class="meta">
         <div><strong>Product</strong><br>${escape(request.commerce.referenceTitle)}</div>
         <div><strong>SKU / Variant</strong><br>${escape(request.commerce.sku)} · ${escape(request.commerce.variantTitle)}</div>
