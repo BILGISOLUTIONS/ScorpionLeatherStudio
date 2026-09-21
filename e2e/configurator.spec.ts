@@ -71,12 +71,13 @@ test('multi-product studio builds and captures a customized order request', asyn
   let deliveredArtworkName = ''
   await page.route('**/api/order-requests', async (route) => {
     const body = JSON.parse(route.request().postData() ?? '{}') as {
-      request?: { requestId?: string; commerce?: { sku?: string } }
+      request?: { requestId?: string; commerce?: { sku?: string; referenceImageUrl?: string } }
       artwork?: { name?: string; type?: string; dataUrl?: string }
     }
     deliveredRequestId = body.request?.requestId ?? ''
     deliveredArtworkName = body.artwork?.name ?? ''
     expect(body.request?.commerce?.sku).toBe('SC-LRH-BLK-XL-002')
+    expect(body.request?.commerce?.referenceImageUrl).toContain('cdn.shopify.com')
     expect(body.artwork?.type).toBe('image/png')
     expect(body.artwork?.dataUrl).toContain('data:image/png;base64,')
     await route.fulfill({
