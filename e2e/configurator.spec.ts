@@ -45,6 +45,7 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByText('crew-logo.png', { exact: true })).toBeVisible()
 
   await page.getByRole('spinbutton', { name: 'Quantity' }).fill('2')
+  await expect(page.getByTestId('base-price')).toHaveText('$700.00')
 
   await expect(page.getByText('ZAN CREW').first()).toBeVisible()
   await expect(page.getByText('Western floral').last()).toBeVisible()
@@ -71,13 +72,15 @@ test('multi-product studio builds and captures a customized order request', asyn
   let deliveredArtworkName = ''
   await page.route('**/api/order-requests', async (route) => {
     const body = JSON.parse(route.request().postData() ?? '{}') as {
-      request?: { requestId?: string; commerce?: { sku?: string; referenceImageUrl?: string } }
+      request?: { requestId?: string; commerce?: { sku?: string; referenceImageUrl?: string; listedInventoryQuantity?: number }; pricing?: { baseSubtotalMinor?: number } }
       artwork?: { name?: string; type?: string; dataUrl?: string }
     }
     deliveredRequestId = body.request?.requestId ?? ''
     deliveredArtworkName = body.artwork?.name ?? ''
     expect(body.request?.commerce?.sku).toBe('SC-LRH-BLK-XL-002')
     expect(body.request?.commerce?.referenceImageUrl).toContain('cdn.shopify.com')
+    expect(body.request?.commerce?.listedInventoryQuantity).toBe(4)
+    expect(body.request?.pricing?.baseSubtotalMinor).toBe(70000)
     expect(body.artwork?.type).toBe('image/png')
     expect(body.artwork?.dataUrl).toContain('data:image/png;base64,')
     await route.fulfill({
