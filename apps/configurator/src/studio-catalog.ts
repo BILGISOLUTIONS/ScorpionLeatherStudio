@@ -6,6 +6,8 @@ export type StudioFamilyKind =
   | 'work-harness'
   | 'radio-harness'
   | 'carpenter-pouch'
+  | 'thigh-protector'
+  | 'cooler-strap'
 
 export interface StudioVariant {
   id: string
@@ -320,6 +322,64 @@ export const studioFamilies: StudioProductFamily[] = [
         basePriceMinor: 5500,
         variants: [
           { id: 'gid://shopify/ProductVariant/52616020328728', title: 'Default', sku: 'SC-CTP-WHT-001', priceMinor: 5500, inventoryQuantity: 2 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'thigh-protector',
+    title: 'Leather Thigh Protector',
+    shortTitle: 'Thigh Protector',
+    description: 'Start from Scorpion’s stocked brown leather thigh protector and submit text, tooling, logo, or construction-change requests for shop review.',
+    supports3D: false,
+    personalization: {
+      tooling: true,
+      text: true,
+      artwork: true,
+      placementOptions: ['Main leather panel', 'Upper strap area', 'Lower panel', 'Shop recommendation'],
+    },
+    references: [
+      {
+        id: 'thigh-brown',
+        shopifyProductId: 'gid://shopify/Product/10403648405784',
+        title: 'Leather Thigh Protector - Brown',
+        handle: 'leather-thigh-protector-brown',
+        productType: 'Leather Thigh Protector',
+        image: 'https://cdn.shopify.com/s/files/1/0985/0345/9096/files/scorpion-leather-thigh-protector-brown.png?v=1788596933',
+        imageAlt: 'Brown Scorpion leather thigh protector with buckle strap and contrast stitching',
+        priceStatus: 'catalog',
+        basePriceMinor: 4599,
+        variants: [
+          { id: 'gid://shopify/ProductVariant/52615992377624', title: 'Default', sku: 'SC-THIGH-BRN-001', priceMinor: 4599, inventoryQuantity: 6 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'cooler-strap',
+    title: 'Cow Leather Cooler Strap',
+    shortTitle: 'Cooler Strap',
+    description: 'Start from Scorpion’s brown cow-leather Engel-style cooler strap and request lettering, tooling, logo treatment, or other leatherwork changes for review.',
+    supports3D: false,
+    personalization: {
+      tooling: true,
+      text: true,
+      artwork: true,
+      placementOptions: ['Center strap', 'Near buckle end', 'Shoulder section', 'Shop recommendation'],
+    },
+    references: [
+      {
+        id: 'cooler-strap-brown',
+        shopifyProductId: 'gid://shopify/Product/10403654140184',
+        title: 'Cow Leather Engel Cooler Strap - Brown',
+        handle: 'cow-leather-engel-cooler-strap-brown',
+        productType: 'Cooler Strap',
+        image: 'https://cdn.shopify.com/s/files/1/0985/0345/9096/files/scorpion-brown-leather-cooler-strap.png?v=1788599287',
+        imageAlt: 'Brown Scorpion cow-leather cooler strap with stitched construction and buckle',
+        priceStatus: 'catalog',
+        basePriceMinor: 12500,
+        variants: [
+          { id: 'gid://shopify/ProductVariant/52616020427032', title: 'Default', sku: 'SC-CS-BRN-001', priceMinor: 12500, inventoryQuantity: 2 },
         ],
       },
     ],
