@@ -15,9 +15,15 @@ test('multi-product studio builds and captures a customized order request', asyn
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Custom Leather Studio' })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Customizable products' })).toBeVisible()
+  const productRail = page.getByRole('navigation', { name: 'Customizable products' })
+  await expect(productRail).toBeVisible()
+  await expect(productRail.getByRole('button')).toHaveCount(8)
   await expect(page.locator('canvas')).toBeVisible()
   await expect(page.getByText('3D contract validated')).toHaveText('3D contract validated')
+
+  await page.getByRole('button', { name: /Thigh Protector/i }).click()
+  await expect(page.getByRole('heading', { name: 'Leather Thigh Protector - Brown' })).toBeVisible()
+  await expect(page.getByTestId('base-price')).toHaveText('$45.99')
 
   await page.getByRole('button', { name: /Radio Harness/i }).click()
   await expect(page.getByText('Leather Radio Harness', { exact: true })).toBeVisible()
