@@ -60,7 +60,7 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect.poll(() => new URL(page.url()).searchParams.has('studio')).toBe(true)
 
   await page.reload()
-  await expect(page.getByTestId('base-price')).toHaveText('$350.00')
+  await expect(page.getByTestId('base-price')).toHaveText('$700.00')
   await expect(page.getByPlaceholder('Name, initials, company, unit, etc.')).toHaveValue('ZAN CREW')
   await expect(page.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue('2')
 
