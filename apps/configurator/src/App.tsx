@@ -56,6 +56,34 @@ const textStyleLabels: Record<TextStyle, string> = {
   'shop-choice': 'Shop choice',
 }
 
+interface ArtworkAttachment {
+  name: string
+  type: string
+  size: number
+  dataUrl: string
+}
+
+const ARTWORK_MAX_BYTES = 2 * 1024 * 1024
+const ARTWORK_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf'])
+
+async function readArtworkFile(file: File): Promise<ArtworkAttachment> {
+  if (!ARTWORK_TYPES.has(file.type)) {
+    throw new Error('Artwork must be PNG, JPG, WEBP, or PDF.')
+  }
+  if (file.size > ARTWORK_MAX_BYTES) {
+    throw new Error('Artwork files must be 2 MB or smaller.')
+  }
+
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Artwork could not be read.'))
+    reader.onerror = () => reject(new Error('Artwork could not be read.'))
+    reader.readAsDataURL(file)
+  })
+
+  return { name: file.name, type: file.type, size: file.size, dataUrl }
+}
+
 function defaultBuild(): StudioBuildDraft {
   const family = studioFamilies[0]
   const reference = family.references[1] ?? family.references[0]
@@ -180,10 +208,12 @@ function ReferenceStage({
   family,
   reference,
   build,
+  artwork,
 }: {
   family: StudioProductFamily
   reference: StudioReference
   build: StudioBuildDraft
+  artwork: ArtworkAttachment | null
 }) {
   const p = build.personalization
   const tooling = toolingLabels[p.toolingStyle]
@@ -191,9 +221,17 @@ function ReferenceStage({
   return (
     <div className="photo-stage" aria-label="Photographed product preview">
       <img src={reference.image} alt={reference.imageAlt} />
-      {(p.textEnabled && p.text.trim()) || p.toolingStyle !== 'none' ? (
+      {p.toolingStyle !== 'none' ? (
+        <div className={`tooling-concept tooling-${p.toolingStyle}`} aria-hidden="true" />
+      ) : null}
+      {(p.textEnabled && p.text.trim()) || p.toolingStyle !== 'none' || artwork ? (
         <div className="mock-personalization" aria-label="Personalization concept preview">
-          <span className="mock-label">CONCEPT PREVIEW · FINAL PLACEMENT CONFIRMED BY SHOP</span>
+          <span className="mock-label">CONCEPT PREVIEW · FINAL ART / PLACEMENT CONFIRMED BY SHOP</span>
+          {artwork && artwork.type.startsWith('image/') ? (
+            <img className="mock-artwork" src={artwork.dataUrl} alt="Uploaded artwork concept" />
+          ) : artwork ? (
+            <span className="mock-file">{artwork.name}</span>
+          ) : null}
           {p.textEnabled && p.text.trim() ? (
             <strong className={`mock-text mock-text-${p.textStyle}`}>{p.text}</strong>
           ) : null}
@@ -314,10 +352,16 @@ function VariantPicker({
 function PersonalizationEditor({
   family,
   build,
+  artwork,
+  onArtworkChange,
+  onStatus,
   onChange,
 }: {
   family: StudioProductFamily
   build: StudioBuildDraft
+  artwork: ArtworkAttachment | null
+  onArtworkChange: (next: ArtworkAttachment | null) => void
+  onStatus: (message: string) => void
   onChange: (next: StudioBuildDraft['personalization']) => void
 }) {
   const p = build.personalization
@@ -418,12 +462,47 @@ function PersonalizationEditor({
 
       {family.personalization.artwork ? (
         <div className="personalization-block">
+          <div className="field-heading">
+            <strong>Logo / artwork</strong>
+            <small>Attach a PNG, JPG, WEBP, or PDF up to 2 MB. The file is sent only with the order request and is not embedded in share links.</small>
+          </div>
+          <label className="artwork-upload">
+            <input
+              type="file"
+              accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf"
+              onChange={async (event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                try {
+                  const next = await readArtworkFile(file)
+                  onArtworkChange(next)
+                  onStatus(`Artwork attached: ${next.name}`)
+                } catch (error) {
+                  onArtworkChange(null)
+                  onStatus(error instanceof Error ? error.message : 'Artwork could not be attached.')
+                } finally {
+                  event.target.value = ''
+                }
+              }}
+            />
+            <span>{artwork ? 'Replace artwork' : 'Attach artwork'}</span>
+          </label>
+          {artwork ? (
+            <div className="artwork-file-card">
+              {artwork.type.startsWith('image/') ? <img src={artwork.dataUrl} alt="Uploaded artwork preview" /> : <div className="artwork-pdf">PDF</div>}
+              <div>
+                <strong>{artwork.name}</strong>
+                <small>{Math.max(1, Math.round(artwork.size / 1024))} KB · {artwork.type}</small>
+              </div>
+              <button type="button" onClick={() => onArtworkChange(null)}>Remove</button>
+            </div>
+          ) : null}
           <label className="field-label">
-            Logo / artwork request
+            Artwork instructions
             <textarea
               value={p.artworkNotes}
               onChange={(event) => update({ artworkNotes: event.target.value })}
-              placeholder="Describe a logo, emblem, patch, symbol, or artwork idea. File upload will be added with the order backend."
+              placeholder="Describe how the logo, emblem, patch, symbol, or artwork should be used."
               maxLength={700}
             />
           </label>
@@ -454,6 +533,7 @@ function OrderCapture({
   setCustomer,
   request,
   setRequest,
+  artwork,
   setStatus,
 }: {
   build: StudioBuildDraft
@@ -464,12 +544,14 @@ function OrderCapture({
   setCustomer: (next: CustomerDraft) => void
   request: StudioOrderRequest | null
   setRequest: (next: StudioOrderRequest | null) => void
+  artwork: ArtworkAttachment | null
   setStatus: (message: string) => void
 }) {
   const issues = validateOrderDraft(build, customer)
   const issueMap = Object.fromEntries(issues.map((issue) => [issue.path, issue.message]))
   const [deliveryState, setDeliveryState] = useState<'idle' | 'sending' | 'sent' | 'unavailable' | 'failed'>('idle')
   const [website, setWebsite] = useState('')
+  const [acknowledged, setAcknowledged] = useState(false)
 
   const prepareRequest = () => {
     try {
@@ -526,7 +608,7 @@ function OrderCapture({
       const response = await fetch('/api/order-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ request, website }),
+        body: JSON.stringify({ request, website, artwork }),
       })
       const payload = await response.json().catch(() => ({})) as { accepted?: boolean; code?: string; deliveryId?: string }
 
@@ -555,6 +637,47 @@ function OrderCapture({
     const subject = encodeURIComponent(`Custom Leather Order Request — ${request.requestId}`)
     const body = encodeURIComponent(summary)
     window.location.href = `mailto:orders@scorpionwesternwear.com?subject=${subject}&body=${body}`
+  }
+
+  const downloadJson = () => {
+    if (!request) return
+    downloadText(`${request.requestId}.json`, JSON.stringify({ request, artwork: artwork ? { name: artwork.name, type: artwork.type, size: artwork.size } : null }, null, 2))
+  }
+
+  const printPacket = () => {
+    if (!request) return
+    const popup = window.open('', '_blank', 'noopener,noreferrer')
+    if (!popup) {
+      setStatus('The browser blocked the print packet. Allow popups for this site and try again.')
+      return
+    }
+
+    const escape = (value: string) => value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+
+    popup.document.write(`<!doctype html><html><head><title>${escape(request.requestId)}</title><style>
+      body{font-family:Arial,sans-serif;margin:32px;color:#171717}h1{margin:0 0 6px}small{color:#666}
+      .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0}.meta div{border:1px solid #ccc;padding:10px}
+      pre{white-space:pre-wrap;border:1px solid #bbb;padding:16px;font-size:12px;line-height:1.45}
+      img{max-width:260px;max-height:180px;object-fit:contain;border:1px solid #ccc;padding:8px}
+      @media print{button{display:none}}
+    </style></head><body>
+      <h1>Scorpion Western Wear — Custom Order Packet</h1>
+      <small>${escape(request.requestId)} · ${escape(request.buildId)}</small>
+      <div class="meta">
+        <div><strong>Product</strong><br>${escape(request.commerce.referenceTitle)}</div>
+        <div><strong>SKU / Variant</strong><br>${escape(request.commerce.sku)} · ${escape(request.commerce.variantTitle)}</div>
+        <div><strong>Customer</strong><br>${escape(request.customer.name)}${request.customer.company ? ` · ${escape(request.customer.company)}` : ''}</div>
+        <div><strong>Contact</strong><br>${escape(request.customer.email || request.customer.phone)}</div>
+      </div>
+      ${artwork && artwork.type.startsWith('image/') ? `<h2>Attached Artwork</h2><img src="${artwork.dataUrl}" alt="Artwork">` : artwork ? `<p><strong>Artwork attachment:</strong> ${escape(artwork.name)}</p>` : ''}
+      <h2>Build Specification</h2><pre>${escape(summary)}</pre>
+      <button onclick="window.print()">Print packet</button>
+    </body></html>`)
+    popup.document.close()
   }
 
   return (
@@ -656,14 +779,20 @@ function OrderCapture({
             <span>{request.commerce.sku}</span>
           </div>
           <pre>{summary}</pre>
+          <label className="request-acknowledgement">
+            <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
+            <span>I understand this is a customization request. Scorpion must confirm design feasibility, availability, lead time, fit, and final price before production.</span>
+          </label>
           <div className="request-actions">
             <button type="button" onClick={copySummary}>Copy summary</button>
-            <button type="button" onClick={() => downloadText(`${request.requestId}.txt`, summary)}>Download build sheet</button>
+            <button type="button" onClick={() => downloadText(`${request.requestId}.txt`, summary)}>Text build sheet</button>
+            <button type="button" onClick={downloadJson}>JSON packet</button>
+            <button type="button" onClick={printPacket}>Print packet</button>
             <button
               type="button"
               className="request-send"
               onClick={sendRequest}
-              disabled={deliveryState === 'sending' || deliveryState === 'sent'}
+              disabled={!acknowledged || deliveryState === 'sending' || deliveryState === 'sent'}
             >
               {deliveryState === 'sending' ? 'Sending…' : deliveryState === 'sent' ? 'Sent to Scorpion' : 'Send to Scorpion'}
             </button>
@@ -679,6 +808,7 @@ export function App() {
   const [build, setBuild] = useState<StudioBuildDraft>(loadInitialBuild)
   const [customer, setCustomer] = useState<CustomerDraft>(loadCustomer)
   const [request, setRequest] = useState<StudioOrderRequest | null>(null)
+  const [artwork, setArtwork] = useState<ArtworkAttachment | null>(null)
   const [status, setStatus] = useState('')
   const [visorOpen, setVisorOpen] = useState(false)
   const [autoRotate, setAutoRotate] = useState(false)
@@ -725,6 +855,7 @@ export function App() {
     setCameraPreset(sampleProduct.asset.defaultCameraPreset)
     setAutoRotate(false)
     setVisorOpen(false)
+    setArtwork(null)
     setStatus('')
   }
 
@@ -753,6 +884,7 @@ export function App() {
     setBuild(next)
     setCustomer(defaultCustomer())
     setRequest(null)
+    setArtwork(null)
     setAutoRotate(false)
     setVisorOpen(false)
     setCameraPreset(sampleProduct.asset.defaultCameraPreset)
@@ -774,7 +906,7 @@ export function App() {
           </p>
         </div>
         <div className="header-build">
-          <div className="prototype-badge">ORDER STUDIO · V0.5</div>
+          <div className="prototype-badge">ORDER STUDIO · V0.6</div>
           <div className="configuration-id">
             <span>BUILD</span>
             <strong>{createStudioBuildId(build)}</strong>
@@ -830,10 +962,10 @@ export function App() {
               </div>
             </div>
           ) : (
-            <ReferenceStage family={family} reference={reference} build={build} />
+            <ReferenceStage family={family} reference={reference} build={build} artwork={artwork} />
           )}
 
-          {family.supports3D ? <ReferenceStage family={family} reference={reference} build={build} /> : null}
+          {family.supports3D ? <ReferenceStage family={family} reference={reference} build={build} artwork={artwork} /> : null}
 
           <section className="viewer-build-card">
             <div>
@@ -876,6 +1008,9 @@ export function App() {
           <PersonalizationEditor
             family={family}
             build={build}
+            artwork={artwork}
+            onArtworkChange={setArtwork}
+            onStatus={setStatus}
             onChange={(personalization) => setBuild((current) => ({ ...current, personalization }))}
           />
 
@@ -952,6 +1087,7 @@ export function App() {
         setCustomer={setCustomer}
         request={request}
         setRequest={setRequest}
+        artwork={artwork}
         setStatus={setStatus}
       />
     </main>
