@@ -1,0 +1,51 @@
+{% comment %}
+  Usage:
+    {% render 'scorpion-customize-button', product: product %}
+
+  Optional:
+    {% render 'scorpion-customize-button',
+      product: product,
+      label: 'Build yours',
+      studio_page: '/pages/custom-leather-studio'
+    %}
+{% endcomment %}
+
+{% assign sls_label = label | default: 'Customize this in Leather Studio' %}
+{% assign sls_page = studio_page | default: '/pages/custom-leather-studio' %}
+
+{% if product != blank %}
+  <a
+    class="scorpion-customize-button"
+    href="{{ sls_page }}?product={{ product.handle | url_encode }}"
+    aria-label="{{ sls_label | escape }} — {{ product.title | escape }}"
+  >
+    {{ sls_label }}
+  </a>
+{% endif %}
+
+<style>
+  .scorpion-customize-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 20px;
+    border: 1px solid #b8924c;
+    background: #15120d;
+    color: #eadcbc;
+    text-decoration: none;
+    font-weight: 750;
+    letter-spacing: .02em;
+    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+
+  .scorpion-customize-button:hover {
+    background: #211a10;
+    border-color: #d3ad61;
+    color: #fff1d1;
+  }
+
+  .scorpion-customize-button:active {
+    transform: translateY(1px);
+  }
+</style>
