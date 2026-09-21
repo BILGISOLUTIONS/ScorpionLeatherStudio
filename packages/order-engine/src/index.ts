@@ -41,6 +41,7 @@ export interface CustomerDraft {
 export interface CommerceResolution {
   productTitle: string
   referenceTitle: string
+  referenceImageUrl?: string
   shopifyProductId: string
   merchandiseId: string
   sku: string
@@ -230,6 +231,7 @@ export function formatOrderSummary(request: StudioOrderRequest): string {
     '',
     `Product: ${request.commerce.productTitle}`,
     `Starting build: ${request.commerce.referenceTitle}`,
+    request.commerce.referenceImageUrl ? `Product reference image: ${request.commerce.referenceImageUrl}` : '',
     `Variant: ${request.commerce.variantTitle}`,
     `SKU: ${request.commerce.sku}`,
     `Quantity: ${request.build.quantity}`,
