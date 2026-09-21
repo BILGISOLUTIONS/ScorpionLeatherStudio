@@ -355,7 +355,12 @@ function VariantPicker({
             aria-pressed={selectedId === variant.id}
           >
             <strong>{variant.title}</strong>
-            <small>{variant.sku}</small>
+            <small>
+              {variant.sku}
+              {reference.priceStatus === 'catalog' && variant.inventoryQuantity !== null
+                ? ` · ${variant.inventoryQuantity} listed`
+                : ''}
+            </small>
           </button>
         ))}
       </div>
@@ -588,6 +593,7 @@ function OrderCapture({
           sku: variant.sku,
           variantTitle: variant.title,
           basePriceMinor: variant.priceMinor,
+          listedInventoryQuantity: variant.inventoryQuantity,
           priceStatus: reference.priceStatus,
         },
       })
@@ -1087,19 +1093,24 @@ export function App() {
 
           <section className="studio-summary" aria-label="Build summary">
             <div className="summary-price">
-              <span>{reference.priceStatus === 'quote' ? 'Base product' : 'Catalog base'}</span>
+              <span>{reference.priceStatus === 'quote' ? 'Base product' : build.quantity > 1 ? 'Catalog base subtotal' : 'Catalog base'}</span>
               <strong data-testid="base-price">
-                {reference.priceStatus === 'quote' ? 'QUOTE' : formatMoney(variant.priceMinor)}
+                {reference.priceStatus === 'quote' ? 'QUOTE' : formatMoney(variant.priceMinor * build.quantity)}
               </strong>
             </div>
             <div className="summary-notice">
               {reference.priceStatus === 'quote'
                 ? 'This Shopify record currently carries a development/test price. The customer-facing studio does not present it as retail pricing.'
-                : 'Current catalog base price shown. Any custom tooling, text, artwork, material changes, or shop modifications require a separate quote.'}
+                : build.quantity > (variant.inventoryQuantity ?? Number.POSITIVE_INFINITY)
+                  ? `Requested quantity exceeds the currently listed inventory of ${variant.inventoryQuantity}. Scorpion must confirm availability before accepting the order.`
+                  : 'Current catalog base subtotal shown. Any custom tooling, text, artwork, material changes, or shop modifications require a separate quote.'}
             </div>
             <div className="summary-spec">
               <div><span>SKU</span><strong>{variant.sku}</strong></div>
               <div><span>Qty</span><strong>{build.quantity}</strong></div>
+              {reference.priceStatus === 'catalog' && variant.inventoryQuantity !== null ? (
+                <div><span>Listed stock</span><strong>{variant.inventoryQuantity}</strong></div>
+              ) : null}
               <div><span>Tooling</span><strong>{toolingLabels[build.personalization.toolingStyle]}</strong></div>
               <div><span>Text</span><strong>{build.personalization.textEnabled ? build.personalization.text || 'Pending' : 'None'}</strong></div>
               <div><span>Placement</span><strong>{build.personalization.placement}</strong></div>
