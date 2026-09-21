@@ -3,10 +3,21 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import nodemailer from 'nodemailer'
 import { formatOrderSummary, type StudioOrderRequest } from '@sls/order-engine'
 
+interface ArtworkAttachmentInput {
+  name: string
+  type: string
+  size: number
+  dataUrl: string
+}
+
 interface SubmissionEnvelope {
   request?: StudioOrderRequest
   website?: string
+  artwork?: ArtworkAttachmentInput | null
 }
+
+const ARTWORK_MAX_BYTES = 2 * 1024 * 1024
+const ARTWORK_ALLOWED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf'])
 
 function stringValue(value: unknown): string {
   return typeof value === 'string' ? value : ''
@@ -51,6 +62,39 @@ function allowedOrigin(req: VercelRequest): boolean {
   } catch {
     return false
   }
+}
+
+function validateArtwork(artwork: ArtworkAttachmentInput | null | undefined): string[] {
+  if (!artwork) return []
+
+  const issues: string[] = []
+  if (!ARTWORK_ALLOWED_TYPES.has(stringValue(artwork.type))) issues.push('Unsupported artwork file type.')
+  if (!Number.isInteger(artwork.size) || artwork.size < 1 || artwork.size > ARTWORK_MAX_BYTES) {
+    issues.push('Artwork must be 2 MB or smaller.')
+  }
+  if (!stringValue(artwork.name).trim() || stringValue(artwork.name).length > 180) {
+    issues.push('Invalid artwork filename.')
+  }
+  if (!stringValue(artwork.dataUrl).startsWith(`data:${artwork.type};base64,`)) {
+    issues.push('Invalid artwork encoding.')
+  }
+  return issues
+}
+
+function sanitizeFilename(name: string): string {
+  const safe = name.replace(/[^a-zA-Z0-9._ -]/gu, '_').replace(/\s+/gu, ' ').trim()
+  return safe.slice(0, 140) || 'artwork'
+}
+
+function decodeArtwork(artwork: ArtworkAttachmentInput | null | undefined): Buffer | null {
+  if (!artwork) return null
+  const marker = ';base64,'
+  const index = artwork.dataUrl.indexOf(marker)
+  if (index < 0) return null
+
+  const buffer = Buffer.from(artwork.dataUrl.slice(index + marker.length), 'base64')
+  if (buffer.length < 1 || buffer.length > ARTWORK_MAX_BYTES) return null
+  return buffer
 }
 
 function validateRequest(request: StudioOrderRequest): string[] {
@@ -114,7 +158,7 @@ function requiredSmtpConfig() {
   }
 }
 
-function renderShopHtml(request: StudioOrderRequest, summary: string): string {
+function renderShopHtml(request: StudioOrderRequest, summary: string, artwork?: ArtworkAttachmentInput | null): string {
   const p = request.build.personalization
   return `
     <div style="font-family:Arial,sans-serif;background:#111;color:#eee;padding:24px">
@@ -131,6 +175,7 @@ function renderShopHtml(request: StudioOrderRequest, summary: string): string {
           <tr><td style="padding:7px;border-bottom:1px solid #333;color:#aaa">Text</td><td style="padding:7px;border-bottom:1px solid #333;text-align:right">${escapeHtml(p.textEnabled ? p.text : 'None')}</td></tr>
           <tr><td style="padding:7px;border-bottom:1px solid #333;color:#aaa">Placement</td><td style="padding:7px;border-bottom:1px solid #333;text-align:right">${escapeHtml(p.placement)}</td></tr>
         </table>
+        ${artwork ? `<p style="margin:18px 0 0;color:#d7bd82"><strong>Artwork attached:</strong> ${escapeHtml(artwork.name)} · ${Math.max(1, Math.round(artwork.size / 1024))} KB</p>` : ''}
         <pre style="white-space:pre-wrap;background:#0d0d0c;border:1px solid #333;padding:14px;color:#ccc;font-size:12px;line-height:1.5;margin-top:18px">${escapeHtml(summary)}</pre>
       </div>
     </div>
@@ -191,12 +236,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  if (JSON.stringify(envelope).length > 50_000) {
+  if (JSON.stringify(envelope).length > 3_250_000) {
     res.status(413).json({ accepted: false, code: 'PAYLOAD_TOO_LARGE' })
     return
   }
 
-  const issues = validateRequest(request)
+  const issues = [...validateRequest(request), ...validateArtwork(envelope.artwork)]
   if (issues.length) {
     res.status(422).json({ accepted: false, code: 'VALIDATION_FAILED', issues })
     return
@@ -212,6 +257,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const from = (process.env.SMTP_FROM ?? smtp.user).trim()
   const summary = formatOrderSummary(request)
   const deliveryId = randomUUID()
+  const artworkBuffer = decodeArtwork(envelope.artwork)
+
+  if (envelope.artwork && !artworkBuffer) {
+    res.status(422).json({ accepted: false, code: 'INVALID_ARTWORK' })
+    return
+  }
 
   try {
     const transport = nodemailer.createTransport({
@@ -227,7 +278,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       replyTo: request.customer.email || undefined,
       subject: `Custom Leather Request ${request.requestId} · ${request.commerce.sku}`,
       text: summary,
-      html: renderShopHtml(request, summary),
+      html: renderShopHtml(request, summary, envelope.artwork),
+      attachments: envelope.artwork && artworkBuffer ? [{
+        filename: sanitizeFilename(envelope.artwork.name),
+        content: artworkBuffer,
+        contentType: envelope.artwork.type,
+      }] : undefined,
       headers: {
         'X-Scorpion-Request-ID': request.requestId,
         'X-Scorpion-Build-ID': request.buildId,
@@ -257,7 +313,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
-    res.status(202).json({ accepted: true, requestId: request.requestId, deliveryId })
+    res.status(202).json({
+      accepted: true,
+      requestId: request.requestId,
+      deliveryId,
+      artworkAttached: Boolean(envelope.artwork && artworkBuffer),
+    })
   } catch (error) {
     console.error('Scorpion order delivery failed', {
       requestId: request.requestId,
