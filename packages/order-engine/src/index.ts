@@ -47,6 +47,7 @@ export interface CommerceResolution {
   sku: string
   variantTitle: string
   basePriceMinor: number
+  listedInventoryQuantity?: number | null
   priceStatus: 'catalog' | 'quote'
 }
 
@@ -62,6 +63,7 @@ export interface StudioOrderRequest {
   pricing: {
     currency: 'USD'
     basePriceMinor: number
+    baseSubtotalMinor: number
     basePriceStatus: 'catalog' | 'quote'
     personalizationRequiresQuote: boolean
   }
@@ -209,6 +211,7 @@ export function createOrderRequest(args: {
     pricing: {
       currency: 'USD',
       basePriceMinor: args.commerce.basePriceMinor,
+      baseSubtotalMinor: args.commerce.basePriceMinor * args.build.quantity,
       basePriceStatus: args.commerce.priceStatus,
       personalizationRequiresQuote: true,
     },
@@ -235,6 +238,12 @@ export function formatOrderSummary(request: StudioOrderRequest): string {
     `Variant: ${request.commerce.variantTitle}`,
     `SKU: ${request.commerce.sku}`,
     `Quantity: ${request.build.quantity}`,
+    request.commerce.listedInventoryQuantity === null || request.commerce.listedInventoryQuantity === undefined
+      ? ''
+      : `Listed inventory at configuration: ${request.commerce.listedInventoryQuantity}`,
+    request.commerce.priceStatus === 'catalog'
+      ? `Catalog base: ${(request.pricing.basePriceMinor / 100).toFixed(2)} each · ${(request.pricing.baseSubtotalMinor / 100).toFixed(2)} base subtotal`
+      : 'Base product pricing: Quote required',
     '',
     `Tooling request: ${p.toolingStyle}`,
     p.toolingNotes ? `Tooling notes: ${p.toolingNotes}` : '',
