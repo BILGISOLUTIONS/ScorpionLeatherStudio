@@ -117,3 +117,15 @@ test('multi-product studio builds and captures a customized order request', asyn
 
   expect(consoleErrors, `Browser console errors: ${consoleErrors.join('\n')}`).toEqual([])
 })
+
+
+test('Shopify embed deep link opens the requested real catalog product', async ({ page }) => {
+  await page.goto('/?embed=1&product=cowhide-radio-harness-black&variant=SC-LRH-BLK-XL-002')
+
+  await expect(page.getByRole('heading', { name: 'Custom Leather Studio' })).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Cowhide Radio Harness - Black' }).first()).toBeVisible()
+  await expect(page.getByTestId('base-price')).toHaveText('$350.00')
+  await expect(page.getByText('SC-LRH-BLK-XL-002').first()).toBeVisible()
+  await expect(page.locator('main')).toHaveClass(/is-embedded/)
+  await expect(page.locator('canvas')).toHaveCount(0)
+})
