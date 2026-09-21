@@ -22,7 +22,7 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByText('3D contract validated')).toHaveText('3D contract validated')
 
   await page.getByRole('button', { name: /Thigh Protector/i }).click()
-  await expect(page.getByRole('heading', { name: 'Leather Thigh Protector - Brown' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Leather Thigh Protector - Brown' }).first()).toBeVisible()
   await expect(page.getByTestId('base-price')).toHaveText('$45.99')
 
   await page.getByRole('button', { name: /Radio Harness/i }).click()
