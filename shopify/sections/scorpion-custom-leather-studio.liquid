@@ -1,0 +1,190 @@
+{% comment %}
+  Scorpion Western Wear — Custom Leather Studio embed section
+  The configurator remains deployed as a dedicated web app while this section
+  makes it behave like a native Shopify page.
+{% endcomment %}
+
+{% assign section_dom_id = 'ScorpionLeatherStudio-' | append: section.id %}
+
+<section
+  id="{{ section_dom_id }}"
+  class="scorpion-leather-studio-section"
+  style="
+    --sls-max-width: {{ section.settings.max_width }}px;
+    --sls-min-height: {{ section.settings.min_height }}px;
+    --sls-background: {{ section.settings.background }};
+  "
+>
+  <div class="scorpion-leather-studio-section__inner">
+    {% if section.settings.studio_url != blank %}
+      <div class="scorpion-leather-studio-section__loading" data-sls-loading>
+        Loading Custom Leather Studio…
+      </div>
+      <iframe
+        data-sls-frame
+        data-src="{{ section.settings.studio_url | escape }}"
+        title="{{ section.settings.iframe_title | escape }}"
+        loading="lazy"
+        allow="clipboard-write"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+      ></iframe>
+    {% else %}
+      <div class="scorpion-leather-studio-section__setup">
+        <strong>Custom Leather Studio URL required</strong>
+        <p>Add the production Studio URL in this section's theme settings.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<style>
+  #{{ section_dom_id }} {
+    width: 100%;
+    background: var(--sls-background);
+  }
+
+  #{{ section_dom_id }} .scorpion-leather-studio-section__inner {
+    width: min(100%, var(--sls-max-width));
+    margin: 0 auto;
+    position: relative;
+  }
+
+  #{{ section_dom_id }} iframe {
+    display: block;
+    width: 100%;
+    min-height: var(--sls-min-height);
+    height: var(--sls-min-height);
+    border: 0;
+    background: #080808;
+    transition: height 180ms ease;
+  }
+
+  #{{ section_dom_id }} .scorpion-leather-studio-section__loading,
+  #{{ section_dom_id }} .scorpion-leather-studio-section__setup {
+    min-height: 160px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 6px;
+    padding: 24px;
+    text-align: center;
+    color: #d8d0bf;
+    background: #0d0d0c;
+    border: 1px solid #2e2a23;
+  }
+
+  #{{ section_dom_id }} .scorpion-leather-studio-section__setup p {
+    margin: 0;
+    opacity: .72;
+  }
+
+  #{{ section_dom_id }}.is-ready .scorpion-leather-studio-section__loading {
+    display: none;
+  }
+</style>
+
+<script>
+  (() => {
+    const section = document.getElementById({{ section_dom_id | json }});
+    if (!section || section.dataset.slsMounted === '1') return;
+    section.dataset.slsMounted = '1';
+
+    const frame = section.querySelector('[data-sls-frame]');
+    if (!frame) return;
+
+    const source = frame.dataset.src;
+    if (!source) return;
+
+    let studioUrl;
+    try {
+      studioUrl = new URL(source, window.location.origin);
+    } catch {
+      return;
+    }
+
+    studioUrl.searchParams.set('embed', '1');
+
+    const pageParams = new URLSearchParams(window.location.search);
+    ['studio', 'product', 'family', 'reference', 'variant'].forEach((key) => {
+      const value = pageParams.get(key);
+      if (value) studioUrl.searchParams.set(key, value);
+    });
+
+    frame.src = studioUrl.toString();
+    const studioOrigin = studioUrl.origin;
+
+    const onMessage = (event) => {
+      if (event.source !== frame.contentWindow) return;
+      if (event.origin !== studioOrigin) return;
+      if (!event.data || typeof event.data !== 'object') return;
+
+      if (event.data.type === 'scorpion-leather-studio:ready') {
+        section.classList.add('is-ready');
+      }
+
+      if (event.data.type === 'scorpion-leather-studio:resize') {
+        const requested = Number(event.data.height);
+        if (!Number.isFinite(requested)) return;
+
+        const min = {{ section.settings.min_height | json }};
+        const nextHeight = Math.max(min, Math.min(16000, Math.ceil(requested)));
+        frame.style.height = nextHeight + 'px';
+      }
+    };
+
+    window.addEventListener('message', onMessage);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Custom Leather Studio",
+  "tag": "section",
+  "class": "section-custom-leather-studio",
+  "settings": [
+    {
+      "type": "text",
+      "id": "studio_url",
+      "label": "Studio URL",
+      "info": "Use the stable production URL, ideally a Scorpion subdomain such as https://studio.scorpionwesternwear.com"
+    },
+    {
+      "type": "text",
+      "id": "iframe_title",
+      "label": "Accessibility title",
+      "default": "Scorpion Western Wear Custom Leather Studio"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "label": "Maximum width",
+      "min": 900,
+      "max": 1800,
+      "step": 50,
+      "unit": "px",
+      "default": 1500
+    },
+    {
+      "type": "range",
+      "id": "min_height",
+      "label": "Initial height",
+      "min": 600,
+      "max": 1800,
+      "step": 100,
+      "unit": "px",
+      "default": 1200
+    },
+    {
+      "type": "color",
+      "id": "background",
+      "label": "Background",
+      "default": "#080808"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Custom Leather Studio"
+    }
+  ]
+}
+{% endschema %}
