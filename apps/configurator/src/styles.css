@@ -2017,3 +2017,39 @@ input:focus-visible {
     grid-auto-columns: 142px;
   }
 }
+
+
+/* V0.7 — Shopify embedded presentation */
+.multi-studio.is-embedded {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 12px;
+}
+
+.is-embedded .studio-header {
+  display: none;
+}
+
+.is-embedded .family-rail {
+  margin-top: 0;
+}
+
+.is-embedded .order-capture {
+  margin-bottom: 0;
+}
+
+.is-embedded .viewer-panel {
+  top: 12px;
+}
+
+@media (max-width: 900px) {
+  .multi-studio.is-embedded {
+    padding: 8px;
+  }
+
+  .is-embedded .family-rail {
+    margin-inline: -8px;
+    padding-inline: 8px;
+  }
+}
