@@ -35,6 +35,15 @@ test('multi-product studio builds and captures a customized order request', asyn
   await page.getByPlaceholder('Name, initials, company, unit, etc.').fill('ZAN CREW')
   await page.getByRole('button', { name: 'Block', exact: true }).click()
   await page.getByLabel('Requested placement').selectOption({ label: 'Front chest panel' })
+
+  const artworkInput = page.locator('input[type="file"]')
+  await artworkInput.setInputFiles({
+    name: 'crew-logo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=', 'base64'),
+  })
+  await expect(page.getByText('crew-logo.png')).toBeVisible()
+
   await page.getByRole('spinbutton', { name: 'Quantity' }).fill('2')
 
   await expect(page.getByText('ZAN CREW').first()).toBeVisible()
@@ -59,21 +68,35 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(requestPanel.locator('pre')).toContainText('ZAN CREW')
   await expect(requestPanel.locator('pre')).toContainText('western-floral')
   let deliveredRequestId = ''
+  let deliveredArtworkName = ''
   await page.route('**/api/order-requests', async (route) => {
-    const body = JSON.parse(route.request().postData() ?? '{}') as { request?: { requestId?: string; commerce?: { sku?: string } } }
+    const body = JSON.parse(route.request().postData() ?? '{}') as {
+      request?: { requestId?: string; commerce?: { sku?: string } }
+      artwork?: { name?: string; type?: string; dataUrl?: string }
+    }
     deliveredRequestId = body.request?.requestId ?? ''
+    deliveredArtworkName = body.artwork?.name ?? ''
     expect(body.request?.commerce?.sku).toBe('SC-LRH-BLK-XL-002')
+    expect(body.artwork?.type).toBe('image/png')
+    expect(body.artwork?.dataUrl).toContain('data:image/png;base64,')
     await route.fulfill({
       status: 202,
       contentType: 'application/json',
-      body: JSON.stringify({ accepted: true, requestId: deliveredRequestId, deliveryId: 'test-delivery' }),
+      body: JSON.stringify({ accepted: true, requestId: deliveredRequestId, deliveryId: 'test-delivery', artworkAttached: true }),
     })
   })
 
-  await requestPanel.getByRole('button', { name: 'Send to Scorpion' }).click()
+  const sendButton = requestPanel.getByRole('button', { name: 'Send to Scorpion' })
+  await expect(sendButton).toBeDisabled()
+  await requestPanel.getByRole('checkbox', { name: /I understand this is a customization request/i }).check()
+  await expect(sendButton).toBeEnabled()
+  await sendButton.click()
   await expect(requestPanel.getByRole('button', { name: 'Sent to Scorpion' })).toBeVisible()
   await expect(page.getByRole('status')).toContainText('sent to Scorpion successfully')
   expect(deliveredRequestId).toMatch(/^SC-REQ-/u)
+  expect(deliveredArtworkName).toBe('crew-logo.png')
+  await expect(requestPanel.getByRole('button', { name: 'JSON packet' })).toBeVisible()
+  await expect(requestPanel.getByRole('button', { name: 'Print packet' })).toBeVisible()
   await expect(requestPanel.getByRole('button', { name: 'Email fallback' })).toBeVisible()
 
   const screenshotName = testInfo.project.name.includes('mobile') ? 'mobile.png' : 'desktop.png'
