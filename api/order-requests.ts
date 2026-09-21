@@ -123,6 +123,7 @@ function validateRequest(request: StudioOrderRequest): string[] {
     ['personalization.artworkNotes', request?.build?.personalization?.artworkNotes, 700],
     ['personalization.additionalNotes', request?.build?.personalization?.additionalNotes, 1000],
     ['sourceUrl', request?.sourceUrl, 3000],
+    ['commerce.referenceImageUrl', request?.commerce?.referenceImageUrl, 3000],
   ]
 
   for (const [field, value, max] of boundedFields) {
@@ -165,6 +166,7 @@ function renderShopHtml(request: StudioOrderRequest, summary: string, artwork?: 
       <div style="max-width:760px;margin:auto;background:#181714;border:1px solid #4b402d;padding:24px">
         <p style="margin:0 0 8px;color:#caa85f;font-size:12px;letter-spacing:1.5px">SCORPION WESTERN WEAR · CUSTOM LEATHER STUDIO</p>
         <h1 style="margin:0 0 18px;font-size:24px">New custom order request</h1>
+        ${request.commerce.referenceImageUrl ? `<img src="${escapeHtml(request.commerce.referenceImageUrl)}" alt="Scorpion product reference" style="display:block;max-width:320px;max-height:240px;object-fit:contain;background:#0d0d0c;border:1px solid #333;padding:8px;margin:0 0 18px">` : ''}
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <tr><td style="padding:7px;border-bottom:1px solid #333;color:#aaa">Request</td><td style="padding:7px;border-bottom:1px solid #333;text-align:right">${escapeHtml(request.requestId)}</td></tr>
           <tr><td style="padding:7px;border-bottom:1px solid #333;color:#aaa">Customer</td><td style="padding:7px;border-bottom:1px solid #333;text-align:right">${escapeHtml(request.customer.name)}</td></tr>
