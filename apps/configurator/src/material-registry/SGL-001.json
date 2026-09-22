@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "SGL-001",
+  "label": "Welding Lens Placeholder",
+  "kind": "glass",
+  "lifecycle": "reference-only",
+  "availability": "unverified",
+  "previewColor": "#111b16",
+  "provenance": {
+    "source": "synthetic-placeholder",
+    "notes": "Development-only lens material; final optical appearance must be matched to the real visor assembly."
+  },
+  "renderer": {
+    "roughness": 0.12,
+    "metalness": 0,
+    "opacity": 0.5,
+    "transmission": 0.32
+  }
+}
