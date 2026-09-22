@@ -414,3 +414,106 @@ test('Field Capture Assistant records a complete swatch session and exports mani
     fullPage: true,
   })
 })
+
+
+test('Material Processor generates local draft PBR maps without storefront runtime', async ({ page }, testInfo) => {
+  const scriptRequests: string[] = []
+  const consoleErrors: string[] = []
+
+  page.on('request', (request) => {
+    if (request.resourceType() === 'script') scriptRequests.push(request.url())
+  })
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+
+  await page.goto('/process.html')
+  await expect(page.getByRole('heading', { name: 'Material Processor' })).toBeVisible()
+
+  const captureManifest = {
+    schemaVersion: 1,
+    captureSessionId: 'SC-TEST-001',
+    client: 'Scorpion Western Wear',
+    materialId: 'SCL-TEST',
+    label: 'Test Leather',
+    frames: {
+      crossPolarized: { file: '01-cross.png' },
+      parallel: { file: '02-parallel.png' },
+      north: { file: '03-north.png' },
+      east: { file: '04-east.png' },
+      south: { file: '05-south.png' },
+      west: { file: '06-west.png' },
+    },
+  }
+
+  await page.getByLabel('Capture manifest file').setInputFiles({
+    name: 'SC-TEST-capture.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(captureManifest)),
+  })
+
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z9xkAAAAASUVORK5CYII=',
+    'base64',
+  )
+
+  const workingInputs = [
+    'Cross-polarized working image',
+    'Parallel / reflective working image',
+    'Directional north working image',
+    'Directional east working image',
+    'Directional south working image',
+    'Directional west working image',
+  ]
+
+  for (const label of workingInputs) {
+    await page.getByLabel(label).setInputFiles({
+      name: label.toLowerCase().replaceAll(/[^a-z]+/gu, '-') + '.png',
+      mimeType: 'image/png',
+      buffer: png,
+    })
+  }
+
+  const processButton = page.getByRole('button', { name: 'Generate draft PBR maps' })
+  await expect(processButton).toBeEnabled()
+  await processButton.click()
+
+  await expect(page.getByRole('status')).toContainText('Draft PBR maps generated', { timeout: 15_000 })
+  await expect(page.getByRole('img', { name: 'Base color preview' })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Roughness proxy preview' })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Normal draft preview' })).toBeVisible()
+
+  const [processingDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download processing manifest' }).click(),
+  ])
+  const processingPath = await processingDownload.path()
+  expect(processingPath).not.toBeNull()
+  const processing = JSON.parse(await fs.readFile(processingPath!, 'utf8')) as {
+    materialId: string
+    status: string
+    processor: { resolution: number; normal: { method: string }; roughness: { method: string } }
+    reviewRequired: string[]
+  }
+
+  expect(processing.materialId).toBe('SCL-TEST')
+  expect(processing.status).toBe('draft-pbr-review-required')
+  expect(processing.processor.resolution).toBe(1024)
+  expect(processing.processor.normal.method).toBe('four-direction-difference-normal')
+  expect(processing.processor.roughness.method).toBe('normalized-reflectance-proxy')
+  expect(processing.reviewRequired.length).toBeGreaterThan(3)
+
+  expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
+  expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
+  expect(consoleErrors, `Material Processor console errors: ${consoleErrors.join('\n')}`).toEqual([])
+
+  const screenshotName = testInfo.project.name.includes('mobile')
+    ? 'material-processor-mobile.png'
+    : 'material-processor-desktop.png'
+
+  await page.screenshot({
+    path: `playwright-output/screenshots/${screenshotName}`,
+    fullPage: true,
+  })
+})
