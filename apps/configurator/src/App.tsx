@@ -1040,7 +1040,7 @@ export function App() {
         build={build}
         family={family}
         reference={reference}
-        variant={variant}
+        variant={effectiveVariant}
         artwork={artwork}
         setStatus={setStatus}
       />
