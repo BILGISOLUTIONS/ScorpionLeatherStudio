@@ -113,7 +113,9 @@ async function pixelImageToPng(image: PixelImage): Promise<Blob> {
   const context = canvas.getContext('2d')
   if (!context) throw new Error('Canvas export is unavailable in this browser.')
 
-  context.putImageData(new ImageData(image.data, image.width, image.height), 0, 0)
+  const ownedPixels = new Uint8ClampedArray(image.data.length)
+  ownedPixels.set(image.data)
+  context.putImageData(new ImageData(ownedPixels, image.width, image.height), 0, 0)
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
@@ -253,7 +255,7 @@ function MaterialProcessor() {
         west: decoded.west!,
       }
 
-      const transfer = Object.values(frames).map((image) => image.data.buffer)
+      const transfer = Object.values(frames).map((image) => image.data.buffer as ArrayBuffer)
 
       worker.postMessage(
         {
