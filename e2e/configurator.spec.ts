@@ -141,18 +141,45 @@ test('multi-product studio builds and captures a customized order request', asyn
 })
 
 
-test('Shopify embed deep link opens the requested real catalog product without loading 3D', async ({ page }) => {
+test('Shopify embed deep link uses live commerce without loading 3D', async ({ page }) => {
   const scriptRequests: string[] = []
   page.on('request', (request) => {
     if (request.resourceType() === 'script') scriptRequests.push(request.url())
+  })
+
+  await page.route('**/api/catalog-product**', async (route) => {
+    const url = new URL(route.request().url())
+    expect(url.searchParams.get('handle')).toBe('cowhide-radio-harness-black')
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        source: 'shopify-storefront',
+        handle: 'cowhide-radio-harness-black',
+        fetchedAt: '2026-09-22T03:30:00.000Z',
+        variants: [
+          {
+            id: '52616019837208',
+            title: 'X-Large',
+            sku: 'SC-LRH-BLK-XL-002',
+            priceMinor: 36000,
+            available: true,
+          },
+        ],
+      }),
+    })
   })
 
   await page.goto('/?embed=1&product=cowhide-radio-harness-black&variant=SC-LRH-BLK-XL-002')
 
   await expect(page.getByRole('heading', { name: 'Custom Leather Studio' })).toBeHidden()
   await expect(page.getByRole('heading', { name: 'Cowhide Radio Harness - Black' }).first()).toBeVisible()
-  await expect(page.getByTestId('base-price')).toHaveText('$350.00')
+  await expect(page.getByTestId('base-price')).toHaveText('$360.00')
   await expect(page.getByText('SC-LRH-BLK-XL-002').first()).toBeVisible()
+  const buildSummary = page.getByRole('region', { name: 'Build summary' })
+  await expect(buildSummary.getByText('Live Shopify')).toBeVisible()
+  await expect(buildSummary.getByText('Available', { exact: true })).toBeVisible()
   await expect(page.locator('main')).toHaveClass(/is-embedded/)
   await expect(page.locator('canvas')).toHaveCount(0)
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
