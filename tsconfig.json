@@ -44,6 +44,9 @@
       ],
       "@sls/material-library": [
         "packages/material-library/src/index.ts"
+      ],
+      "@sls/material-processor": [
+        "packages/material-processor/src/index.ts"
       ]
     }
   },
