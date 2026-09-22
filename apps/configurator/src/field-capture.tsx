@@ -306,6 +306,7 @@ function FieldCaptureAssistant() {
           <p>Standardize leather/material capture at the shop so every swatch enters the same digital-material pipeline.</p>
         </div>
         <nav>
+          <a href="/process.html">Material Processor</a>
           <a href="/materials.html">Material Lab</a>
           <a href="/">Customer Studio</a>
         </nav>
