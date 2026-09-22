@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   createDefaultPersonalization,
   createOrderRequest,
@@ -294,14 +294,24 @@ function buildShareUrl(build: StudioBuildDraft): string {
   return url.toString()
 }
 
+const storefrontImageCache = new Map<string, string>()
+
 function storefrontImage(url: string, width: number): string {
+  const cacheKey = `${width}:${url}`
+  const cached = storefrontImageCache.get(cacheKey)
+  if (cached) return cached
+
+  let resolved = url
   try {
     const parsed = new URL(url)
     if (parsed.hostname === 'cdn.shopify.com') parsed.searchParams.set('width', String(width))
-    return parsed.toString()
+    resolved = parsed.toString()
   } catch {
-    return url
+    // Keep the original URL if it cannot be parsed.
   }
+
+  storefrontImageCache.set(cacheKey, resolved)
+  return resolved
 }
 
 function downloadText(filename: string, content: string) {
@@ -365,7 +375,7 @@ function ReferenceStage({
   )
 }
 
-function ProductFamilyRail({
+const ProductFamilyRail = memo(function ProductFamilyRail({
   selectedId,
   onSelect,
 }: {
@@ -390,9 +400,9 @@ function ProductFamilyRail({
       ))}
     </nav>
   )
-}
+})
 
-function ReferencePicker({
+const ReferencePicker = memo(function ReferencePicker({
   family,
   selectedId,
   onSelect,
@@ -426,9 +436,9 @@ function ReferencePicker({
       </div>
     </fieldset>
   )
-}
+})
 
-function VariantPicker({
+const VariantPicker = memo(function VariantPicker({
   reference,
   selectedId,
   onSelect,
@@ -470,7 +480,7 @@ function VariantPicker({
       </div>
     </fieldset>
   )
-}
+})
 
 function PersonalizationEditor({
   family,
@@ -1094,7 +1104,7 @@ export function App() {
     }
   }, [artwork])
 
-  const chooseFamily = (nextFamily: StudioProductFamily) => {
+  const chooseFamily = useCallback((nextFamily: StudioProductFamily) => {
     const nextReference = nextFamily.references[0]
     setBuild({
       schemaVersion: 1,
@@ -1108,16 +1118,24 @@ export function App() {
     })
     setArtwork(null)
     setStatus('')
-  }
+  }, [])
 
-  const chooseReference = (nextReference: StudioReference) => {
+  const chooseReference = useCallback((nextReference: StudioReference) => {
     setBuild((current) => ({
       ...current,
       referenceId: nextReference.id,
       variantId: nextReference.variants[0].id,
     }))
     setStatus('')
-  }
+  }, [])
+
+  const chooseVariant = useCallback((nextVariant: StudioVariant) => {
+    setBuild((current) => ({ ...current, variantId: nextVariant.id }))
+  }, [])
+
+  const changePersonalization = useCallback((personalization: StudioBuildDraft['personalization']) => {
+    setBuild((current) => ({ ...current, personalization }))
+  }, [])
 
   const shareBuild = async () => {
     const url = buildShareUrl(build)
@@ -1209,7 +1227,7 @@ export function App() {
           <VariantPicker
             reference={reference}
             selectedId={variant.id}
-            onSelect={(nextVariant) => setBuild((current) => ({ ...current, variantId: nextVariant.id }))}
+            onSelect={chooseVariant}
           />
 
           <PersonalizationEditor
@@ -1218,7 +1236,7 @@ export function App() {
             artwork={artwork}
             onArtworkChange={setArtwork}
             onStatus={setStatus}
-            onChange={(personalization) => setBuild((current) => ({ ...current, personalization }))}
+            onChange={changePersonalization}
           />
 
           <fieldset className="studio-section quantity-section">
