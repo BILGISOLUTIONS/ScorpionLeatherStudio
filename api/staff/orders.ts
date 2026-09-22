@@ -69,6 +69,8 @@ async function listOrders(req: VercelRequest, res: VercelResponse) {
           'shopify_draft_order_name',
           'shopify_draft_order_invoice_url',
           'shopify_draft_order_state',
+          'shopify_invoice_state',
+          'shopify_invoice_sent_at',
         ].join(','),
   )
   params.set('order', 'created_at.desc')
