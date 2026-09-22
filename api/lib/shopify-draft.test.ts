@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StudioOrderRequest } from '@sls/order-engine'
-import { createShopifyDraftOrder, isShopifyDraftOrderConfigured, sendShopifyDraftInvoice } from './shopify-draft'
+import { createShopifyDraftOrder, getShopifyDraftOrderState, isShopifyDraftOrderConfigured, sendShopifyDraftInvoice } from './shopify-draft'
 
 const request: StudioOrderRequest = {
   schemaVersion: 1,
@@ -156,6 +156,40 @@ describe('Shopify draft-order adapter', () => {
 
     await expect(sendShopifyDraftInvoice('123')).rejects.toThrow('INVALID_SHOPIFY_DRAFT_ORDER_ID')
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('reconciles a completed draft to the converted paid order', async () => {
+    process.env.SHOPIFY_STORE_DOMAIN = 'scorpion-test.myshopify.com'
+    process.env.SHOPIFY_ADMIN_ACCESS_TOKEN = 'test-token'
+
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: {
+        draftOrder: {
+          id: 'gid://shopify/DraftOrder/123',
+          name: '#D123',
+          invoiceUrl: 'https://example.myshopify.com/checkouts/test',
+          invoiceSentAt: '2026-09-22T04:30:00Z',
+          completedAt: '2026-09-22T05:00:00Z',
+          status: 'COMPLETED',
+          order: {
+            id: 'gid://shopify/Order/987',
+            name: '#1098',
+            displayFinancialStatus: 'PAID',
+            displayFulfillmentStatus: 'UNFULFILLED',
+          },
+        },
+      },
+    }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const state = await getShopifyDraftOrderState('gid://shopify/DraftOrder/123')
+    expect(state.status).toBe('COMPLETED')
+    expect(state.order?.displayFinancialStatus).toBe('PAID')
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const payload = JSON.parse(String(init.body))
+    expect(payload.query).toContain('query ScorpionDraftOrderState')
+    expect(payload.variables).toEqual({ id: 'gid://shopify/DraftOrder/123' })
   })
 
   it('surfaces Shopify user errors instead of returning false success', async () => {
