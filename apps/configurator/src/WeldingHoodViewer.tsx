@@ -2,7 +2,13 @@ import { memo, useMemo, useState } from 'react'
 import { createInitialConfiguration, setSelection } from '@sls/configurator-core'
 import { ThreeProductViewer } from '@sls/three-renderer'
 import type { ValidationIssue } from '@sls/product-schema'
-import { sampleManifest, sampleMaterials, sampleProduct } from './sample-product'
+import { createRendererMaterialMap } from '@sls/material-library'
+import { sampleManifest, sampleProduct } from './sample-product'
+import {
+  preferredMaterialTextureEdge,
+  scorpionMaterialById,
+  scorpionMaterialDefinitions,
+} from './scorpion-materials'
 
 const hoodReferenceMap: Record<string, string> = {
   'hood-dark-yellow': 'dark-textured-yellow-trim',
@@ -33,13 +39,25 @@ function WeldingHoodViewerComponent({ referenceId }: { referenceId: string }) {
   const [cameraPreset, setCameraPreset] = useState(sampleProduct.asset.defaultCameraPreset)
   const [assetIssues, setAssetIssues] = useState<ValidationIssue[]>([])
   const configuration = useMemo(() => resolveHoodConfiguration(referenceId), [referenceId])
+  const materials = useMemo(
+    () => createRendererMaterialMap(scorpionMaterialDefinitions, preferredMaterialTextureEdge()),
+    [],
+  )
+  const activeLeatherMaterial = useMemo(() => {
+    const selectedBuild = sampleProduct.optionGroups
+      .find((group) => group.id === 'catalogBuild')
+      ?.values.find((value) => value.id === configuration.selections.catalogBuild)
+    return selectedBuild?.visual?.materialVariant
+      ? scorpionMaterialById.get(selectedBuild.visual.materialVariant)
+      : undefined
+  }, [configuration.selections.catalogBuild])
 
   return (
     <div className="viewer-panel" aria-label="Interactive 3D product viewer">
       <ThreeProductViewer
         product={sampleProduct}
         manifest={sampleManifest}
-        materials={sampleMaterials}
+        materials={materials}
         selections={configuration.selections}
         animationStates={{ 'visor.open': visorOpen }}
         cameraPreset={cameraPreset}
@@ -78,6 +96,7 @@ function WeldingHoodViewerComponent({ referenceId }: { referenceId: string }) {
 
       <div className="viewer-caption">
         Development digital twin · photographed product is the visual authority
+        {activeLeatherMaterial ? ` · ${activeLeatherMaterial.lifecycle}` : ''}
       </div>
       <div className={`asset-status ${assetIssues.length ? 'has-issues' : ''}`}>
         {assetIssues.length
