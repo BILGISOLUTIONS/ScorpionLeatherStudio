@@ -524,3 +524,107 @@ test('Material Processor generates local draft PBR maps without storefront runti
     fullPage: true,
   })
 })
+
+
+test('Material QA renders processed maps and exports an explicit approval packet', async ({ page }, testInfo) => {
+  const scriptRequests: string[] = []
+  const consoleErrors: string[] = []
+
+  page.on('request', (request) => {
+    if (request.resourceType() === 'script') scriptRequests.push(request.url())
+  })
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+
+  await page.goto('/material-qa.html')
+  await expect(page.getByRole('heading', { name: 'Material QA' })).toBeVisible()
+
+  const processingManifest = {
+    schemaVersion: 1,
+    materialId: 'SCL-TEST',
+    label: 'Test Leather',
+    captureSessionId: 'SC-TEST-001',
+    processor: { resolution: 1024 },
+    outputs: {
+      baseColor: 'SCL-TEST-1k-basecolor.png',
+      roughness: 'SCL-TEST-1k-roughness.png',
+      normal: 'SCL-TEST-1k-normal.png',
+    },
+  }
+
+  await page.getByLabel('Processing manifest file').setInputFiles({
+    name: 'SCL-TEST-processing.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(processingManifest)),
+  })
+
+  const pngBase64 = await page.evaluate(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 4
+    canvas.height = 4
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Test canvas unavailable')
+    context.fillStyle = '#8A4E2B'
+    context.fillRect(0, 0, 4, 4)
+    return canvas.toDataURL('image/png').split(',')[1]
+  })
+  const png = Buffer.from(pngBase64, 'base64')
+
+  for (const label of ['Base color map file', 'Roughness map file', 'Normal map file']) {
+    await page.getByLabel(label).setInputFiles({
+      name: label.toLowerCase().replaceAll(/[^a-z]+/gu, '-') + '.png',
+      mimeType: 'image/png',
+      buffer: png,
+    })
+  }
+
+  await expect(page.getByLabel('3D material QA viewer').locator('canvas')).toBeVisible()
+  await expect(page.getByText('3 / 3')).toBeVisible()
+
+  await page.getByLabel('Lighting').selectOption('raking-left')
+  await page.getByLabel('Test shape').selectOption('cylinder')
+  await page.getByLabel('Reviewer *').fill('QA Reviewer')
+
+  const checks = page.locator('.qa-check input[type="checkbox"]')
+  await expect(checks).toHaveCount(6)
+  for (let index = 0; index < 6; index += 1) {
+    await checks.nth(index).check()
+  }
+
+  await expect(page.getByText('Eligible for registry promotion')).toBeVisible()
+
+  const [approvalDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Export QA approval packet' }).click(),
+  ])
+  const approvalPath = await approvalDownload.path()
+  expect(approvalPath).not.toBeNull()
+
+  const approval = JSON.parse(await fs.readFile(approvalPath!, 'utf8')) as {
+    materialId: string
+    decision: string
+    automaticRegistryMutation: boolean
+    reviewer: string
+    maps: Record<string, { width: number; height: number }>
+  }
+
+  expect(approval.materialId).toBe('SCL-TEST')
+  expect(approval.decision).toBe('approved-for-registry-promotion')
+  expect(approval.automaticRegistryMutation).toBe(false)
+  expect(approval.reviewer).toBe('QA Reviewer')
+  expect(approval.maps.baseColor).toMatchObject({ width: 4, height: 4 })
+
+  expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
+  expect(consoleErrors, `Material QA console errors: ${consoleErrors.join('\n')}`).toEqual([])
+
+  const screenshotName = testInfo.project.name.includes('mobile')
+    ? 'material-qa-mobile.png'
+    : 'material-qa-desktop.png'
+
+  await page.screenshot({
+    path: `playwright-output/screenshots/${screenshotName}`,
+    fullPage: true,
+  })
+})
