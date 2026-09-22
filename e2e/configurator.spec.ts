@@ -5,6 +5,16 @@ test.beforeAll(async () => {
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
 })
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/catalog-variant?*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: false, code: 'TEST_SNAPSHOT_FALLBACK' }),
+    })
+  })
+})
+
 test('multi-product studio builds and captures a customized order request', async ({ page }, testInfo) => {
   const consoleErrors: string[] = []
   page.on('console', (message) => {
@@ -178,6 +188,7 @@ test('staff console stays isolated and locked without credentials', async ({ pag
 
 
 test('live Shopify reconciliation updates price inventory and order packet', async ({ page }) => {
+  await page.unroute('**/api/catalog-variant?*')
   await page.route('**/api/catalog-variant?*', async (route) => {
     const url = new URL(route.request().url())
     expect(url.searchParams.get('productId')).toBe('gid://shopify/Product/10403653812504')
@@ -209,7 +220,8 @@ test('live Shopify reconciliation updates price inventory and order packet', asy
   await expect(page.getByTestId('base-price')).toHaveText('$360.00')
 
   const buildSummary = page.getByRole('region', { name: 'Build summary' })
-  await expect(buildSummary.getByText('1', { exact: true })).toBeVisible()
+  const stockRow = buildSummary.getByText('Listed stock').locator('..')
+  await expect(stockRow.getByText('1', { exact: true })).toBeVisible()
 
   await page.getByRole('spinbutton', { name: 'Quantity' }).fill('2')
   await expect(page.getByTestId('base-price')).toHaveText('$720.00')
