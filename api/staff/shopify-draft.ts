@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type { StudioOrderRequest } from '@sls/order-engine'
-import { authorizeStaff, isStaffAccessConfigured } from '../lib/staff-auth'
-import { createShopifyDraftOrder, isShopifyDraftOrderConfigured } from '../lib/shopify-draft'
-import { getSupabaseConfiguration, supabaseHeaders } from '../lib/supabase'
+import { authorizeStaff, isStaffAccessConfigured } from '../../server/lib/staff-auth'
+import { createShopifyDraftOrder, isShopifyDraftOrderConfigured } from '../../server/lib/shopify-draft'
+import { getSupabaseConfiguration, supabaseHeaders } from '../../server/lib/supabase'
 
 interface StoredOrder {
   request_id: string
