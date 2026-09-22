@@ -158,12 +158,12 @@ test('Shopify embed deep link opens the requested real catalog product without l
   await expect(page.locator('main')).toHaveClass(/is-embedded/)
   await expect(page.locator('canvas')).toHaveCount(0)
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
-  expect(scriptRequests.some((url) => url.includes('OrderCapture-'))).toBe(false)
+  expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
 
   const deferredOrder = page.getByTestId('order-capture-deferred')
   await deferredOrder.scrollIntoViewIfNeeded()
   await expect(page.getByRole('region', { name: 'Custom order request' }).getByRole('textbox', { name: /^Name/ })).toBeVisible()
-  await expect.poll(() => scriptRequests.some((url) => url.includes('OrderCapture-'))).toBe(true)
+  await expect.poll(() => scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(true)
 })
 
 
