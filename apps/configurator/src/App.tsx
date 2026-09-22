@@ -1181,7 +1181,7 @@ export function App() {
       <ProductFamilyRail selectedId={family.id} onSelect={chooseFamily} />
 
       <section className="studio-grid">
-        <div className="viewer-column">
+        <div className={`viewer-column ${family.supports3D ? 'has-3d' : 'is-static-preview'}`}>
           {family.supports3D ? (
             <Suspense fallback={<div className="viewer-panel viewer-loading">Loading 3D studio…</div>}>
               <WeldingHoodViewer referenceId={reference.id} />
