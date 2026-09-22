@@ -128,9 +128,6 @@ export function deriveRoughnessMap(
 ): PixelImage {
   assertMatching([crossPolarized, parallel])
 
-  const crossMean = Math.max(1, meanLuminance(crossPolarized))
-  const parallelMean = Math.max(1, meanLuminance(parallel))
-  const parallelScale = crossMean / parallelMean
   const output = new Uint8ClampedArray(crossPolarized.data.length)
 
   for (let index = 0; index < crossPolarized.data.length; index += 4) {
@@ -144,7 +141,7 @@ export function deriveRoughnessMap(
       parallel.data[index],
       parallel.data[index + 1],
       parallel.data[index + 2],
-    ) * parallelScale / 255
+    ) / 255
 
     const response = Math.max(0, reflected - diffuse)
     const roughness = Math.max(
