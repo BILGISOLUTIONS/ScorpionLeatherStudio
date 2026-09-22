@@ -27,6 +27,14 @@ function stringValue(value: unknown): string {
   return typeof value === 'string' ? value : ''
 }
 
+function declaredPayloadTooLarge(req: VercelRequest): boolean {
+  const header = req.headers['content-length']
+  const raw = Array.isArray(header) ? header[0] : header
+  if (!raw) return false
+  const size = Number(raw)
+  return Number.isFinite(size) && size > 3_250_000
+}
+
 function parseBody(req: VercelRequest): SubmissionEnvelope {
   if (typeof req.body === 'string') {
     return JSON.parse(req.body) as SubmissionEnvelope
@@ -73,6 +81,7 @@ function validateArtwork(artwork: ArtworkAttachmentInput | null | undefined): st
 
   const issues: string[] = []
   if (!ARTWORK_ALLOWED_TYPES.has(stringValue(artwork.type))) issues.push('Unsupported artwork file type.')
+  if (stringValue(artwork.dataUrl).length > 2_900_000) issues.push('Artwork payload is too large.')
   if (!Number.isInteger(artwork.size) || artwork.size < 1 || artwork.size > ARTWORK_MAX_BYTES) {
     issues.push('Artwork must be 2 MB or smaller.')
   }
@@ -236,6 +245,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
+  if (declaredPayloadTooLarge(req)) {
+    res.status(413).json({ accepted: false, code: 'PAYLOAD_TOO_LARGE' })
+    return
+  }
+
   let envelope: SubmissionEnvelope
   try {
     envelope = parseBody(req)
@@ -252,11 +266,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const request = envelope.request
   if (!request) {
     res.status(400).json({ accepted: false, code: 'REQUEST_REQUIRED' })
-    return
-  }
-
-  if (JSON.stringify(envelope).length > 3_250_000) {
-    res.status(413).json({ accepted: false, code: 'PAYLOAD_TOO_LARGE' })
     return
   }
 
@@ -285,6 +294,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const transport = nodemailer.createTransport({
+      pool: true,
+      maxConnections: 1,
+      maxMessages: 4,
       host: smtp.host,
       port: smtp.port,
       secure: smtp.secure,
@@ -338,6 +350,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       deliveryId,
       artworkAttached: Boolean(envelope.artwork && artworkBuffer),
     })
+
+    transport.close()
   } catch (error) {
     console.error('Scorpion order delivery failed', {
       requestId: request.requestId,
