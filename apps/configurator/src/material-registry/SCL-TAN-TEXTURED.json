@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "SCL-TAN-TEXTURED",
+  "label": "Tan Textured Reference",
+  "kind": "leather",
+  "lifecycle": "reference-only",
+  "availability": "quote",
+  "previewColor": "#a87545",
+  "physical": {
+    "materialType": "Leather",
+    "grain": "Nap / textured",
+    "finish": "Tan textured reference"
+  },
+  "provenance": {
+    "source": "photographed-product-reference",
+    "notes": "Approximation derived from the current Scorpion catalog photo. Replace with calibrated field capture before production color approval."
+  },
+  "renderer": {
+    "roughness": 0.84,
+    "metalness": 0,
+    "sheen": 0.1,
+    "sheenRoughness": 0.82
+  }
+}
