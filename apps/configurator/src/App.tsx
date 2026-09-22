@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { createInitialConfiguration, setSelection } from '@sls/configurator-core'
 import {
   createDefaultPersonalization,
@@ -15,7 +15,6 @@ import {
   type ToolingStyle,
 } from '@sls/order-engine'
 import { formatMoney } from '@sls/pricing-engine'
-import { ThreeProductViewer } from '@sls/three-renderer'
 import type { ValidationIssue } from '@sls/product-schema'
 import { sampleManifest, sampleMaterials, sampleProduct } from './sample-product'
 import {
@@ -27,6 +26,11 @@ import {
   type StudioReference,
   type StudioVariant,
 } from './studio-catalog'
+
+const ThreeProductViewer = lazy(async () => {
+  const module = await import('@sls/three-renderer')
+  return { default: module.ThreeProductViewer }
+})
 
 const BUILD_STORAGE_KEY = 'scorpion-leather-studio:v004-build'
 const CUSTOMER_STORAGE_KEY = 'scorpion-leather-studio:v004-customer'
@@ -1063,16 +1067,18 @@ export function App() {
         <div className="viewer-column">
           {family.supports3D ? (
             <div className="viewer-panel" aria-label="Interactive 3D product viewer">
-              <ThreeProductViewer
-                product={sampleProduct}
-                manifest={sampleManifest}
-                materials={sampleMaterials}
-                selections={hoodConfiguration.selections}
-                animationStates={{ 'visor.open': visorOpen }}
-                cameraPreset={cameraPreset}
-                autoRotate={autoRotate}
-                onAssetIssues={setAssetIssues}
-              />
+              <Suspense fallback={<div className="viewer-loading">Loading 3D studio…</div>}>
+                <ThreeProductViewer
+                  product={sampleProduct}
+                  manifest={sampleManifest}
+                  materials={sampleMaterials}
+                  selections={hoodConfiguration.selections}
+                  animationStates={{ 'visor.open': visorOpen }}
+                  cameraPreset={cameraPreset}
+                  autoRotate={autoRotate}
+                  onAssetIssues={setAssetIssues}
+                />
+              </Suspense>
 
               <div className="view-selector" aria-label="Product views">
                 {Object.entries(sampleManifest.cameraPresets).map(([key, preset]) => (
