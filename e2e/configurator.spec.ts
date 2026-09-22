@@ -581,10 +581,7 @@ test('Material QA renders processed maps and exports an explicit approval packet
     })
   }
 
-  const deferredViewer = page.getByTestId('material-qa-viewer-deferred')
-  if (await deferredViewer.count()) {
-    await deferredViewer.scrollIntoViewIfNeeded()
-  }
+  await page.getByRole('heading', { name: 'Controlled 3D inspection' }).scrollIntoViewIfNeeded()
   await expect(page.getByLabel('3D material QA viewer').locator('canvas')).toBeVisible()
   await expect.poll(() => scriptRequests.some((url) => url.includes('MaterialQaViewer'))).toBe(true)
   await expect(page.getByText('3 / 3')).toBeVisible()
