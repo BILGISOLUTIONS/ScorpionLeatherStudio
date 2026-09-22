@@ -225,7 +225,7 @@ function compactShareBuild(build: StudioBuildDraft): CompactShareTokenV2 {
       p.artworkNotes,
       p.additionalNotes,
     ],
-    build.hoodConfiguration,
+    build.hoodConfiguration ?? null,
   ]
 }
 
@@ -286,7 +286,7 @@ function expandShareBuild(value: unknown): StudioBuildDraft {
         artworkNotes,
         additionalNotes,
       },
-      ...(hoodConfiguration === undefined ? {} : { hoodConfiguration }),
+      ...(hoodConfiguration === undefined || hoodConfiguration === null ? {} : { hoodConfiguration }),
     }
   }
 
