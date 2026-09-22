@@ -419,6 +419,7 @@ function MaterialPromotion() {
               <div><span>Reviewer</span><strong>{promotion.material.approval?.reviewer}</strong></div>
               <div><span>Texture tiers</span><strong>{promotion.material.textureTiers?.map((tier) => `${tier.maxEdge / 1024}K`).join(' · ')}</strong></div>
               <div><span>Asset root</span><strong>{promotion.assetPlacement.root}</strong></div>
+              <div><span>Registry file</span><strong>{promotion.registryDestination}</strong></div>
             </div>
 
             <details className="definition-preview">
@@ -442,13 +443,13 @@ function MaterialPromotion() {
             </div>
 
             <div className="release-actions">
-              <button type="button" className="primary" onClick={() => downloadJson(`${promotion.material.id}-production-material.json`, promotion.material)}>Download production definition</button>
+              <button type="button" className="primary" onClick={() => downloadJson(`${promotion.material.id}.json`, promotion.material)}>Download drop-in registry JSON</button>
               <button type="button" onClick={() => downloadJson(`${promotion.material.id}-asset-placement.json`, promotion.assetPlacement)}>Download asset placement manifest</button>
               <button type="button" onClick={copyDefinition}>Copy definition</button>
             </div>
 
             <p className="manual-gate">
-              <strong>Manual registry gate preserved.</strong> This page produces the approved release package but does not write to GitHub or alter the deployed material registry.
+              <strong>Manual registry gate preserved.</strong> Place the downloaded registry JSON at <code>{promotion.registryDestination}</code> and the normalized maps at the listed asset destinations. CI will validate both before deployment.
             </p>
           </>
         ) : null}
