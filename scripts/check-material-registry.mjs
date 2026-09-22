@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 
 const root = process.cwd()
 const registryDir = join(root, 'apps/configurator/src/material-registry')
@@ -34,7 +34,13 @@ function publicAssetPath(url) {
   if (typeof url !== 'string' || !url.startsWith('/')) {
     fail('Material texture URL must be root-relative: ' + String(url))
   }
-  return join(publicDir, url.replace(/^\/+/, ''))
+
+  const assetPath = resolve(publicDir, url.replace(/^\/+/, ''))
+  const allowedRoot = resolve(publicDir) + sep
+  if (!assetPath.startsWith(allowedRoot)) {
+    fail('Material texture URL escapes the public asset root: ' + url)
+  }
+  return assetPath
 }
 
 const records = readRegistry()
