@@ -151,6 +151,7 @@ function MaterialLab() {
         <div className="lab-links">
           <a href="/capture.html" className="studio-link">Start capture session</a>
           <a href="/process.html" className="studio-link">Process captures</a>
+          <a href="/material-qa.html" className="studio-link">Material QA</a>
           <a href="/" className="studio-link">Open customer studio</a>
         </div>
       </header>
