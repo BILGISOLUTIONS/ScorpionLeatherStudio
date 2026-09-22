@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { createRendererMaterialMap, validateMaterialDefinition } from '@sls/material-library'
-import { preferredMaterialTextureEdge, scorpionMaterialDefinitions } from './scorpion-materials'
+import {
+  preferredMaterialTextureEdge,
+  scorpionMaterialDefinitions,
+  scorpionMaterialSourceById,
+} from './scorpion-materials'
 
 describe('Scorpion material registry', () => {
   it('has unique stable material ids', () => {
     const ids = scorpionMaterialDefinitions.map((material) => material.id)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('keeps registry filenames aligned with stable material ids', () => {
+    for (const material of scorpionMaterialDefinitions) {
+      expect(scorpionMaterialSourceById.get(material.id)).toBe(`./material-registry/${material.id}.json`)
+    }
   })
 
   it('passes material lifecycle validation', () => {
