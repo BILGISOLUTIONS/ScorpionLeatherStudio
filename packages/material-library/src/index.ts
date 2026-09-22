@@ -31,6 +31,13 @@ export interface PhysicalMaterialMetadata {
   supplierItem?: string
 }
 
+export interface MaterialApprovalMetadata {
+  reviewer: string
+  reviewedAt: string
+  decision: 'approved-for-registry-promotion'
+  sourceQaPacket?: string
+}
+
 export interface ScorpionMaterialDefinition {
   schemaVersion: 1
   id: string
@@ -41,6 +48,7 @@ export interface ScorpionMaterialDefinition {
   previewColor: string
   physical?: PhysicalMaterialMetadata
   provenance: MaterialCaptureProvenance
+  approval?: MaterialApprovalMetadata
   renderer: Omit<MaterialVariant, 'id' | 'label' | 'kind' | 'color' | 'textures'>
   textureTiers?: MaterialTextureTier[]
 }
@@ -64,8 +72,38 @@ export function validateMaterialDefinition(material: ScorpionMaterialDefinition)
     if (material.provenance.source !== 'field-capture' && material.provenance.source !== 'supplier-reference') {
       issue('provenance.source', 'Production-approved materials must come from a field capture or supplier reference.')
     }
-    if (material.kind === 'leather' && !material.textureTiers?.length) {
-      issue('textureTiers', 'Production-approved leather requires at least one texture tier.')
+    if (!material.approval?.reviewer.trim()) {
+      issue('approval.reviewer', 'Production-approved materials require a named reviewer.')
+    }
+    if (!material.approval?.reviewedAt) {
+      issue('approval.reviewedAt', 'Production-approved materials require a review timestamp.')
+    }
+    if (material.approval?.decision !== 'approved-for-registry-promotion') {
+      issue('approval.decision', 'Production-approved materials require an explicit QA promotion decision.')
+    }
+
+    if (material.provenance.source === 'field-capture') {
+      if (!material.provenance.captureSessionId) {
+        issue('provenance.captureSessionId', 'Field-captured production materials require a capture session id.')
+      }
+      if (!material.provenance.crossPolarized) {
+        issue('provenance.crossPolarized', 'Field-captured production materials require a cross-polarized source frame.')
+      }
+      if (!material.provenance.directionalLighting) {
+        issue('provenance.directionalLighting', 'Field-captured production materials require the directional lighting set.')
+      }
+      if (!material.provenance.scaleReference) {
+        issue('provenance.scaleReference', 'Field-captured production materials require a scale reference for texture sizing.')
+      }
+    }
+
+    if (material.kind === 'leather') {
+      if (!material.textureTiers?.length) {
+        issue('textureTiers', 'Production-approved leather requires at least one texture tier.')
+      }
+      if (!material.textureTiers?.some((tier) => tier.maxEdge === 1024)) {
+        issue('textureTiers.1024', 'Production-approved leather requires a 1K baseline tier for efficient delivery.')
+      }
     }
   }
 
@@ -80,6 +118,12 @@ export function validateMaterialDefinition(material: ScorpionMaterialDefinition)
 
     if (material.kind === 'leather' && !tier.textures.baseColor) {
       issue(`textureTiers.${tier.maxEdge}.baseColor`, 'Leather texture tiers require a base-color map.')
+    }
+    if (material.lifecycle === 'production-approved' && material.kind === 'leather' && !tier.textures.normal) {
+      issue(`textureTiers.${tier.maxEdge}.normal`, 'Production leather texture tiers require a normal map.')
+    }
+    if (material.lifecycle === 'production-approved' && material.kind === 'leather' && !tier.textures.roughness) {
+      issue(`textureTiers.${tier.maxEdge}.roughness`, 'Production leather texture tiers require a roughness map.')
     }
   }
 
