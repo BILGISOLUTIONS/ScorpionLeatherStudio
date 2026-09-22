@@ -36,6 +36,13 @@ test('multi-product studio builds and captures a customized order request', asyn
   const buildSummary = page.getByRole('region', { name: 'Build summary' })
   await expect(buildSummary.getByText('SC-LRH-BLK-XL-002')).toBeVisible()
 
+  await page.getByLabel('Leather finish preference').selectOption('textured')
+  await page.getByLabel('Leather color request').fill('Dark brown')
+  await page.getByLabel('Stitching preference').selectOption('contrast')
+  await page.getByLabel('Hardware preference').selectOption('antique-brass')
+  await page.getByLabel('Edge / binding preference').selectOption('dark')
+  await page.getByLabel('Construction notes').fill('Reinforce the shoulder strap junctions.')
+
   await page.getByRole('button', { name: 'Western floral' }).click()
   await page.getByRole('checkbox', { name: /Add text/i }).check()
   await page.getByPlaceholder('Name, initials, company, unit, etc.').fill('ZAN CREW')
@@ -62,6 +69,9 @@ test('multi-product studio builds and captures a customized order request', asyn
   await page.reload()
   await expect(page.getByTestId('base-price')).toHaveText('$700.00')
   await expect(page.getByPlaceholder('Name, initials, company, unit, etc.')).toHaveValue('ZAN CREW')
+  await expect(page.getByLabel('Leather finish preference')).toHaveValue('textured')
+  await expect(page.getByLabel('Leather color request')).toHaveValue('Dark brown')
+  await expect(page.getByLabel('Hardware preference')).toHaveValue('antique-brass')
   await expect(page.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue('2')
 
   const requestPanel = page.getByRole('region', { name: 'Custom order request' })
@@ -73,12 +83,21 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(requestPanel.locator('pre')).toContainText('SC-LRH-BLK-XL-002')
   await expect(requestPanel.locator('pre')).toContainText('Quantity: 2')
   await expect(requestPanel.locator('pre')).toContainText('ZAN CREW')
+  await expect(requestPanel.locator('pre')).toContainText('Leather finish preference: Textured')
+  await expect(requestPanel.locator('pre')).toContainText('Leather color request: Dark brown')
+  await expect(requestPanel.locator('pre')).toContainText('Hardware preference: Antique Brass')
+  await expect(requestPanel.locator('pre')).toContainText('Reinforce the shoulder strap junctions.')
   await expect(requestPanel.locator('pre')).toContainText('western-floral')
   let deliveredRequestId = ''
   let deliveredArtworkName = ''
   await page.route('**/api/order-requests', async (route) => {
     const body = JSON.parse(route.request().postData() ?? '{}') as {
-      request?: { requestId?: string; commerce?: { sku?: string; referenceImageUrl?: string; listedInventoryQuantity?: number }; pricing?: { baseSubtotalMinor?: number } }
+      request?: {
+        requestId?: string
+        commerce?: { sku?: string; referenceImageUrl?: string; listedInventoryQuantity?: number }
+        pricing?: { baseSubtotalMinor?: number }
+        build?: { personalization?: { construction?: { leatherFinish?: string; leatherColor?: string; hardware?: string } } }
+      }
       artwork?: { name?: string; type?: string; dataUrl?: string }
     }
     deliveredRequestId = body.request?.requestId ?? ''
@@ -87,6 +106,9 @@ test('multi-product studio builds and captures a customized order request', asyn
     expect(body.request?.commerce?.referenceImageUrl).toContain('cdn.shopify.com')
     expect(body.request?.commerce?.listedInventoryQuantity).toBe(4)
     expect(body.request?.pricing?.baseSubtotalMinor).toBe(70000)
+    expect(body.request?.build?.personalization?.construction?.leatherFinish).toBe('textured')
+    expect(body.request?.build?.personalization?.construction?.leatherColor).toBe('Dark brown')
+    expect(body.request?.build?.personalization?.construction?.hardware).toBe('antique-brass')
     expect(body.artwork?.type).toBe('image/png')
     expect(body.artwork?.dataUrl).toContain('data:image/png;base64,')
     await route.fulfill({
@@ -119,7 +141,12 @@ test('multi-product studio builds and captures a customized order request', asyn
 })
 
 
-test('Shopify embed deep link opens the requested real catalog product', async ({ page }) => {
+test('Shopify embed deep link opens the requested real catalog product without loading 3D', async ({ page }) => {
+  const scriptRequests: string[] = []
+  page.on('request', (request) => {
+    if (request.resourceType() === 'script') scriptRequests.push(request.url())
+  })
+
   await page.goto('/?embed=1&product=cowhide-radio-harness-black&variant=SC-LRH-BLK-XL-002')
 
   await expect(page.getByRole('heading', { name: 'Custom Leather Studio' })).toBeHidden()
@@ -128,4 +155,5 @@ test('Shopify embed deep link opens the requested real catalog product', async (
   await expect(page.getByText('SC-LRH-BLK-XL-002').first()).toBeVisible()
   await expect(page.locator('main')).toHaveClass(/is-embedded/)
   await expect(page.locator('canvas')).toHaveCount(0)
+  expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
 })
