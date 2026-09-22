@@ -16,6 +16,7 @@ import { storefrontImage } from './studio-media'
 import type { ArtworkAttachment } from './studio-types'
 import { buildShareUrl } from './studio-url'
 import { useDebouncedLocalStorage } from './useDebouncedLocalStorage'
+import { useLiveCatalogVariant } from './useLiveCatalogVariant'
 import {
   findFamily,
   findReferenceByHandle,
@@ -383,11 +384,11 @@ const VariantPicker = memo(function VariantPicker({
             onClick={() => onSelect(variant)}
             aria-pressed={selectedId === variant.id}
           >
-            <strong>{variant.title}</strong>
+            <strong>{effectiveVariant.title}</strong>
             <small>
-              {variant.sku}
-              {reference.priceStatus === 'catalog' && variant.inventoryQuantity !== null
-                ? ` · ${variant.inventoryQuantity} listed`
+              {effectiveVariant.sku}
+              {reference.priceStatus === 'catalog' && effectiveVariant.inventoryQuantity !== null
+                ? ` · ${effectiveVariant.inventoryQuantity} listed`
                 : ''}
             </small>
           </button>
@@ -715,7 +716,7 @@ function DeferredOrderCapture({
         build={build}
         family={family}
         reference={reference}
-        variant={variant}
+        variant={effectiveVariant}
         artwork={artwork}
         setStatus={setStatus}
       />
@@ -730,6 +731,23 @@ export function App() {
   const [status, setStatus] = useState('')
 
   const { family, reference, variant } = useMemo(() => resolveStudio(build), [build])
+  const liveCatalog = useLiveCatalogVariant(
+    reference.priceStatus === 'catalog',
+    reference.shopifyProductId,
+    variant.id,
+  )
+  const effectiveVariant = useMemo<StudioVariant>(() => {
+    const live = liveCatalog.variant
+    if (!live || live.variantId !== variant.id) return variant
+
+    return {
+      ...variant,
+      title: live.variantTitle || variant.title,
+      sku: live.sku || variant.sku,
+      priceMinor: live.priceMinor,
+      inventoryQuantity: live.inventoryQuantity,
+    }
+  }, [liveCatalog.variant, variant])
   const construction = build.personalization.construction
   const constructionRequested =
     construction.leatherFinish !== 'as-photographed' ||
@@ -897,11 +915,11 @@ export function App() {
               <p>{family.description}</p>
             </div>
             <dl>
-              <div><dt>SKU</dt><dd>{variant.sku}</dd></div>
-              <div><dt>Variant</dt><dd>{variant.title}</dd></div>
+              <div><dt>SKU</dt><dd>{effectiveVariant.sku}</dd></div>
+              <div><dt>Variant</dt><dd>{effectiveVariant.title}</dd></div>
               <div>
                 <dt>Base price</dt>
-                <dd>{reference.priceStatus === 'quote' ? 'Quote required' : formatMoney(variant.priceMinor)}</dd>
+                <dd>{reference.priceStatus === 'quote' ? 'Quote required' : formatMoney(effectiveVariant.priceMinor)}</dd>
               </div>
               <div><dt>Customization</dt><dd>{customWorkRequested ? 'Custom quote' : 'Available to request'}</dd></div>
             </dl>
@@ -975,21 +993,30 @@ export function App() {
             <div className="summary-price">
               <span>{reference.priceStatus === 'quote' ? 'Base product' : build.quantity > 1 ? 'Catalog base subtotal' : 'Catalog base'}</span>
               <strong data-testid="base-price">
-                {reference.priceStatus === 'quote' ? 'QUOTE' : formatMoney(variant.priceMinor * build.quantity)}
+                {reference.priceStatus === 'quote' ? 'QUOTE' : formatMoney(effectiveVariant.priceMinor * build.quantity)}
               </strong>
+            </div>
+            <div className="catalog-freshness" data-testid="catalog-freshness">
+              {reference.priceStatus === 'quote'
+                ? 'Quote workflow'
+                : liveCatalog.status === 'live'
+                  ? `Live Shopify data · ${liveCatalog.variant?.productStatus ?? 'ACTIVE'}`
+                  : liveCatalog.status === 'loading'
+                    ? 'Checking live Shopify catalog…'
+                    : 'Verified snapshot fallback'}
             </div>
             <div className="summary-notice">
               {reference.priceStatus === 'quote'
                 ? 'This Shopify record currently carries a development/test price. The customer-facing studio does not present it as retail pricing.'
-                : build.quantity > (variant.inventoryQuantity ?? Number.POSITIVE_INFINITY)
-                  ? `Requested quantity exceeds the currently listed inventory of ${variant.inventoryQuantity}. Scorpion must confirm availability before accepting the order.`
+                : build.quantity > (effectiveVariant.inventoryQuantity ?? Number.POSITIVE_INFINITY)
+                  ? `Requested quantity exceeds the currently listed inventory of ${effectiveVariant.inventoryQuantity}. Scorpion must confirm availability before accepting the order.`
                   : 'Current catalog base subtotal shown. Any custom tooling, text, artwork, material changes, or shop modifications require a separate quote.'}
             </div>
             <div className="summary-spec">
-              <div><span>SKU</span><strong>{variant.sku}</strong></div>
+              <div><span>SKU</span><strong>{effectiveVariant.sku}</strong></div>
               <div><span>Qty</span><strong>{build.quantity}</strong></div>
-              {reference.priceStatus === 'catalog' && variant.inventoryQuantity !== null ? (
-                <div><span>Listed stock</span><strong>{variant.inventoryQuantity}</strong></div>
+              {reference.priceStatus === 'catalog' && effectiveVariant.inventoryQuantity !== null ? (
+                <div><span>Listed stock</span><strong>{effectiveVariant.inventoryQuantity}</strong></div>
               ) : null}
               <div><span>Leather</span><strong>{leatherFinishLabels[construction.leatherFinish]}{construction.leatherColor.trim() ? ` · ${construction.leatherColor.trim()}` : ''}</strong></div>
               <div><span>Stitching</span><strong>{stitchingLabels[construction.stitching]}</strong></div>
