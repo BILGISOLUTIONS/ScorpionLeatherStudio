@@ -621,10 +621,6 @@ function OrderCapture({
   family,
   reference,
   variant,
-  customer,
-  setCustomer,
-  request,
-  setRequest,
   artwork,
   setStatus,
 }: {
@@ -632,22 +628,22 @@ function OrderCapture({
   family: StudioProductFamily
   reference: StudioReference
   variant: StudioVariant
-  customer: CustomerDraft
-  setCustomer: (next: CustomerDraft) => void
-  request: StudioOrderRequest | null
-  setRequest: (next: StudioOrderRequest | null) => void
   artwork: ArtworkAttachment | null
   setStatus: (message: string) => void
 }) {
-  const issues = validateOrderDraft(build, customer)
-  const issueMap = Object.fromEntries(issues.map((issue) => [issue.path, issue.message]))
+  const [customer, setCustomer] = useState<CustomerDraft>(loadCustomer)
+  const [request, setRequest] = useState<StudioOrderRequest | null>(null)
   const [deliveryState, setDeliveryState] = useState<'idle' | 'sending' | 'sent' | 'unavailable' | 'failed'>('idle')
   const [website, setWebsite] = useState('')
   const [acknowledged, setAcknowledged] = useState(false)
 
+  const issues = validateOrderDraft(build, customer)
+  const issueMap = Object.fromEntries(issues.map((issue) => [issue.path, issue.message]))
   useEffect(() => {
+    setRequest(null)
+    setDeliveryState('idle')
     setAcknowledged(false)
-  }, [request?.requestId])
+  }, [build])
 
   const prepareRequest = () => {
     try {
@@ -672,6 +668,7 @@ function OrderCapture({
       })
       setRequest(next)
       setDeliveryState('idle')
+      setAcknowledged(false)
       setStatus(`Order request ${next.requestId} prepared.`)
 
       try {
@@ -908,8 +905,6 @@ function OrderCapture({
 export function App() {
   const [embedded] = useState(embeddedMode)
   const [build, setBuild] = useState<StudioBuildDraft>(loadInitialBuild)
-  const [customer, setCustomer] = useState<CustomerDraft>(loadCustomer)
-  const [request, setRequest] = useState<StudioOrderRequest | null>(null)
   const [artwork, setArtwork] = useState<ArtworkAttachment | null>(loadSessionArtwork)
   const [status, setStatus] = useState('')
   const [visorOpen, setVisorOpen] = useState(false)
@@ -926,10 +921,6 @@ export function App() {
     Boolean(build.personalization.additionalNotes.trim())
 
   useDebouncedLocalStorage(BUILD_STORAGE_KEY, build)
-
-  useEffect(() => {
-    setRequest(null)
-  }, [build])
 
   useEffect(() => {
     if (!embedded || window.parent === window) return
@@ -1025,8 +1016,6 @@ export function App() {
   const resetBuild = () => {
     const next = defaultBuild()
     setBuild(next)
-    setCustomer(defaultCustomer())
-    setRequest(null)
     setArtwork(null)
     setAutoRotate(false)
     setVisorOpen(false)
@@ -1233,10 +1222,6 @@ export function App() {
         family={family}
         reference={reference}
         variant={variant}
-        customer={customer}
-        setCustomer={setCustomer}
-        request={request}
-        setRequest={setRequest}
         artwork={artwork}
         setStatus={setStatus}
       />
