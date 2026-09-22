@@ -322,7 +322,7 @@ test('Field Capture Assistant records a complete swatch session and exports mani
   await page.getByLabel('Operator *').fill('Field Operator')
   await page.getByLabel('Material type').fill('Cowhide')
   await page.getByLabel('Hide').fill('Cowhide')
-  await page.getByLabel('Grain').fill('Full grain')
+  await page.getByLabel('Grain', { exact: true }).fill('Full grain')
   await page.getByLabel('Finish').fill('Matte')
   await page.getByLabel('Thickness (mm)').fill('2.1')
   await page.getByLabel('Supplier').fill('Test Supplier')
