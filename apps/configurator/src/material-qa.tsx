@@ -342,6 +342,7 @@ function MaterialQa() {
         </div>
         <nav>
           <a href="/process.html">Material Processor</a>
+          <a href="/promote.html">Material Promotion</a>
           <a href="/materials.html">Material Lab</a>
           <a href="/">Customer Studio</a>
         </nav>
@@ -441,7 +442,7 @@ function MaterialQa() {
             </label>
             <label className="range-field"><span>Texture repeat <output>{repeat.toFixed(1)}×</output></span><input type="range" min="0.5" max="8" step="0.25" value={repeat} onChange={(event) => setRepeat(Number(event.target.value))} /></label>
             <label className="range-field"><span>Normal scale <output>{normalScale.toFixed(2)}</output></span><input type="range" min="0" max="2.5" step="0.05" value={normalScale} onChange={(event) => setNormalScale(Number(event.target.value))} /></label>
-            <label className="range-field"><span>Roughness multiplier <output>{roughnessScalar.toFixed(2)}</output></span><input type="range" min="0.5" max="1.5" step="0.05" value={roughnessScalar} onChange={(event) => setRoughnessScalar(Number(event.target.value))} /></label>
+            <label className="range-field"><span>Roughness scalar <output>{roughnessScalar.toFixed(2)}</output></span><input type="range" min="0.35" max="1" step="0.05" value={roughnessScalar} onChange={(event) => setRoughnessScalar(Number(event.target.value))} /></label>
 
             <div className="map-facts">
               <span>Material</span><strong>{manifest?.materialId || 'Not loaded'}</strong>
