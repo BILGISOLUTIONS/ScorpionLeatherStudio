@@ -320,6 +320,16 @@ function buildShareUrl(build: StudioBuildDraft): string {
   return url.toString()
 }
 
+function storefrontImage(url: string, width: number): string {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname === 'cdn.shopify.com') parsed.searchParams.set('width', String(width))
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
 function downloadText(filename: string, content: string) {
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
   const href = URL.createObjectURL(blob)
@@ -348,7 +358,13 @@ function ReferenceStage({
 
   return (
     <div className="photo-stage" aria-label="Photographed product preview">
-      <img src={reference.image} alt={reference.imageAlt} />
+      <img
+        src={storefrontImage(reference.image, 1200)}
+        srcSet={`${storefrontImage(reference.image, 640)} 640w, ${storefrontImage(reference.image, 960)} 960w, ${storefrontImage(reference.image, 1400)} 1400w`}
+        sizes="(max-width: 900px) 100vw, 60vw"
+        alt={reference.imageAlt}
+        decoding="async"
+      />
       {p.toolingStyle !== 'none' ? (
         <div className={`tooling-concept tooling-${p.toolingStyle}`} aria-hidden="true" />
       ) : null}
@@ -391,7 +407,7 @@ function ProductFamilyRail({
           className={selectedId === family.id ? 'is-selected' : ''}
           onClick={() => onSelect(family)}
         >
-          <img src={family.references[0].image} alt="" loading="lazy" />
+          <img src={storefrontImage(family.references[0].image, 160)} alt="" loading="lazy" decoding="async" />
           <span>
             <strong>{family.shortTitle}</strong>
             <small>{family.references.length} starting build{family.references.length === 1 ? '' : 's'}</small>
@@ -426,7 +442,7 @@ function ReferencePicker({
             onClick={() => onSelect(reference)}
             aria-pressed={selectedId === reference.id}
           >
-            <img src={reference.image} alt="" loading="lazy" />
+            <img src={storefrontImage(reference.image, 480)} alt="" loading="lazy" decoding="async" />
             <span>
               <strong>{reference.title}</strong>
               <small>{reference.priceStatus === 'quote' ? 'Custom quote' : `Base ${formatMoney(reference.basePriceMinor)}`}</small>
@@ -779,7 +795,7 @@ function OrderCapture({
         commerce: {
           productTitle: family.title,
           referenceTitle: reference.title,
-          referenceImageUrl: reference.image,
+          referenceImageUrl: storefrontImage(reference.image, 1000),
           shopifyProductId: reference.shopifyProductId,
           merchandiseId: variant.id,
           sku: variant.sku,
