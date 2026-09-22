@@ -69,7 +69,11 @@ function configureTexture(texture: THREE.Texture, variant: MaterialVariant, colo
   if (colorTexture) texture.colorSpace = THREE.SRGBColorSpace
 }
 
-function hydrateMaterialTextures(material: THREE.MeshPhysicalMaterial, variant: MaterialVariant) {
+function hydrateMaterialTextures(
+  material: THREE.MeshPhysicalMaterial,
+  variant: MaterialVariant,
+  invalidate: () => void,
+) {
   if (!variant.textures) return () => undefined
 
   const loader = new THREE.TextureLoader()
@@ -93,6 +97,7 @@ function hydrateMaterialTextures(material: THREE.MeshPhysicalMaterial, variant: 
         loaded.push(texture)
         assign(texture)
         material.needsUpdate = true
+        invalidate()
       },
       undefined,
       () => undefined,
@@ -124,6 +129,7 @@ function MechanicalAnimations({
   manifest: AssetManifest
   animationStates: Record<string, boolean>
 }) {
+  const { invalidate } = useThree()
   const reducedMotion = useReducedMotion()
   const targets = useMemo(() => {
     return Object.entries(manifest.animations).flatMap(([key, definition]) => {
@@ -135,17 +141,28 @@ function MechanicalAnimations({
   const stateRef = useRef(animationStates)
   stateRef.current = animationStates
 
+  useEffect(() => {
+    invalidate()
+  }, [animationStates, invalidate])
+
   useFrame((_, delta) => {
+    let keepAnimating = false
+
     for (const { key, definition, object } of targets) {
       const target = stateRef.current[key] ? definition.to : definition.from
       const axis = definition.property.split('.').at(-1) as 'x' | 'y' | 'z'
+
       if (reducedMotion) {
         object.rotation[axis] = target
-      } else {
-        const lambda = Math.max(4, 1000 / Math.max(1, definition.durationMs))
-        object.rotation[axis] = THREE.MathUtils.damp(object.rotation[axis], target, lambda, delta)
+        continue
       }
+
+      const lambda = Math.max(4, 1000 / Math.max(1, definition.durationMs))
+      object.rotation[axis] = THREE.MathUtils.damp(object.rotation[axis], target, lambda, delta)
+      if (Math.abs(object.rotation[axis] - target) > 0.001) keepAnimating = true
     }
+
+    if (keepAnimating) invalidate()
   })
 
   return null
@@ -159,6 +176,7 @@ function ProductModel({
   animationStates = {},
   onAssetIssues,
 }: ThreeProductViewerProps) {
+  const { invalidate } = useThree()
   const gltf = useGLTF(manifest.model)
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene])
 
@@ -208,13 +226,15 @@ function ProductModel({
 
       const material = createMaterial(variant)
       createdMaterials.push(material)
-      textureCleanups.push(hydrateMaterialTextures(material, variant))
+      textureCleanups.push(hydrateMaterialTextures(material, variant, invalidate))
 
       for (const nodeName of nodeNames) {
         const node = scene.getObjectByName(nodeName)
         if (node instanceof THREE.Mesh) node.material = material
       }
     }
+
+    invalidate()
 
     return () => {
       for (const cleanup of textureCleanups) cleanup()
@@ -224,6 +244,7 @@ function ProductModel({
     manifest.components,
     manifest.defaultMaterialVariants,
     manifest.materialSlots,
+    invalidate,
     materials,
     product.optionGroups,
     scene,
@@ -247,7 +268,7 @@ function CameraRig({
   presetName: string
   autoRotate: boolean
 }) {
-  const { camera } = useThree()
+  const { camera, invalidate } = useThree()
   const reducedMotion = useReducedMotion()
   const controls = useRef<OrbitControlsImpl>(null)
   const destination = useRef(new THREE.Vector3())
@@ -278,7 +299,22 @@ function CameraRig({
     } else {
       transitioning.current = true
     }
-  }, [camera, manifest.cameraPresets, presetName, reducedMotion])
+
+    invalidate()
+  }, [camera, invalidate, manifest.cameraPresets, presetName, reducedMotion])
+
+  useEffect(() => {
+    if (!autoRotate || reducedMotion) return
+
+    let frame = 0
+    const tick = () => {
+      invalidate()
+      frame = window.requestAnimationFrame(tick)
+    }
+    tick()
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [autoRotate, invalidate, reducedMotion])
 
   useFrame((_, delta) => {
     if (!transitioning.current || reducedMotion) return
@@ -305,6 +341,8 @@ function CameraRig({
         camera.lookAt(destinationTarget.current)
       }
       transitioning.current = false
+    } else {
+      invalidate()
     }
   })
 
@@ -316,7 +354,7 @@ function CameraRig({
       maxDistance={1.6}
       minPolarAngle={0.35}
       maxPolarAngle={2.55}
-      autoRotate={autoRotate}
+      autoRotate={autoRotate && !reducedMotion}
       autoRotateSpeed={0.65}
       makeDefault
     />
@@ -329,6 +367,7 @@ export function ThreeProductViewer(props: ThreeProductViewerProps) {
 
   return (
     <Canvas
+      frameloop="demand"
       camera={{ position: initial?.position ?? [0.48, 0.28, 0.68], fov: initial?.fov ?? 35 }}
       dpr={[1, 1.75]}
       shadows
