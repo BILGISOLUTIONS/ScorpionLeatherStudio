@@ -66,3 +66,33 @@ Before broad public launch, add abuse protection such as Cloudflare Turnstile or
 Once the Shopify custom-distribution app/backend is established, the server-side delivery step can additionally create a Shopify draft order or custom-order record.
 
 For quote-only catalog references, the system must never treat the current $10 development placeholder as approved retail pricing. Staff quoting remains authoritative.
+
+
+## Durable order persistence (recommended)
+
+V0.9 can persist every validated request to Supabase before attempting email delivery. This changes email from the only copy of a lead into a notification channel.
+
+Add these server-side environment variables:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Run:
+
+```text
+supabase/scorpion_custom_order_requests.sql
+```
+
+in the dedicated Scorpion Supabase project.
+
+The service-role key must never be exposed to the browser, Shopify Liquid, GitHub source, or public configuration.
+
+### Delivery behavior
+
+- Supabase + email succeed: request is persisted and emailed.
+- Supabase succeeds, email fails: request is still accepted and retained for staff follow-up.
+- Supabase succeeds, SMTP is not configured: request is retained and accepted.
+- Supabase is not configured, email succeeds: legacy email-only behavior continues.
+- Neither persistence nor email is available: the API returns an error and the browser keeps the local build sheet/fallback options.
+
+`request_id` is the database primary key, so retries are idempotent and update the same request instead of creating duplicate leads.
