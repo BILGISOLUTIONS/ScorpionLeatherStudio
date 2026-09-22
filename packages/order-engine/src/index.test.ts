@@ -4,6 +4,7 @@ import {
   createOrderRequest,
   createStudioBuildId,
   createStudioShareToken,
+  formatOrderSummary,
   restoreStudioShareToken,
   validateOrderDraft,
   type CustomerDraft,
@@ -42,6 +43,46 @@ describe('order engine', () => {
     expect(validateOrderDraft(build, { ...customer, email: '' })[0]?.path).toBe('customer.contact')
   })
 
+  it('validates and preserves construction preferences', () => {
+    const customized: StudioBuildDraft = {
+      ...build,
+      personalization: {
+        ...build.personalization,
+        construction: {
+          ...build.personalization.construction,
+          leatherFinish: 'textured',
+          leatherColor: 'Dark brown',
+          stitching: 'contrast',
+          hardware: 'antique-brass',
+          edgeTreatment: 'dark',
+          notes: 'Reinforce the strap junctions.',
+        },
+      },
+    }
+
+    expect(validateOrderDraft(customized, customer)).toEqual([])
+    expect(restoreStudioShareToken(createStudioShareToken(customized))).toEqual(customized)
+  })
+
+  it('requires notes for custom construction requests', () => {
+    const customized: StudioBuildDraft = {
+      ...build,
+      personalization: {
+        ...build.personalization,
+        construction: {
+          ...build.personalization.construction,
+          hardware: 'custom-request',
+          notes: '',
+        },
+      },
+    }
+
+    expect(validateOrderDraft(customized, customer)).toContainEqual({
+      path: 'build.personalization.construction.notes',
+      message: 'Describe the custom construction request.',
+    })
+  })
+
   it('creates a structured request using resolved commerce identity', () => {
     const request = createOrderRequest({
       build,
@@ -67,5 +108,6 @@ describe('order engine', () => {
     expect(request.pricing.baseSubtotalMinor).toBe(70000)
     expect(request.commerce.listedInventoryQuantity).toBe(4)
     expect(request.requestId).toMatch(/^SC-REQ-/u)
+    expect(formatOrderSummary(request)).toContain('Leather finish preference: As Photographed')
   })
 })
