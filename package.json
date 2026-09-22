@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run packages",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "budget": "node scripts/check-build-budget.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
