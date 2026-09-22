@@ -639,6 +639,8 @@ function OrderCapture({
 
   const issues = validateOrderDraft(build, customer)
   const issueMap = Object.fromEntries(issues.map((issue) => [issue.path, issue.message]))
+  useDebouncedLocalStorage(CUSTOMER_STORAGE_KEY, customer, 250)
+
   useEffect(() => {
     setRequest(null)
     setDeliveryState('idle')
