@@ -99,6 +99,9 @@ describe('order engine', () => {
         basePriceMinor: 35000,
         listedInventoryQuantity: 4,
         priceStatus: 'catalog',
+        priceSource: 'shopify-storefront',
+        availabilityStatus: 'available',
+        commerceRefreshedAt: '2026-09-22T03:30:00.000Z',
       },
     })
 
@@ -107,7 +110,11 @@ describe('order engine', () => {
     expect(request.pricing.personalizationRequiresQuote).toBe(true)
     expect(request.pricing.baseSubtotalMinor).toBe(70000)
     expect(request.commerce.listedInventoryQuantity).toBe(4)
+    expect(request.commerce.priceSource).toBe('shopify-storefront')
     expect(request.requestId).toMatch(/^SC-REQ-/u)
-    expect(formatOrderSummary(request)).toContain('Leather finish preference: As Photographed')
+    const summary = formatOrderSummary(request)
+    expect(summary).toContain('Commerce source: shopify-storefront')
+    expect(summary).toContain('Availability: available')
+    expect(summary).toContain('Leather finish preference: As Photographed')
   })
 })
