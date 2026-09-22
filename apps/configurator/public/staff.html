@@ -68,6 +68,12 @@
     .detail-side label{display:grid;gap:6px;margin-bottom:12px;color:#cfc5b4;font-size:.7rem;font-weight:700}
     .save-row{display:flex;gap:8px;align-items:center}
     .save-state{font-size:.68rem;color:var(--muted)}
+    .commerce-card{margin-top:18px;padding:13px;border:1px solid #4b402f;background:#17140f}
+    .commerce-card>span{display:block;color:var(--gold2);font-size:.6rem;font-weight:850;letter-spacing:.09em}
+    .commerce-card p{margin:7px 0 10px;color:#b9b09f;font-size:.7rem;line-height:1.45}
+    .commerce-actions{display:flex;flex-wrap:wrap;gap:7px}
+    .commerce-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 12px;border:1px solid #4a4134;color:#d9ccb5;text-decoration:none;font-size:.7rem}
+    .commerce-actions [hidden]{display:none!important}
     @media(max-width:850px){
       header{display:block}.status-dot{margin-top:12px}
       .toolbar{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -176,6 +182,14 @@
           <button id="saveOrder" class="primary" type="button">Save changes</button>
           <span id="saveState" class="save-state"></span>
         </div>
+        <section class="commerce-card" aria-label="Shopify draft order">
+          <span>SHOPIFY DRAFT ORDER</span>
+          <p id="draftState">Save a quote and move the request to Quoted or Approved before creating a Shopify draft order.</p>
+          <div class="commerce-actions">
+            <button id="createDraft" class="secondary" type="button">Create Shopify draft</button>
+            <a id="draftInvoice" href="#" target="_blank" rel="noopener noreferrer" hidden>Open invoice checkout</a>
+          </div>
+        </section>
       </aside>
     </div>
   </dialog>
@@ -293,9 +307,12 @@
 
           tr.append(
             cell(String(order.delivery_status || '—').replaceAll('_',' ')),
-            cell(order.quote_total_minor !== null && order.quote_total_minor !== undefined
-              ? money(order.quote_total_minor)
-              : order.base_price_status === 'catalog' ? money(order.base_subtotal_minor) + ' base' : 'Quote required'),
+            cell(
+              order.quote_total_minor !== null && order.quote_total_minor !== undefined
+                ? money(order.quote_total_minor)
+                : order.base_price_status === 'catalog' ? money(order.base_subtotal_minor) + ' base' : 'Quote required',
+              order.shopify_draft_order_name ? 'Shopify ' + order.shopify_draft_order_name : ''
+            ),
             cell(dateTime(order.created_at)),
           );
 
@@ -349,6 +366,34 @@
             : (Number(order.quote_total_minor) / 100).toFixed(2);
           el('staffNotes').value = order.staff_notes || '';
           el('saveState').textContent = '';
+
+          const createDraft = el('createDraft');
+          const invoice = el('draftInvoice');
+          const hasQuote = Number.isInteger(order.quote_total_minor) && order.quote_total_minor > 0;
+          const eligibleStatus = ['quoted','approved'].includes(order.status);
+          const existingDraft = Boolean(order.shopify_draft_order_id);
+
+          createDraft.disabled = existingDraft || !hasQuote || !eligibleStatus || order.shopify_draft_order_state === 'creating';
+          createDraft.textContent = existingDraft
+            ? (order.shopify_draft_order_name || 'Shopify draft created')
+            : order.shopify_draft_order_state === 'creating' ? 'Creating…' : 'Create Shopify draft';
+
+          if (existingDraft) {
+            el('draftState').textContent = 'Linked to ' + (order.shopify_draft_order_name || 'a Shopify draft order') + '.';
+          } else if (order.shopify_draft_order_state === 'failed') {
+            el('draftState').textContent = 'The last Shopify draft attempt failed. Review the quote/configuration and retry.';
+          } else {
+            el('draftState').textContent = 'Save a quote and move the request to Quoted or Approved before creating a Shopify draft order.';
+          }
+
+          if (order.shopify_draft_order_invoice_url) {
+            invoice.href = order.shopify_draft_order_invoice_url;
+            invoice.hidden = false;
+          } else {
+            invoice.removeAttribute('href');
+            invoice.hidden = true;
+          }
+
           detail.showModal();
         } catch (error) {
           el('saveState').textContent = error.message || 'Could not load request.';
@@ -416,6 +461,49 @@
           el('saveState').textContent = error.message || 'Save failed';
         } finally {
           el('saveOrder').disabled = false;
+        }
+      });
+
+      el('createDraft').addEventListener('click', async () => {
+        if (!state.selected) return;
+
+        const requestId = state.selected.request_id;
+        const dollars = el('quoteTotal').value.trim();
+        const quoteTotalMinor = dollars === '' ? null : Math.round(Number(dollars) * 100);
+
+        el('createDraft').disabled = true;
+        el('draftState').textContent = 'Saving the current quote and creating the Shopify draft…';
+
+        try {
+          await api('/api/staff/orders', {
+            method:'PATCH',
+            body:JSON.stringify({
+              requestId,
+              status: el('editStatus').value,
+              quoteTotalMinor,
+              staffNotes: el('staffNotes').value,
+            }),
+          });
+
+          const payload = await api('/api/staff/shopify-draft', {
+            method:'POST',
+            body:JSON.stringify({ requestId }),
+          });
+
+          const draft = payload.draftOrder || {};
+          el('draftState').textContent = (payload.existing ? 'Existing' : 'Created') + ' Shopify draft ' + (draft.name || draft.id || '') + '.';
+          el('createDraft').textContent = draft.name || 'Shopify draft created';
+          if (draft.invoiceUrl) {
+            el('draftInvoice').href = draft.invoiceUrl;
+            el('draftInvoice').hidden = false;
+          }
+
+          await loadOrders();
+          const refreshed = state.orders.find((o) => o.request_id === requestId);
+          if (refreshed) state.selected = { ...state.selected, ...refreshed };
+        } catch (error) {
+          el('draftState').textContent = error.message || 'Shopify draft creation failed.';
+          el('createDraft').disabled = false;
         }
       });
 
