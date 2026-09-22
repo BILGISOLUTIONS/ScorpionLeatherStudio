@@ -292,8 +292,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
+  let transport: ReturnType<typeof nodemailer.createTransport> | null = null
+
   try {
-    const transport = nodemailer.createTransport({
+    transport = nodemailer.createTransport({
       pool: true,
       maxConnections: 1,
       maxMessages: 4,
@@ -350,13 +352,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       deliveryId,
       artworkAttached: Boolean(envelope.artwork && artworkBuffer),
     })
-
-    transport.close()
   } catch (error) {
     console.error('Scorpion order delivery failed', {
       requestId: request.requestId,
       error: error instanceof Error ? error.message : String(error),
     })
     res.status(502).json({ accepted: false, code: 'DELIVERY_FAILED' })
+  } finally {
+    transport?.close()
   }
 }
