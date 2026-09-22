@@ -1037,7 +1037,17 @@ export function App() {
 
   const { family, reference, variant } = useMemo(() => resolveStudio(build), [build])
   const hoodConfiguration = useMemo(() => selectedHoodConfiguration(reference), [reference])
+  const construction = build.personalization.construction
+  const constructionRequested =
+    construction.leatherFinish !== 'as-photographed' ||
+    Boolean(construction.leatherColor.trim()) ||
+    construction.stitching !== 'as-photographed' ||
+    construction.hardware !== 'as-photographed' ||
+    construction.edgeTreatment !== 'as-photographed' ||
+    Boolean(construction.notes.trim())
+
   const customWorkRequested =
+    constructionRequested ||
     build.personalization.toolingStyle !== 'none' ||
     build.personalization.textEnabled ||
     Boolean(build.personalization.artworkNotes.trim()) ||
@@ -1327,6 +1337,9 @@ export function App() {
               {reference.priceStatus === 'catalog' && variant.inventoryQuantity !== null ? (
                 <div><span>Listed stock</span><strong>{variant.inventoryQuantity}</strong></div>
               ) : null}
+              <div><span>Leather</span><strong>{leatherFinishLabels[construction.leatherFinish]}{construction.leatherColor.trim() ? ` · ${construction.leatherColor.trim()}` : ''}</strong></div>
+              <div><span>Stitching</span><strong>{stitchingLabels[construction.stitching]}</strong></div>
+              <div><span>Hardware</span><strong>{hardwareLabels[construction.hardware]}</strong></div>
               <div><span>Tooling</span><strong>{toolingLabels[build.personalization.toolingStyle]}</strong></div>
               <div><span>Text</span><strong>{build.personalization.textEnabled ? build.personalization.text || 'Pending' : 'None'}</strong></div>
               <div><span>Placement</span><strong>{build.personalization.placement}</strong></div>
