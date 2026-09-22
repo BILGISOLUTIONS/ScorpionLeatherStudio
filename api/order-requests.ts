@@ -292,19 +292,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  let transport: ReturnType<typeof nodemailer.createTransport> | null = null
+  const transport = nodemailer.createTransport({
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 4,
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: { user: smtp.user, pass: smtp.pass },
+  })
 
   try {
-    transport = nodemailer.createTransport({
-      pool: true,
-      maxConnections: 1,
-      maxMessages: 4,
-      host: smtp.host,
-      port: smtp.port,
-      secure: smtp.secure,
-      auth: { user: smtp.user, pass: smtp.pass },
-    })
-
     await transport.sendMail({
       from,
       to: destination,
@@ -359,6 +357,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
     res.status(502).json({ accepted: false, code: 'DELIVERY_FAILED' })
   } finally {
-    transport?.close()
+    transport.close()
   }
 }
