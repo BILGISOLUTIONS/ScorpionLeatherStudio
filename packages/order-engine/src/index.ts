@@ -410,13 +410,15 @@ export function createOrderRequest(args: {
 }
 
 function formatUsdMinor(amountMinor: number): string {
-  return '
+  return String.fromCharCode(36) + (amountMinor / 100).toFixed(2)
+}
+
+function preferenceLabel(value: string): string {
   return value
     .split('-')
     .map((part) => part ? part[0].toUpperCase() + part.slice(1) : part)
     .join(' ')
 }
-
 export function formatOrderSummary(request: StudioOrderRequest): string {
   const p = request.build.personalization
   const construction = p.construction
