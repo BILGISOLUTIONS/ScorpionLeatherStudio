@@ -1,4 +1,5 @@
 import type { StudioOrderRequest } from '@sls/order-engine'
+import { isShopifyConfigured, shopifyGraphQl } from './shopify-client'
 
 export interface ShopifyDraftOrderResult {
   id: string
@@ -18,62 +19,6 @@ export interface ShopifyDraftOrderState extends ShopifyDraftOrderResult {
   } | null
 }
 
-interface ShopifyConfiguration {
-  storeDomain: string
-  accessToken: string
-  apiVersion: string
-}
-
-interface GraphQlEnvelope<T> {
-  data?: T
-  errors?: Array<{ message: string }>
-}
-
-function configuration(): ShopifyConfiguration | null {
-  const rawDomain = process.env.SHOPIFY_STORE_DOMAIN?.trim()
-  const accessToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN?.trim()
-  if (!rawDomain || !accessToken) return null
-
-  let storeDomain = rawDomain
-    .replace(/^https?:\/\//iu, '')
-    .replace(/\/$/u, '')
-  if (!storeDomain.includes('.')) storeDomain = `${storeDomain}.myshopify.com`
-
-  return {
-    storeDomain,
-    accessToken,
-    apiVersion: process.env.SHOPIFY_ADMIN_API_VERSION?.trim() || '2026-07',
-  }
-}
-
-async function shopifyGraphQl<T>(
-  query: string,
-  variables: Record<string, unknown>,
-): Promise<T> {
-  const config = configuration()
-  if (!config) throw new Error('SHOPIFY_DRAFT_ORDER_NOT_CONFIGURED')
-
-  const response = await fetch(
-    `https://${config.storeDomain}/admin/api/${config.apiVersion}/graphql.json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': config.accessToken,
-      },
-      body: JSON.stringify({ query, variables }),
-    },
-  )
-
-  const payload = await response.json() as GraphQlEnvelope<T>
-  if (!response.ok) throw new Error(`SHOPIFY_HTTP_${response.status}`)
-  if (payload.errors?.length) {
-    throw new Error(`SHOPIFY_GRAPHQL_ERROR: ${payload.errors.map((error) => error.message).join('; ')}`)
-  }
-  if (!payload.data) throw new Error('SHOPIFY_EMPTY_RESPONSE')
-  return payload.data
-}
-
 function dollars(minor: number): string {
   return (minor / 100).toFixed(2)
 }
@@ -83,7 +28,7 @@ function trimmed(value: string, max: number): string {
 }
 
 export function isShopifyDraftOrderConfigured(): boolean {
-  return Boolean(configuration())
+  return isShopifyConfigured()
 }
 
 export async function createShopifyDraftOrder(
