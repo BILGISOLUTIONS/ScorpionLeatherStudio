@@ -2145,3 +2145,20 @@ input:focus-visible {
 .viewer-build-card {
   contain: layout paint;
 }
+
+
+/* V0.10 — live catalog reconciliation */
+.catalog-freshness {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  margin: 8px 0 2px;
+  padding: 0 9px;
+  border: 1px solid #383228;
+  background: #11100d;
+  color: #9f9584;
+  font-size: .62rem;
+  font-weight: 760;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
