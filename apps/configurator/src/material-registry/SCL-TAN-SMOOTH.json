@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "SCL-TAN-SMOOTH",
+  "label": "Tan Smooth Reference",
+  "kind": "leather",
+  "lifecycle": "reference-only",
+  "availability": "quote",
+  "previewColor": "#b5824f",
+  "physical": {
+    "materialType": "Leather",
+    "grain": "Smooth",
+    "finish": "Tan smooth reference"
+  },
+  "provenance": {
+    "source": "photographed-product-reference",
+    "notes": "Approximation derived from the current Scorpion catalog photo. Replace with calibrated field capture before production color approval."
+  },
+  "renderer": {
+    "roughness": 0.68,
+    "metalness": 0,
+    "sheen": 0.18,
+    "sheenRoughness": 0.67
+  }
+}
