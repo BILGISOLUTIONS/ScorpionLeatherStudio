@@ -412,13 +412,13 @@ export function createOrderRequest(args: {
 function formatUsdMinor(amountMinor: number): string {
   return String.fromCharCode(36) + (amountMinor / 100).toFixed(2)
 }
-
 function preferenceLabel(value: string): string {
   return value
     .split('-')
     .map((part) => part ? part[0].toUpperCase() + part.slice(1) : part)
     .join(' ')
 }
+
 export function formatOrderSummary(request: StudioOrderRequest): string {
   const p = request.build.personalization
   const construction = p.construction
@@ -451,65 +451,6 @@ export function formatOrderSummary(request: StudioOrderRequest): string {
       : `Listed inventory at configuration: ${request.commerce.listedInventoryQuantity}`,
     request.commerce.priceStatus === 'catalog'
       ? `Catalog base: ${formatUsdMinor(request.pricing.basePriceMinor)} each · ${formatUsdMinor(request.pricing.baseSubtotalMinor)} base subtotal`
-      : 'Base product pricing: Quote required',
-    '',
-    `Tooling request: ${p.toolingStyle}`,
-    p.toolingNotes ? `Tooling notes: ${p.toolingNotes}` : '',
-    `Text personalization: ${p.textEnabled ? p.text : 'None'}`,
-    p.textEnabled ? `Text style: ${p.textStyle}` : '',
-    `Requested placement: ${p.placement}`,
-    p.artworkNotes ? `Logo/artwork notes: ${p.artworkNotes}` : '',
-    p.additionalNotes ? `Additional notes: ${p.additionalNotes}` : '',
-    '',
-    `Base price status: ${request.commerce.priceStatus === 'catalog' ? 'Current catalog base price' : 'Quote required'}`,
-    'Custom tooling/text/artwork pricing: Quote required',
-    '',
-    `Source build: ${request.sourceUrl}`,
-  ]
-  return lines.filter((line, index, all) => line || (index > 0 && all[index - 1] !== '')).join('\n')
-}
- + (amountMinor / 100).toFixed(2)
-}
-
-function preferenceLabel(value: string): string {
-  return value
-    .split('-')
-    .map((part) => part ? part[0].toUpperCase() + part.slice(1) : part)
-    .join(' ')
-}
-
-export function formatOrderSummary(request: StudioOrderRequest): string {
-  const p = request.build.personalization
-  const construction = p.construction
-  const lines = [
-    'SCORPION WESTERN WEAR — CUSTOM ORDER REQUEST',
-    `Request: ${request.requestId}`,
-    `Build: ${request.buildId}`,
-    '',
-    `Customer: ${request.customer.name}`,
-    request.customer.company ? `Company: ${request.customer.company}` : '',
-    request.customer.email ? `Email: ${request.customer.email}` : '',
-    request.customer.phone ? `Phone: ${request.customer.phone}` : '',
-    `Preferred contact: ${request.customer.preferredContact}`,
-    request.customer.neededBy ? `Needed by: ${request.customer.neededBy}` : '',
-    '',
-    `Product: ${request.commerce.productTitle}`,
-    `Starting build: ${request.commerce.referenceTitle}`,
-    request.commerce.referenceImageUrl ? `Product reference image: ${request.commerce.referenceImageUrl}` : '',
-    `Variant: ${request.commerce.variantTitle}`,
-    `SKU: ${request.commerce.sku}`,
-    `Quantity: ${request.build.quantity}`,
-    `Leather finish preference: ${preferenceLabel(construction.leatherFinish)}`,
-    `Leather color request: ${construction.leatherColor.trim() || 'As photographed'}`,
-    `Stitching preference: ${preferenceLabel(construction.stitching)}`,
-    `Hardware preference: ${preferenceLabel(construction.hardware)}`,
-    `Edge / binding preference: ${preferenceLabel(construction.edgeTreatment)}`,
-    construction.notes ? `Construction notes: ${construction.notes}` : '',
-    request.commerce.listedInventoryQuantity === null || request.commerce.listedInventoryQuantity === undefined
-      ? ''
-      : `Listed inventory at configuration: ${request.commerce.listedInventoryQuantity}`,
-    request.commerce.priceStatus === 'catalog'
-      ? `Catalog base: ${(request.pricing.basePriceMinor / 100).toFixed(2)} each · ${(request.pricing.baseSubtotalMinor / 100).toFixed(2)} base subtotal`
       : 'Base product pricing: Quote required',
     '',
     `Tooling request: ${p.toolingStyle}`,
