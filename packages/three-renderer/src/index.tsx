@@ -60,12 +60,17 @@ function createMaterial(variant: MaterialVariant): THREE.MeshPhysicalMaterial {
   })
 }
 
-function configureTexture(texture: THREE.Texture, variant: MaterialVariant, colorTexture = false) {
+function configureTexture(
+  texture: THREE.Texture,
+  variant: MaterialVariant,
+  maxAnisotropy: number,
+  colorTexture = false,
+) {
   texture.wrapS = THREE.RepeatWrapping
   texture.wrapT = THREE.RepeatWrapping
   const repeat = variant.textureRepeat ?? [1, 1]
   texture.repeat.set(repeat[0], repeat[1])
-  texture.anisotropy = 4
+  texture.anisotropy = Math.max(1, Math.min(8, maxAnisotropy))
   if (colorTexture) texture.colorSpace = THREE.SRGBColorSpace
 }
 
@@ -73,6 +78,7 @@ function hydrateMaterialTextures(
   material: THREE.MeshPhysicalMaterial,
   variant: MaterialVariant,
   invalidate: () => void,
+  maxAnisotropy: number,
 ) {
   if (!variant.textures) return () => undefined
 
@@ -93,7 +99,7 @@ function hydrateMaterialTextures(
           texture.dispose()
           return
         }
-        configureTexture(texture, variant, colorTexture)
+        configureTexture(texture, variant, maxAnisotropy, colorTexture)
         loaded.push(texture)
         assign(texture)
         material.needsUpdate = true
@@ -176,7 +182,7 @@ function ProductModel({
   animationStates = {},
   onAssetIssues,
 }: ThreeProductViewerProps) {
-  const { invalidate } = useThree()
+  const { invalidate, gl } = useThree()
   const gltf = useGLTF(manifest.model)
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene])
 
@@ -195,6 +201,8 @@ function ProductModel({
   useEffect(() => {
     const createdMaterials: THREE.MeshPhysicalMaterial[] = []
     const textureCleanups: Array<() => void> = []
+    const materialByVariant = new Map<string, THREE.MeshPhysicalMaterial>()
+    const maxAnisotropy = gl.capabilities.getMaxAnisotropy()
     const activeComponents = new Map<string, string>()
     const selectedMaterialVariants = new Map<string, string>(Object.entries(manifest.defaultMaterialVariants ?? {}))
 
@@ -224,9 +232,13 @@ function ProductModel({
       const variant = materials[variantId]
       if (!variant) continue
 
-      const material = createMaterial(variant)
-      createdMaterials.push(material)
-      textureCleanups.push(hydrateMaterialTextures(material, variant, invalidate))
+      let material = materialByVariant.get(variantId)
+      if (!material) {
+        material = createMaterial(variant)
+        materialByVariant.set(variantId, material)
+        createdMaterials.push(material)
+        textureCleanups.push(hydrateMaterialTextures(material, variant, invalidate, maxAnisotropy))
+      }
 
       for (const nodeName of nodeNames) {
         const node = scene.getObjectByName(nodeName)
@@ -244,6 +256,7 @@ function ProductModel({
     manifest.components,
     manifest.defaultMaterialVariants,
     manifest.materialSlots,
+    gl,
     invalidate,
     materials,
     product.optionGroups,
