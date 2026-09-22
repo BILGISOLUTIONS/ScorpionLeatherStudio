@@ -963,7 +963,6 @@ export function App() {
     }
   }, [embedded])
 
-  useDebouncedLocalStorage(CUSTOMER_STORAGE_KEY, customer, 250)
 
   useEffect(() => {
     try {
