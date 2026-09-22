@@ -41,6 +41,9 @@
       ],
       "@sls/order-engine": [
         "packages/order-engine/src/index.ts"
+      ],
+      "@sls/material-library": [
+        "packages/material-library/src/index.ts"
       ]
     }
   },
