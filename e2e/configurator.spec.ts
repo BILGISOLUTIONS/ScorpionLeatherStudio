@@ -84,8 +84,11 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByLabel('Hardware preference')).toHaveValue('antique-brass')
   await expect(page.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue('2')
 
+  const deferredOrder = page.getByTestId('order-capture-deferred')
+  if (await deferredOrder.count()) {
+    await deferredOrder.scrollIntoViewIfNeeded()
+  }
   const requestPanel = page.getByRole('region', { name: 'Custom order request' })
-  await requestPanel.scrollIntoViewIfNeeded()
   await expect(requestPanel.getByRole('textbox', { name: /^Name/ })).toBeVisible()
   await requestPanel.getByRole('textbox', { name: /^Name/ }).fill('Test Customer')
   await requestPanel.getByRole('textbox', { name: 'Email', exact: true }).fill('customer@example.com')
