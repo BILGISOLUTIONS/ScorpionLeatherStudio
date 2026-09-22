@@ -24,11 +24,13 @@ export interface LiveVariantCommerce {
   fetchedAt?: string
 }
 
-const productRequestCache = new Map<string, Promise<LiveProductPayload | null>>()
+const PRODUCT_CACHE_TTL_MS = 60_000
+const productRequestCache = new Map<string, { expiresAt: number; request: Promise<LiveProductPayload | null> }>()
 
 async function fetchLiveProduct(handle: string): Promise<LiveProductPayload | null> {
   const cached = productRequestCache.get(handle)
-  if (cached) return cached
+  if (cached && cached.expiresAt > Date.now()) return cached.request
+  if (cached) productRequestCache.delete(handle)
 
   const request = fetch(`/api/catalog-product?handle=${encodeURIComponent(handle)}`, {
     method: 'GET',
@@ -45,7 +47,10 @@ async function fetchLiveProduct(handle: string): Promise<LiveProductPayload | nu
       return null
     })
 
-  productRequestCache.set(handle, request)
+  productRequestCache.set(handle, {
+    expiresAt: Date.now() + PRODUCT_CACHE_TTL_MS,
+    request,
+  })
   return request
 }
 
