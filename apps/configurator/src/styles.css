@@ -2070,3 +2070,29 @@ input:focus-visible {
   letter-spacing: .08em;
   text-transform: uppercase;
 }
+
+
+/* V0.8 construction preferences */
+.construction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.construction-grid .field-label {
+  min-width: 0;
+}
+
+.construction-notes {
+  margin-top: 12px;
+}
+
+.construction-notes textarea {
+  min-height: 88px;
+}
+
+@media (max-width: 620px) {
+  .construction-grid {
+    grid-template-columns: 1fr;
+  }
+}
