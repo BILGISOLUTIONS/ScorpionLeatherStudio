@@ -148,7 +148,10 @@ function MaterialLab() {
             hardware, and lens materials without coupling material data to individual products.
           </p>
         </div>
-        <a href="/" className="studio-link">Open customer studio</a>
+        <div className="lab-links">
+          <a href="/capture.html" className="studio-link">Start capture session</a>
+          <a href="/" className="studio-link">Open customer studio</a>
+        </div>
       </header>
 
       <section className="lab-stats" aria-label="Material library status">
