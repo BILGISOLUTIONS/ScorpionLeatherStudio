@@ -7,6 +7,17 @@ export interface ShopifyDraftOrderResult {
   status: string
 }
 
+export interface ShopifyDraftOrderState extends ShopifyDraftOrderResult {
+  completedAt: string | null
+  invoiceSentAt: string | null
+  order: {
+    id: string
+    name: string
+    displayFinancialStatus: string | null
+    displayFulfillmentStatus: string
+  } | null
+}
+
 interface ShopifyConfiguration {
   storeDomain: string
   accessToken: string
@@ -222,4 +233,42 @@ export async function sendShopifyDraftInvoice(
   }
 
   return result.draftOrder
+}
+
+
+export async function getShopifyDraftOrderState(
+  draftOrderId: string,
+): Promise<ShopifyDraftOrderState> {
+  if (!/^gid:\/\/shopify\/DraftOrder\/\d+$/u.test(draftOrderId)) {
+    throw new Error('INVALID_SHOPIFY_DRAFT_ORDER_ID')
+  }
+
+  const query = `
+    query ScorpionDraftOrderState($id: ID!) {
+      draftOrder(id: $id) {
+        id
+        name
+        invoiceUrl
+        invoiceSentAt
+        completedAt
+        status
+        order {
+          id
+          name
+          displayFinancialStatus
+          displayFulfillmentStatus
+        }
+      }
+    }
+  `
+
+  const data = await shopifyGraphQl<{
+    draftOrder?: ShopifyDraftOrderState | null
+  }>(query, { id: draftOrderId })
+
+  if (!data.draftOrder?.id) {
+    throw new Error('SHOPIFY_DRAFT_ORDER_NOT_FOUND')
+  }
+
+  return data.draftOrder
 }
