@@ -273,7 +273,9 @@ test('Material Lab inspects the registry without loading customer 3D runtime', a
   await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(7)
   await expect(page.getByText('SCL-COGNAC')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Cognac Textured Reference' })).toBeVisible()
-  await expect(page.getByText('Production approved', { exact: true })).toHaveCount(1)
+  await expect(
+    page.getByRole('region', { name: 'Material library status' }).getByText('Production approved', { exact: true }),
+  ).toBeVisible()
 
   await page.getByRole('searchbox', { name: 'Search materials' }).fill('cognac')
   await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(1)
