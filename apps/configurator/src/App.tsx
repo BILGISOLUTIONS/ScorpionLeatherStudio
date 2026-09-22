@@ -544,11 +544,12 @@ function PersonalizationEditor({
               <button
                 type="button"
                 key={style}
-                className={p.toolingStyle === style ? 'choice-chip is-selected' : 'choice-chip'}
+                className={p.toolingStyle === style ? 'choice-chip tooling-choice is-selected' : 'choice-chip tooling-choice'}
                 onClick={() => update({ toolingStyle: style })}
                 aria-pressed={p.toolingStyle === style}
               >
-                {toolingLabels[style]}
+                <span className={`tooling-choice-swatch tooling-choice-swatch-${style}`} aria-hidden="true" />
+                <span>{toolingLabels[style]}</span>
               </button>
             ))}
           </div>
