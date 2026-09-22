@@ -18,6 +18,10 @@ interface SubmissionEnvelope {
 
 const ARTWORK_MAX_BYTES = 2 * 1024 * 1024
 const ARTWORK_ALLOWED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf'])
+const LEATHER_FINISH_VALUES = new Set(['as-photographed', 'smooth', 'textured', 'roughout-suede', 'shop-choice', 'custom-request'])
+const STITCHING_VALUES = new Set(['as-photographed', 'matching', 'contrast', 'heavy-contrast', 'shop-choice', 'custom-request'])
+const HARDWARE_VALUES = new Set(['as-photographed', 'antique-brass', 'brass', 'nickel', 'black', 'shop-choice', 'custom-request'])
+const EDGE_VALUES = new Set(['as-photographed', 'natural', 'dark', 'contrast', 'shop-choice', 'custom-request'])
 
 function stringValue(value: unknown): string {
   return typeof value === 'string' ? value : ''
@@ -109,6 +113,17 @@ function validateRequest(request: StudioOrderRequest): string[] {
   }
   if (!stringValue(request?.commerce?.sku).trim()) issues.push('SKU is required.')
   if (!stringValue(request?.commerce?.merchandiseId).trim()) issues.push('Merchandise id is required.')
+
+  const construction = request?.build?.personalization?.construction
+  if (!construction) {
+    issues.push('Construction preferences are required.')
+  } else {
+    if (!LEATHER_FINISH_VALUES.has(stringValue(construction.leatherFinish))) issues.push('Invalid leather finish preference.')
+    if (!STITCHING_VALUES.has(stringValue(construction.stitching))) issues.push('Invalid stitching preference.')
+    if (!HARDWARE_VALUES.has(stringValue(construction.hardware))) issues.push('Invalid hardware preference.')
+    if (!EDGE_VALUES.has(stringValue(construction.edgeTreatment))) issues.push('Invalid edge preference.')
+  }
+
   if (!Number.isInteger(request?.build?.quantity) || request.build.quantity < 1 || request.build.quantity > 99) {
     issues.push('Quantity must be between 1 and 99.')
   }
@@ -119,6 +134,8 @@ function validateRequest(request: StudioOrderRequest): string[] {
     ['customer.phone', request?.customer?.phone, 80],
     ['customer.company', request?.customer?.company, 160],
     ['personalization.text', request?.build?.personalization?.text, 40],
+    ['personalization.construction.leatherColor', request?.build?.personalization?.construction?.leatherColor, 80],
+    ['personalization.construction.notes', request?.build?.personalization?.construction?.notes, 700],
     ['personalization.toolingNotes', request?.build?.personalization?.toolingNotes, 500],
     ['personalization.artworkNotes', request?.build?.personalization?.artworkNotes, 700],
     ['personalization.additionalNotes', request?.build?.personalization?.additionalNotes, 1000],
