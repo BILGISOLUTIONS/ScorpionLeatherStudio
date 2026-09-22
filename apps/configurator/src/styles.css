@@ -2053,3 +2053,20 @@ input:focus-visible {
     padding-inline: 8px;
   }
 }
+
+
+/* V0.8 performance states */
+.viewer-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(124, 91, 42, .10), transparent 32%),
+    #0e0e0d;
+  color: #b8ad99;
+  font-size: .72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
