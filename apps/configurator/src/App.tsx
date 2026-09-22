@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { createInitialConfiguration, setSelection } from '@sls/configurator-core'
 import {
   createDefaultPersonalization,
   createOrderRequest,
@@ -19,8 +18,6 @@ import {
   type ToolingStyle,
 } from '@sls/order-engine'
 import { formatMoney } from '@sls/pricing-engine'
-import type { ValidationIssue } from '@sls/product-schema'
-import { sampleManifest, sampleMaterials, sampleProduct } from './sample-product'
 import {
   findFamily,
   findReferenceByHandle,
@@ -33,22 +30,12 @@ import {
   type StudioVariant,
 } from './studio-catalog'
 
-const ThreeProductViewer = lazy(async () => {
-  const module = await import('@sls/three-renderer')
-  return { default: module.ThreeProductViewer }
-})
+const WeldingHoodViewer = lazy(() => import('./WeldingHoodViewer'))
 
 const BUILD_STORAGE_KEY = 'scorpion-leather-studio:v004-build'
 const CUSTOMER_STORAGE_KEY = 'scorpion-leather-studio:v004-customer'
 const REQUEST_STORAGE_KEY = 'scorpion-leather-studio:v004-requests'
 const ARTWORK_SESSION_KEY = 'scorpion-leather-studio:v006-artwork'
-
-const hoodReferenceMap: Record<string, string> = {
-  'hood-dark-yellow': 'dark-textured-yellow-trim',
-  'hood-cognac': 'cognac-textured',
-  'hood-tan-smooth': 'tan-smooth',
-  'hood-tan-textured': 'tan-textured',
-}
 
 const toolingLabels: Record<ToolingStyle, string> = {
   none: 'No tooling',
@@ -298,19 +285,6 @@ function resolveStudio(
   const reference = getReference(family, build.referenceId)
   const variant = getVariant(reference, build.variantId)
   return { family, reference, variant }
-}
-
-function selectedHoodConfiguration(reference: StudioReference) {
-  let configuration = createInitialConfiguration(sampleProduct)
-  const optionId = hoodReferenceMap[reference.id]
-  if (optionId) {
-    try {
-      configuration = setSelection(sampleProduct, configuration, 'catalogBuild', optionId)
-    } catch {
-      // The product photograph remains authoritative if the renderer reference fails.
-    }
-  }
-  return configuration
 }
 
 function buildShareUrl(build: StudioBuildDraft): string {
@@ -1046,13 +1020,8 @@ export function App() {
   const [build, setBuild] = useState<StudioBuildDraft>(loadInitialBuild)
   const [artwork, setArtwork] = useState<ArtworkAttachment | null>(loadSessionArtwork)
   const [status, setStatus] = useState('')
-  const [visorOpen, setVisorOpen] = useState(false)
-  const [autoRotate, setAutoRotate] = useState(false)
-  const [cameraPreset, setCameraPreset] = useState(sampleProduct.asset.defaultCameraPreset)
-  const [assetIssues, setAssetIssues] = useState<ValidationIssue[]>([])
 
   const { family, reference, variant } = useMemo(() => resolveStudio(build), [build])
-  const hoodConfiguration = useMemo(() => selectedHoodConfiguration(reference), [reference])
   const construction = build.personalization.construction
   const constructionRequested =
     construction.leatherFinish !== 'as-photographed' ||
@@ -1137,9 +1106,6 @@ export function App() {
         nextFamily.personalization.placementOptions.at(-1) ?? 'Shop recommendation',
       ),
     })
-    setCameraPreset(sampleProduct.asset.defaultCameraPreset)
-    setAutoRotate(false)
-    setVisorOpen(false)
     setArtwork(null)
     setStatus('')
   }
@@ -1168,9 +1134,6 @@ export function App() {
     const next = defaultBuild()
     setBuild(next)
     setArtwork(null)
-    setAutoRotate(false)
-    setVisorOpen(false)
-    setCameraPreset(sampleProduct.asset.defaultCameraPreset)
     const url = new URL(window.location.href)
     url.searchParams.delete('studio')
     url.searchParams.delete('build')
@@ -1189,7 +1152,7 @@ export function App() {
           </p>
         </div>
         <div className="header-build">
-          <div className="prototype-badge">ORDER STUDIO · V0.7</div>
+          <div className="prototype-badge">ORDER STUDIO · V0.8</div>
           <div className="configuration-id">
             <span>BUILD</span>
             <strong>{createStudioBuildId(build)}</strong>
@@ -1202,50 +1165,9 @@ export function App() {
       <section className="studio-grid">
         <div className="viewer-column">
           {family.supports3D ? (
-            <div className="viewer-panel" aria-label="Interactive 3D product viewer">
-              <Suspense fallback={<div className="viewer-loading">Loading 3D studio…</div>}>
-                <ThreeProductViewer
-                  product={sampleProduct}
-                  manifest={sampleManifest}
-                  materials={sampleMaterials}
-                  selections={hoodConfiguration.selections}
-                  animationStates={{ 'visor.open': visorOpen }}
-                  cameraPreset={cameraPreset}
-                  autoRotate={autoRotate}
-                  onAssetIssues={setAssetIssues}
-                />
-              </Suspense>
-
-              <div className="view-selector" aria-label="Product views">
-                {Object.entries(sampleManifest.cameraPresets).map(([key, preset]) => (
-                  <button
-                    type="button"
-                    key={key}
-                    className={cameraPreset === key ? 'is-active' : ''}
-                    onClick={() => {
-                      setCameraPreset(key)
-                      setAutoRotate(false)
-                    }}
-                  >
-                    {preset.label ?? key}
-                  </button>
-                ))}
-              </div>
-
-              <div className="viewer-actions">
-                <button type="button" className={autoRotate ? 'is-active' : ''} onClick={() => setAutoRotate((value) => !value)}>
-                  {autoRotate ? 'Stop spin' : 'Auto spin'}
-                </button>
-                <button type="button" onClick={() => setVisorOpen((open) => !open)}>
-                  {visorOpen ? 'Close visor' : 'Open visor'}
-                </button>
-              </div>
-
-              <div className="viewer-caption">Development digital twin · photographed product is the visual authority</div>
-              <div className={`asset-status ${assetIssues.length ? 'has-issues' : ''}`}>
-                {assetIssues.length ? `${assetIssues.length} asset issue${assetIssues.length === 1 ? '' : 's'}` : '3D contract validated'}
-              </div>
-            </div>
+            <Suspense fallback={<div className="viewer-loading">Loading 3D studio…</div>}>
+              <WeldingHoodViewer referenceId={reference.id} />
+            </Suspense>
           ) : (
             <ReferenceStage family={family} reference={reference} build={build} artwork={artwork} />
           )}
