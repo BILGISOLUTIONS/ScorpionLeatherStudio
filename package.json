@@ -10,7 +10,7 @@
     "dev": "npm run dev -w @sls/configurator",
     "build": "npm run build -w @sls/configurator",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run packages",
+    "test": "vitest run packages api",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "budget": "node scripts/check-build-budget.mjs"
