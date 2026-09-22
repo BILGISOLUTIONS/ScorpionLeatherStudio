@@ -325,7 +325,7 @@ test('Field Capture Assistant records a complete swatch session and exports mani
   await page.getByLabel('Grain', { exact: true }).fill('Full grain')
   await page.getByLabel('Finish').fill('Matte')
   await page.getByLabel('Thickness (mm)').fill('2.1')
-  await page.getByLabel('Supplier').fill('Test Supplier')
+  await page.getByLabel('Supplier', { exact: true }).fill('Test Supplier')
   await page.getByLabel('Color target').fill('ColorChecker')
   await page.getByLabel('Camera / phone').fill('Test Camera')
 
