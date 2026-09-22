@@ -28,6 +28,11 @@ const capturedLeather: ScorpionMaterialDefinition = {
     directionalLighting: true,
     scaleReference: true,
   },
+  approval: {
+    reviewer: 'QA Reviewer',
+    reviewedAt: '2026-09-22T10:00:00.000Z',
+    decision: 'approved-for-registry-promotion',
+  },
   renderer: {
     roughness: 0.8,
     metalness: 0,
