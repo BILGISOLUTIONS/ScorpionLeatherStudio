@@ -805,7 +805,7 @@ function OrderCapture({
     }
   }
 
-  const summary = request ? formatOrderSummary(request) : ''
+  const summary = useMemo(() => request ? formatOrderSummary(request) : '', [request])
 
   const copySummary = async () => {
     if (!request) return
