@@ -10,10 +10,11 @@
     "dev": "npm run dev -w @sls/configurator",
     "build": "npm run build -w @sls/configurator",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run packages api",
+    "test": "vitest run packages api server",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "budget": "node scripts/check-build-budget.mjs"
+    "budget": "node scripts/check-build-budget.mjs",
+    "budget:functions": "node scripts/check-vercel-functions.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
