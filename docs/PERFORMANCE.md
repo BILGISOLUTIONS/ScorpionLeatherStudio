@@ -115,3 +115,38 @@ Until live catalog refresh exists:
 - quote-only products remain QUOTE;
 - custom work remains subject to Scorpion confirmation;
 - inventory shown in a build packet should be treated as the catalog value captured when the Studio data was refreshed.
+
+
+## V0.9 runtime-efficiency pass
+
+V0.9 separates the below-the-fold customer order workflow from the initial configurator runtime and defers loading it until the customer approaches the order section.
+
+Measured production output on the final V0.9 branch:
+
+- initial JavaScript: **233.6 kB raw / 71.2 kB gzip**
+- order-capture chunk: **8.4 kB raw / 3.3 kB gzip**
+- welding-hood 3D chunk: **951.1 kB raw / 258.6 kB gzip**
+- CSS: **29.1 kB raw / 6.9 kB gzip**
+
+Additional runtime changes:
+
+- order capture is loaded behind an `IntersectionObserver` boundary with a forward preload margin;
+- Playwright verifies the order module is absent before the order area is approached and present afterward;
+- catalog family, reference, and variant resolution use indexed maps instead of repeated linear scans;
+- below-the-fold order rendering uses `content-visibility` and intrinsic-size containment;
+- high-churn visual regions use layout/paint containment where safe;
+- shared media, URL, and persistence helpers were extracted from the main application module;
+- the application entry and lazy chunks now have separate gzip/raw regression budgets.
+
+### V0.9 enforced ceilings
+
+- initial JS raw: **285 kB**
+- initial JS gzip: **88 kB**
+- CSS raw: **50 kB**
+- CSS gzip: **15 kB**
+- any lazy JS chunk raw: **1,100 kB**
+- any lazy JS chunk gzip: **300 kB**
+- order-capture chunk raw: **24 kB**
+- order-capture chunk gzip: **10 kB**
+
+These limits intentionally leave development headroom while preventing the application from drifting back toward the pre-split V0.7 payload.
