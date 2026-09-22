@@ -71,7 +71,12 @@ export function useLiveCatalogVariant(
         return response.json() as Promise<{ ok?: boolean; variant?: LiveCatalogVariant }>
       })
       .then((payload) => {
-        if (disposed || !payload.ok || !payload.variant) return
+        if (disposed) return
+        if (!payload.ok || !payload.variant) {
+          setVariant(null)
+          setStatus('fallback')
+          return
+        }
         cache.set(key, {
           variant: payload.variant,
           expiresAt: Date.now() + CACHE_TTL_MS,
