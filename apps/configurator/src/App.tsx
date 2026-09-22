@@ -9,6 +9,10 @@ import {
   restoreStudioShareToken,
   validateOrderDraft,
   type CustomerDraft,
+  type EdgePreference,
+  type HardwarePreference,
+  type LeatherFinishPreference,
+  type StitchingPreference,
   type StudioBuildDraft,
   type StudioOrderRequest,
   type TextStyle,
@@ -61,6 +65,43 @@ const textStyleLabels: Record<TextStyle, string> = {
   script: 'Script',
   monogram: 'Monogram',
   'shop-choice': 'Shop choice',
+}
+
+const leatherFinishLabels: Record<LeatherFinishPreference, string> = {
+  'as-photographed': 'As photographed',
+  smooth: 'Smooth',
+  textured: 'Textured / grain',
+  'roughout-suede': 'Roughout / suede',
+  'shop-choice': 'Let Scorpion recommend',
+  'custom-request': 'Custom request',
+}
+
+const stitchingLabels: Record<StitchingPreference, string> = {
+  'as-photographed': 'As photographed',
+  matching: 'Matching thread',
+  contrast: 'Contrast thread',
+  'heavy-contrast': 'Heavy contrast stitch',
+  'shop-choice': 'Let Scorpion recommend',
+  'custom-request': 'Custom request',
+}
+
+const hardwareLabels: Record<HardwarePreference, string> = {
+  'as-photographed': 'As photographed',
+  'antique-brass': 'Antique brass',
+  brass: 'Brass',
+  nickel: 'Nickel / silver',
+  black: 'Black hardware',
+  'shop-choice': 'Let Scorpion recommend',
+  'custom-request': 'Custom request',
+}
+
+const edgeLabels: Record<EdgePreference, string> = {
+  'as-photographed': 'As photographed',
+  natural: 'Natural edge',
+  dark: 'Dark edge / binding',
+  contrast: 'Contrast edge / binding',
+  'shop-choice': 'Let Scorpion recommend',
+  'custom-request': 'Custom request',
 }
 
 interface ArtworkAttachment {
@@ -458,12 +499,92 @@ function PersonalizationEditor({
 }) {
   const p = build.personalization
   const update = (patch: Partial<StudioBuildDraft['personalization']>) => onChange({ ...p, ...patch })
+  const updateConstruction = (patch: Partial<StudioBuildDraft['personalization']['construction']>) => {
+    update({ construction: { ...p.construction, ...patch } })
+  }
 
   return (
     <fieldset className="studio-section personalization-section">
       <div className="section-title-row">
-        <legend>3. Personalize</legend>
+        <legend>3. Construction & personalization</legend>
         <span>Preferences are reviewed before production</span>
+      </div>
+
+      <div className="personalization-block construction-block">
+        <div className="field-heading">
+          <strong>Construction preferences</strong>
+          <small>These are requests, not guaranteed material inventory. Scorpion confirms feasibility, availability, and final price.</small>
+        </div>
+        <div className="construction-grid">
+          <label className="field-label">
+            Leather finish preference
+            <select
+              value={p.construction.leatherFinish}
+              onChange={(event) => updateConstruction({ leatherFinish: event.target.value as LeatherFinishPreference })}
+            >
+              {(Object.keys(leatherFinishLabels) as LeatherFinishPreference[]).map((value) => (
+                <option key={value} value={value}>{leatherFinishLabels[value]}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field-label">
+            Leather color request
+            <input
+              type="text"
+              value={p.construction.leatherColor}
+              onChange={(event) => updateConstruction({ leatherColor: event.target.value.slice(0, 80) })}
+              placeholder="Leave blank to use photographed color"
+              maxLength={80}
+            />
+          </label>
+
+          <label className="field-label">
+            Stitching preference
+            <select
+              value={p.construction.stitching}
+              onChange={(event) => updateConstruction({ stitching: event.target.value as StitchingPreference })}
+            >
+              {(Object.keys(stitchingLabels) as StitchingPreference[]).map((value) => (
+                <option key={value} value={value}>{stitchingLabels[value]}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field-label">
+            Hardware preference
+            <select
+              value={p.construction.hardware}
+              onChange={(event) => updateConstruction({ hardware: event.target.value as HardwarePreference })}
+            >
+              {(Object.keys(hardwareLabels) as HardwarePreference[]).map((value) => (
+                <option key={value} value={value}>{hardwareLabels[value]}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field-label">
+            Edge / binding preference
+            <select
+              value={p.construction.edgeTreatment}
+              onChange={(event) => updateConstruction({ edgeTreatment: event.target.value as EdgePreference })}
+            >
+              {(Object.keys(edgeLabels) as EdgePreference[]).map((value) => (
+                <option key={value} value={value}>{edgeLabels[value]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="field-label construction-notes">
+          Construction notes
+          <textarea
+            value={p.construction.notes}
+            onChange={(event) => updateConstruction({ notes: event.target.value.slice(0, 700) })}
+            placeholder="Describe any custom leather, stitching, hardware, binding, reinforcement, fit, or construction request."
+            maxLength={700}
+          />
+        </label>
       </div>
 
       {family.personalization.tooling ? (
@@ -607,7 +728,7 @@ function PersonalizationEditor({
           <textarea
             value={p.additionalNotes}
             onChange={(event) => update({ additionalNotes: event.target.value })}
-            placeholder="Leather preferences, stitching, trim, hardware, fit notes, special use case, or anything the shop should know."
+            placeholder="Special use case, fit notes, job requirements, deadlines, or anything else the shop should know."
             maxLength={1000}
           />
         </label>
