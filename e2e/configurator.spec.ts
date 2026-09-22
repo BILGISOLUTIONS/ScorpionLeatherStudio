@@ -300,3 +300,117 @@ test('Material Lab inspects the registry without loading customer 3D runtime', a
     fullPage: true,
   })
 })
+
+
+test('Field Capture Assistant records a complete swatch session and exports manifests locally', async ({ page }, testInfo) => {
+  const scriptRequests: string[] = []
+  const consoleErrors: string[] = []
+
+  page.on('request', (request) => {
+    if (request.resourceType() === 'script') scriptRequests.push(request.url())
+  })
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+
+  await page.goto('/capture.html')
+
+  await expect(page.getByRole('heading', { name: 'Field Capture Assistant' })).toBeVisible()
+  await page.getByLabel('Material ID *').fill('SCL-005')
+  await page.getByLabel('Material label *').fill('Saddle Brown Full Grain')
+  await page.getByLabel('Operator *').fill('Field Operator')
+  await page.getByLabel('Material type').fill('Cowhide')
+  await page.getByLabel('Hide').fill('Cowhide')
+  await page.getByLabel('Grain').fill('Full grain')
+  await page.getByLabel('Finish').fill('Matte')
+  await page.getByLabel('Thickness (mm)').fill('2.1')
+  await page.getByLabel('Supplier').fill('Test Supplier')
+  await page.getByLabel('Color target').fill('ColorChecker')
+  await page.getByLabel('Camera / phone').fill('Test Camera')
+
+  const captureFrames = [
+    ['Identification file', '00-identification.dng'],
+    ['Cross-polarized file', '01-cross-polarized.dng'],
+    ['Parallel / reflective file', '02-parallel.dng'],
+    ['Directional north file', '03-north.dng'],
+    ['Directional east file', '04-east.dng'],
+    ['Directional south file', '05-south.dng'],
+    ['Directional west file', '06-west.dng'],
+    ['Macro grain file', '07-macro.dng'],
+    ['Edge / thickness file', '08-edge.dng'],
+  ] as const
+
+  for (const [label, name] of captureFrames) {
+    await page.getByLabel(label).setInputFiles({
+      name,
+      mimeType: 'application/octet-stream',
+      buffer: Buffer.from(`capture:${name}`),
+    })
+  }
+
+  const progress = page.getByRole('region', { name: 'Capture progress' })
+  await expect(progress).toContainText('9 / 9')
+  await expect(progress).toContainText('Ready')
+
+  await page.reload()
+  await expect(progress).toContainText('9 / 9')
+  await expect(page.getByLabel('Material ID *')).toHaveValue('SCL-005')
+  await expect(page.getByText('01-cross-polarized.dng')).toBeVisible()
+
+  const [manifestDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download capture manifest' }).click(),
+  ])
+  const manifestPath = await manifestDownload.path()
+  expect(manifestPath).not.toBeNull()
+  const manifest = JSON.parse(await fs.readFile(manifestPath!, 'utf8')) as {
+    materialId: string
+    capture: { crossPolarized: boolean; directionalLighting: boolean; scaleReference: boolean }
+    frames: Record<string, { file: string }>
+  }
+  expect(manifest.materialId).toBe('SCL-005')
+  expect(manifest.capture).toMatchObject({
+    crossPolarized: true,
+    directionalLighting: true,
+    scaleReference: true,
+  })
+  expect(manifest.frames.crossPolarized.file).toBe('01-cross-polarized.dng')
+  expect(manifest.frames.edge.file).toBe('08-edge.dng')
+
+  const [registryDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download registry draft' }).click(),
+  ])
+  const registryPath = await registryDownload.path()
+  expect(registryPath).not.toBeNull()
+  const registry = JSON.parse(await fs.readFile(registryPath!, 'utf8')) as {
+    id: string
+    lifecycle: string
+    physical?: { thicknessMm?: number }
+    provenance?: { source?: string; crossPolarized?: boolean; directionalLighting?: boolean }
+    reviewRequired?: string[]
+  }
+  expect(registry.id).toBe('SCL-005')
+  expect(registry.lifecycle).toBe('captured-master')
+  expect(registry.physical?.thicknessMm).toBe(2.1)
+  expect(registry.provenance).toMatchObject({
+    source: 'field-capture',
+    crossPolarized: true,
+    directionalLighting: true,
+  })
+  expect(registry.reviewRequired?.length).toBeGreaterThan(0)
+
+  expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
+  expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
+  expect(consoleErrors, `Field Capture console errors: ${consoleErrors.join('\n')}`).toEqual([])
+
+  const screenshotName = testInfo.project.name.includes('mobile')
+    ? 'field-capture-mobile.png'
+    : 'field-capture-desktop.png'
+
+  await page.screenshot({
+    path: `playwright-output/screenshots/${screenshotName}`,
+    fullPage: true,
+  })
+})
