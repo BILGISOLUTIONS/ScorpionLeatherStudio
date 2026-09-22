@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import nodemailer from 'nodemailer'
 import { formatOrderSummary, type StudioOrderRequest } from '@sls/order-engine'
+import { markOrderDelivery, persistOrderRequest } from './lib/order-store'
 
 interface ArtworkAttachmentInput {
   name: string
@@ -275,9 +276,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
+  const artworkBuffer = decodeArtwork(envelope.artwork)
+  if (envelope.artwork && !artworkBuffer) {
+    res.status(422).json({ accepted: false, code: 'INVALID_ARTWORK' })
+    return
+  }
+
+  const persistence = await persistOrderRequest(
+    request,
+    envelope.artwork ? {
+      name: envelope.artwork.name,
+      type: envelope.artwork.type,
+      size: envelope.artwork.size,
+    } : null,
+  )
+
+  if (persistence.error) {
+    console.error('Scorpion order persistence failed', {
+      requestId: request.requestId,
+      error: persistence.error,
+    })
+  }
+
   const smtp = requiredSmtpConfig()
   if (!smtp) {
-    res.status(503).json({ accepted: false, code: 'ORDER_TRANSPORT_NOT_CONFIGURED' })
+    if (persistence.persisted) {
+      await markOrderDelivery(request.requestId, 'stored')
+      res.status(202).json({
+        accepted: true,
+        requestId: request.requestId,
+        persisted: true,
+        emailSent: false,
+        deliveryStatus: 'stored',
+        artworkAttached: Boolean(envelope.artwork && artworkBuffer),
+      })
+      return
+    }
+
+    res.status(503).json({
+      accepted: false,
+      code: persistence.configured ? 'ORDER_DELIVERY_UNAVAILABLE' : 'ORDER_TRANSPORT_NOT_CONFIGURED',
+    })
     return
   }
 
@@ -285,12 +324,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const from = (process.env.SMTP_FROM ?? smtp.user).trim()
   const summary = formatOrderSummary(request)
   const deliveryId = randomUUID()
-  const artworkBuffer = decodeArtwork(envelope.artwork)
-
-  if (envelope.artwork && !artworkBuffer) {
-    res.status(422).json({ accepted: false, code: 'INVALID_ARTWORK' })
-    return
-  }
 
   const transport = nodemailer.createTransport({
     pool: true,
@@ -344,18 +377,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     }
 
+    await markOrderDelivery(request.requestId, 'emailed')
     res.status(202).json({
       accepted: true,
       requestId: request.requestId,
       deliveryId,
+      persisted: persistence.persisted,
+      emailSent: true,
+      deliveryStatus: 'emailed',
       artworkAttached: Boolean(envelope.artwork && artworkBuffer),
     })
   } catch (error) {
+    await markOrderDelivery(request.requestId, 'email_failed')
     console.error('Scorpion order delivery failed', {
       requestId: request.requestId,
       error: error instanceof Error ? error.message : String(error),
     })
-    res.status(502).json({ accepted: false, code: 'DELIVERY_FAILED' })
+
+    if (persistence.persisted) {
+      res.status(202).json({
+        accepted: true,
+        requestId: request.requestId,
+        persisted: true,
+        emailSent: false,
+        deliveryStatus: 'stored_email_failed',
+        artworkAttached: Boolean(envelope.artwork && artworkBuffer),
+      })
+    } else {
+      res.status(502).json({ accepted: false, code: 'DELIVERY_FAILED' })
+    }
   } finally {
     transport.close()
   }
