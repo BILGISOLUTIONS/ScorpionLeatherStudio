@@ -386,8 +386,23 @@ export const studioFamilies: StudioProductFamily[] = [
   },
 ]
 
+const familyById = new Map(studioFamilies.map((family) => [family.id, family] as const))
+const referenceByHandle = new Map(
+  studioFamilies.flatMap((family) =>
+    family.references.map((reference) => [reference.handle, { family, reference }] as const),
+  ),
+)
+
 export function getFamily(familyId: string): StudioProductFamily {
-  return studioFamilies.find((family) => family.id === familyId) ?? studioFamilies[0]
+  return familyById.get(familyId as StudioFamilyKind) ?? studioFamilies[0]
+}
+
+export function findFamily(familyId: string): StudioProductFamily | undefined {
+  return familyById.get(familyId as StudioFamilyKind)
+}
+
+export function findReferenceByHandle(handle: string): { family: StudioProductFamily; reference: StudioReference } | undefined {
+  return referenceByHandle.get(handle)
 }
 
 export function getReference(family: StudioProductFamily, referenceId: string): StudioReference {
