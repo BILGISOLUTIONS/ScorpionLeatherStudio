@@ -288,6 +288,9 @@ test('Material Lab inspects the registry without loading customer 3D runtime', a
   expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
   expect(consoleErrors, `Material Lab console errors: ${consoleErrors.join('\n')}`).toEqual([])
 
+  await page.getByRole('combobox', { name: 'Filter materials' }).selectOption('all')
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(7)
+
   const screenshotName = testInfo.project.name.includes('mobile')
     ? 'material-lab-mobile.png'
     : 'material-lab-desktop.png'
