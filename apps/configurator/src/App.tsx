@@ -828,15 +828,31 @@ function OrderCapture({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ request, website, artwork }),
       })
-      const payload = await response.json().catch(() => ({})) as { accepted?: boolean; code?: string; deliveryId?: string }
+      const payload = await response.json().catch(() => ({})) as {
+        accepted?: boolean
+        code?: string
+        deliveryId?: string
+        persisted?: boolean
+        emailSent?: boolean
+        deliveryStatus?: string
+      }
 
       if (response.ok && payload.accepted) {
         setDeliveryState('sent')
-        setStatus(`Request ${request.requestId} sent to Scorpion successfully.`)
+        if (payload.emailSent === false && payload.persisted) {
+          setStatus(`Request ${request.requestId} was saved securely for Scorpion. Email notification is pending.`)
+        } else if (payload.persisted) {
+          setStatus(`Request ${request.requestId} was saved and sent to Scorpion successfully.`)
+        } else {
+          setStatus(`Request ${request.requestId} sent to Scorpion successfully.`)
+        }
         return
       }
 
-      if (response.status === 503 && payload.code === 'ORDER_TRANSPORT_NOT_CONFIGURED') {
+      if (
+        response.status === 503 &&
+        (payload.code === 'ORDER_TRANSPORT_NOT_CONFIGURED' || payload.code === 'ORDER_DELIVERY_UNAVAILABLE')
+      ) {
         setDeliveryState('unavailable')
         setStatus('Direct delivery is not configured on this deployment yet. Use the email fallback below.')
         return
