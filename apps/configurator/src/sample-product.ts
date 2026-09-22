@@ -1,4 +1,4 @@
-import type { AssetManifest, MaterialVariant, ProductDefinition } from '@sls/product-schema'
+import type { AssetManifest, ProductDefinition } from '@sls/product-schema'
 
 export const sampleProduct: ProductDefinition = {
   schemaVersion: 1,
@@ -199,78 +199,5 @@ export const sampleManifest: AssetManifest = {
     front: { label: 'Front', target: [0, 0.04, 0], position: [0, 0.08, 0.82], fov: 34 },
     rear: { label: 'Rear', target: [0, 0.04, 0], position: [0, 0.08, -0.82], fov: 34 },
     detail: { label: 'Visor', target: [0, 0.12, 0.13], position: [0.34, 0.24, 0.48], fov: 27 },
-  },
-}
-
-export const sampleMaterials: Record<string, MaterialVariant> = {
-  'SCL-DTY': {
-    id: 'SCL-DTY',
-    label: 'Dark Textured Reference',
-    kind: 'leather',
-    color: '#24211d',
-    roughness: 0.86,
-    metalness: 0,
-    sheen: 0.1,
-    sheenRoughness: 0.84,
-  },
-  'SCL-COGNAC': {
-    id: 'SCL-COGNAC',
-    label: 'Cognac Textured Reference',
-    kind: 'leather',
-    color: '#8a4e2b',
-    roughness: 0.8,
-    metalness: 0,
-    sheen: 0.14,
-    sheenRoughness: 0.77,
-  },
-  'SCL-TAN-SMOOTH': {
-    id: 'SCL-TAN-SMOOTH',
-    label: 'Tan Smooth Reference',
-    kind: 'leather',
-    color: '#b5824f',
-    roughness: 0.68,
-    metalness: 0,
-    sheen: 0.18,
-    sheenRoughness: 0.67,
-  },
-  'SCL-TAN-TEXTURED': {
-    id: 'SCL-TAN-TEXTURED',
-    label: 'Tan Textured Reference',
-    kind: 'leather',
-    color: '#a87545',
-    roughness: 0.84,
-    metalness: 0,
-    sheen: 0.1,
-    sheenRoughness: 0.82,
-  },
-  'SCH-001': {
-    id: 'SCH-001',
-    label: 'Nickel Renderer Reference',
-    kind: 'metal',
-    color: '#b7bab8',
-    roughness: 0.26,
-    metalness: 0.92,
-    clearcoat: 0.2,
-    clearcoatRoughness: 0.2,
-  },
-  'SCH-002': {
-    id: 'SCH-002',
-    label: 'Brass-tone Renderer Reference',
-    kind: 'metal',
-    color: '#8b6a2f',
-    roughness: 0.34,
-    metalness: 0.86,
-    clearcoat: 0.08,
-    clearcoatRoughness: 0.35,
-  },
-  'SGL-001': {
-    id: 'SGL-001',
-    label: 'Welding Lens Placeholder',
-    kind: 'glass',
-    color: '#111b16',
-    roughness: 0.12,
-    metalness: 0,
-    opacity: 0.5,
-    transmission: 0.32,
   },
 }
