@@ -1,4 +1,5 @@
 import type { StudioOrderRequest } from '@sls/order-engine'
+import { getSupabaseConfiguration, supabaseHeaders } from './supabase'
 
 export interface ArtworkMetadata {
   name: string
@@ -12,26 +13,11 @@ export interface PersistenceResult {
   error?: string
 }
 
-function configuration(): { url: string; serviceKey: string } | null {
-  const url = process.env.SUPABASE_URL?.trim().replace(/\/$/u, '')
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
-  return url && serviceKey ? { url, serviceKey } : null
-}
-
-function headers(serviceKey: string, prefer?: string): Record<string, string> {
-  return {
-    apikey: serviceKey,
-    Authorization: `Bearer ${serviceKey}`,
-    'Content-Type': 'application/json',
-    ...(prefer ? { Prefer: prefer } : {}),
-  }
-}
-
 export async function persistOrderRequest(
   request: StudioOrderRequest,
   artwork?: ArtworkMetadata | null,
 ): Promise<PersistenceResult> {
-  const config = configuration()
+  const config = getSupabaseConfiguration()
   if (!config) return { configured: false, persisted: false }
 
   try {
@@ -39,7 +25,7 @@ export async function persistOrderRequest(
       `${config.url}/rest/v1/scorpion_custom_order_requests?on_conflict=request_id`,
       {
         method: 'POST',
-        headers: headers(config.serviceKey, 'resolution=merge-duplicates,return=minimal'),
+        headers: supabaseHeaders(config.serviceKey, 'resolution=merge-duplicates,return=minimal'),
         body: JSON.stringify({
           request_id: request.requestId,
           build_id: request.buildId,
@@ -88,7 +74,7 @@ export async function markOrderDelivery(
   requestId: string,
   deliveryStatus: 'emailed' | 'email_failed' | 'stored',
 ): Promise<void> {
-  const config = configuration()
+  const config = getSupabaseConfiguration()
   if (!config) return
 
   try {
@@ -96,7 +82,7 @@ export async function markOrderDelivery(
       `${config.url}/rest/v1/scorpion_custom_order_requests?request_id=eq.${encodeURIComponent(requestId)}`,
       {
         method: 'PATCH',
-        headers: headers(config.serviceKey, 'return=minimal'),
+        headers: supabaseHeaders(config.serviceKey, 'return=minimal'),
         body: JSON.stringify({
           delivery_status: deliveryStatus,
           updated_at: new Date().toISOString(),
