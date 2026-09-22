@@ -177,7 +177,7 @@ function MaterialQa() {
 
   const approved = Object.values(checks).every(Boolean) && Boolean(reviewer.trim()) && allMapsLoaded && matchingDimensions
 
-  const loadMap = async (key: MapKey, file: File) => {
+  const loadMap = async (key: MaterialQaMapKey, file: File) => {
     try {
       const dimensions = await inspectImage(file)
       const url = URL.createObjectURL(file)
