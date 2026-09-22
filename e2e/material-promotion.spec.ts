@@ -162,8 +162,9 @@ test('Material Promotion verifies provenance and emits a production material pac
 
   const [definitionDownload] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Download production definition' }).click(),
+    page.getByRole('button', { name: 'Download drop-in registry JSON' }).click(),
   ])
+  expect(definitionDownload.suggestedFilename()).toBe('SCL-005.json')
   const definitionPath = await definitionDownload.path()
   expect(definitionPath).not.toBeNull()
   const definition = JSON.parse(await fs.readFile(definitionPath!, 'utf8')) as {
@@ -207,9 +208,11 @@ test('Material Promotion verifies provenance and emits a production material pac
   expect(placementPath).not.toBeNull()
   const placement = JSON.parse(await fs.readFile(placementPath!, 'utf8')) as {
     root: string
+    registryDestination: string
     files: Array<{ destination: string }>
   }
   expect(placement.root).toBe('/materials/SCL-005')
+  expect(placement.registryDestination).toBe('apps/configurator/src/material-registry/SCL-005.json')
   expect(placement.files).toHaveLength(3)
   expect(placement.files.map((file) => file.destination)).toContain('/materials/SCL-005/1k/basecolor.webp')
 
