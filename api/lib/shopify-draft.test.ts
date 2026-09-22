@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StudioOrderRequest } from '@sls/order-engine'
-import { createShopifyDraftOrder, isShopifyDraftOrderConfigured } from './shopify-draft'
+import { createShopifyDraftOrder, isShopifyDraftOrderConfigured, sendShopifyDraftInvoice } from './shopify-draft'
 
 const request: StudioOrderRequest = {
   schemaVersion: 1,
@@ -118,6 +118,44 @@ describe('Shopify draft-order adapter', () => {
       key: 'Scorpion Request ID',
       value: request.requestId,
     })
+  })
+
+  it('sends a reviewed draft invoice through the same GraphQL client', async () => {
+    process.env.SHOPIFY_STORE_DOMAIN = 'scorpion-test.myshopify.com'
+    process.env.SHOPIFY_ADMIN_ACCESS_TOKEN = 'test-token'
+
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: {
+        draftOrderInvoiceSend: {
+          draftOrder: {
+            id: 'gid://shopify/DraftOrder/123',
+            name: '#D123',
+            invoiceUrl: 'https://example.myshopify.com/checkouts/test',
+            status: 'INVOICE_SENT',
+          },
+          userErrors: [],
+        },
+      },
+    }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await sendShopifyDraftInvoice('gid://shopify/DraftOrder/123')
+    expect(result.status).toBe('INVOICE_SENT')
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const payload = JSON.parse(String(init.body))
+    expect(payload.query).toContain('draftOrderInvoiceSend')
+    expect(payload.variables).toEqual({ id: 'gid://shopify/DraftOrder/123' })
+  })
+
+  it('rejects malformed draft ids before making a network call', async () => {
+    process.env.SHOPIFY_STORE_DOMAIN = 'scorpion-test.myshopify.com'
+    process.env.SHOPIFY_ADMIN_ACCESS_TOKEN = 'test-token'
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(sendShopifyDraftInvoice('123')).rejects.toThrow('INVALID_SHOPIFY_DRAFT_ORDER_ID')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('surfaces Shopify user errors instead of returning false success', async () => {
