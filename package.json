@@ -10,7 +10,7 @@
     "dev": "npm run dev -w @sls/configurator",
     "build": "npm run build -w @sls/configurator",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run packages api server",
+    "test": "vitest run packages api server apps/configurator/src/scorpion-materials.test.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "budget": "node scripts/check-build-budget.mjs",
