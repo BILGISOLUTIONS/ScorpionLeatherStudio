@@ -34,9 +34,19 @@ const customer: CustomerDraft = {
 }
 
 describe('order engine', () => {
-  it('creates deterministic build IDs and share-token round trips', () => {
+  it('creates deterministic build IDs and compact share-token round trips', () => {
     expect(createStudioBuildId(build)).toBe(createStudioBuildId(build))
-    expect(restoreStudioShareToken(createStudioShareToken(build))).toEqual(build)
+    const token = createStudioShareToken(build)
+    expect(restoreStudioShareToken(token)).toEqual(build)
+    expect(token.length).toBeLessThan(JSON.stringify(build).length)
+  })
+
+  it('continues to restore legacy verbose share tokens', () => {
+    const legacy = btoa(JSON.stringify(build))
+      .replaceAll('+', '-')
+      .replaceAll('/', '_')
+      .replace(/=+$/u, '')
+    expect(restoreStudioShareToken(legacy)).toEqual(build)
   })
 
   it('requires customer contact information', () => {
