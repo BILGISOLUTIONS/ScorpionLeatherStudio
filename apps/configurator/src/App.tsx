@@ -29,6 +29,7 @@ import {
   type StudioReference,
   type StudioVariant,
 } from './studio-catalog'
+import { useLiveVariantCommerce } from './live-commerce'
 
 const WeldingHoodViewer = lazy(() => import('./WeldingHoodViewer'))
 
@@ -743,6 +744,10 @@ function OrderCapture({
   reference,
   variant,
   artwork,
+  commercePriceMinor,
+  commerceSource,
+  availabilityStatus,
+  commerceRefreshedAt,
   setStatus,
 }: {
   build: StudioBuildDraft
@@ -750,6 +755,10 @@ function OrderCapture({
   reference: StudioReference
   variant: StudioVariant
   artwork: ArtworkAttachment | null
+  commercePriceMinor: number
+  commerceSource: 'shopify-storefront' | 'catalog-snapshot' | 'quote'
+  availabilityStatus: 'available' | 'unavailable' | 'unknown'
+  commerceRefreshedAt?: string
   setStatus: (message: string) => void
 }) {
   const [customer, setCustomer] = useState<CustomerDraft>(loadCustomer)
@@ -784,9 +793,12 @@ function OrderCapture({
           merchandiseId: variant.id,
           sku: variant.sku,
           variantTitle: variant.title,
-          basePriceMinor: variant.priceMinor,
+          basePriceMinor: commercePriceMinor,
           listedInventoryQuantity: variant.inventoryQuantity,
           priceStatus: reference.priceStatus,
+          priceSource: commerceSource,
+          availabilityStatus,
+          commerceRefreshedAt,
         },
       })
       setRequest(next)
@@ -1032,6 +1044,19 @@ export function App() {
   const [status, setStatus] = useState('')
 
   const { family, reference, variant } = useMemo(() => resolveStudio(build), [build])
+  const liveCommerce = useLiveVariantCommerce(reference, variant)
+  const commercePriceMinor = reference.priceStatus === 'quote' ? variant.priceMinor : liveCommerce.priceMinor
+  const commerceSource: 'shopify-storefront' | 'catalog-snapshot' | 'quote' =
+    reference.priceStatus === 'quote'
+      ? 'quote'
+      : liveCommerce.status === 'live'
+        ? 'shopify-storefront'
+        : 'catalog-snapshot'
+  const availabilityStatus: 'available' | 'unavailable' | 'unknown' =
+    liveCommerce.status === 'live'
+      ? liveCommerce.available ? 'available' : 'unavailable'
+      : 'unknown'
+
   const construction = build.personalization.construction
   const constructionRequested =
     construction.leatherFinish !== 'as-photographed' ||
@@ -1203,7 +1228,7 @@ export function App() {
               <div><dt>Variant</dt><dd>{variant.title}</dd></div>
               <div>
                 <dt>Base price</dt>
-                <dd>{reference.priceStatus === 'quote' ? 'Quote required' : formatMoney(variant.priceMinor)}</dd>
+                <dd>{reference.priceStatus === 'quote' ? 'Quote required' : formatMoney(commercePriceMinor)}</dd>
               </div>
               <div><dt>Customization</dt><dd>{customWorkRequested ? 'Custom quote' : 'Available to request'}</dd></div>
             </dl>
@@ -1277,21 +1302,29 @@ export function App() {
             <div className="summary-price">
               <span>{reference.priceStatus === 'quote' ? 'Base product' : build.quantity > 1 ? 'Catalog base subtotal' : 'Catalog base'}</span>
               <strong data-testid="base-price">
-                {reference.priceStatus === 'quote' ? 'QUOTE' : formatMoney(variant.priceMinor * build.quantity)}
+                {reference.priceStatus === 'quote' ? 'QUOTE' : formatMoney(commercePriceMinor * build.quantity)}
               </strong>
             </div>
             <div className="summary-notice">
               {reference.priceStatus === 'quote'
                 ? 'This Shopify record currently carries a development/test price. The customer-facing studio does not present it as retail pricing.'
-                : build.quantity > (variant.inventoryQuantity ?? Number.POSITIVE_INFINITY)
-                  ? `Requested quantity exceeds the currently listed inventory of ${variant.inventoryQuantity}. Scorpion must confirm availability before accepting the order.`
-                  : 'Current catalog base subtotal shown. Any custom tooling, text, artwork, material changes, or shop modifications require a separate quote.'}
+                : availabilityStatus === 'unavailable'
+                  ? 'The Shopify storefront currently reports this variant unavailable. The request can still be submitted for Scorpion to confirm availability or alternatives.'
+                  : commerceSource === 'shopify-storefront'
+                    ? 'Live Shopify storefront base subtotal shown. Custom tooling, text, artwork, material changes, or shop modifications still require a separate quote.'
+                    : 'Catalog snapshot base subtotal shown because live Shopify refresh is unavailable. Scorpion confirms current price and availability before production.'}
             </div>
             <div className="summary-spec">
               <div><span>SKU</span><strong>{variant.sku}</strong></div>
               <div><span>Qty</span><strong>{build.quantity}</strong></div>
+              {reference.priceStatus === 'catalog' ? (
+                <>
+                  <div><span>Commerce</span><strong>{commerceSource === 'shopify-storefront' ? 'Live Shopify' : 'Catalog snapshot'}</strong></div>
+                  <div><span>Availability</span><strong>{availabilityStatus === 'available' ? 'Available' : availabilityStatus === 'unavailable' ? 'Unavailable' : 'Confirm with shop'}</strong></div>
+                </>
+              ) : null}
               {reference.priceStatus === 'catalog' && variant.inventoryQuantity !== null ? (
-                <div><span>Listed stock</span><strong>{variant.inventoryQuantity}</strong></div>
+                <div><span>Stock snapshot</span><strong>{variant.inventoryQuantity}</strong></div>
               ) : null}
               <div><span>Leather</span><strong>{leatherFinishLabels[construction.leatherFinish]}{construction.leatherColor.trim() ? ` · ${construction.leatherColor.trim()}` : ''}</strong></div>
               <div><span>Stitching</span><strong>{stitchingLabels[construction.stitching]}</strong></div>
@@ -1317,6 +1350,10 @@ export function App() {
         reference={reference}
         variant={variant}
         artwork={artwork}
+        commercePriceMinor={commercePriceMinor}
+        commerceSource={commerceSource}
+        availabilityStatus={availabilityStatus}
+        commerceRefreshedAt={liveCommerce.fetchedAt}
         setStatus={setStatus}
       />
     </main>
