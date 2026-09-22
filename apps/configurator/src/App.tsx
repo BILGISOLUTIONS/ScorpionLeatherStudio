@@ -926,18 +926,21 @@ export function App() {
     if (!embedded || window.parent === window) return
 
     let frame = 0
+    let lastHeight = 0
     const sendHeight = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
-        const height = Math.max(
+        const height = Math.ceil(Math.max(
           document.documentElement.scrollHeight,
           document.body.scrollHeight,
           document.documentElement.offsetHeight,
-        )
+        ))
+        if (Math.abs(height - lastHeight) < 2) return
+        lastHeight = height
         window.parent.postMessage({
           type: 'scorpion-leather-studio:resize',
           version: 1,
-          height: Math.ceil(height),
+          height,
         }, '*')
       })
     }
