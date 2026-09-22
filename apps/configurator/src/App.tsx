@@ -384,11 +384,11 @@ const VariantPicker = memo(function VariantPicker({
             onClick={() => onSelect(variant)}
             aria-pressed={selectedId === variant.id}
           >
-            <strong>{effectiveVariant.title}</strong>
+            <strong>{variant.title}</strong>
             <small>
-              {effectiveVariant.sku}
-              {reference.priceStatus === 'catalog' && effectiveVariant.inventoryQuantity !== null
-                ? ` · ${effectiveVariant.inventoryQuantity} listed`
+              {variant.sku}
+              {reference.priceStatus === 'catalog' && variant.inventoryQuantity !== null
+                ? ` · ${variant.inventoryQuantity} listed`
                 : ''}
             </small>
           </button>
@@ -716,7 +716,7 @@ function DeferredOrderCapture({
         build={build}
         family={family}
         reference={reference}
-        variant={effectiveVariant}
+        variant={variant}
         artwork={artwork}
         setStatus={setStatus}
       />
