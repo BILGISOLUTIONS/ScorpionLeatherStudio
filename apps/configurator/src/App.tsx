@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createDefaultPersonalization,
   createStudioBuildId,
@@ -652,6 +652,77 @@ function PersonalizationEditor({
   )
 }
 
+function DeferredOrderCapture({
+  build,
+  family,
+  reference,
+  variant,
+  artwork,
+  setStatus,
+}: {
+  build: StudioBuildDraft
+  family: StudioProductFamily
+  reference: StudioReference
+  variant: StudioVariant
+  artwork: ArtworkAttachment | null
+  setStatus: (message: string) => void
+}) {
+  const anchorRef = useRef<HTMLElement | null>(null)
+  const [active, setActive] = useState(false)
+
+  useEffect(() => {
+    if (active) return
+
+    const node = anchorRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setActive(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        setActive(true)
+        observer.disconnect()
+      },
+      { rootMargin: '600px 0px' },
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [active])
+
+  if (!active) {
+    return (
+      <section
+        ref={anchorRef}
+        className="order-capture order-capture-loading"
+        aria-label="Custom order request"
+        data-testid="order-capture-deferred"
+      >
+        <div>
+          <p className="eyebrow">ORDER CAPTURE</p>
+          <h2>Ready when you are</h2>
+          <p>Order tools load as you approach this section.</p>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <Suspense fallback={<section className="order-capture order-capture-loading" aria-label="Custom order request">Loading order tools…</section>}>
+      <OrderCapture
+        build={build}
+        family={family}
+        reference={reference}
+        variant={variant}
+        artwork={artwork}
+        setStatus={setStatus}
+      />
+    </Suspense>
+  )
+}
+
 export function App() {
   const [embedded] = useState(embeddedMode)
   const [build, setBuild] = useState<StudioBuildDraft>(loadInitialBuild)
@@ -938,16 +1009,14 @@ export function App() {
         </aside>
       </section>
 
-      <Suspense fallback={<section className="order-capture order-capture-loading" aria-label="Custom order request">Loading order tools…</section>}>
-        <OrderCapture
-          build={build}
-          family={family}
-          reference={reference}
-          variant={variant}
-          artwork={artwork}
-          setStatus={setStatus}
-        />
-      </Suspense>
+      <DeferredOrderCapture
+        build={build}
+        family={family}
+        reference={reference}
+        variant={variant}
+        artwork={artwork}
+        setStatus={setStatus}
+      />
     </main>
   )
 }
