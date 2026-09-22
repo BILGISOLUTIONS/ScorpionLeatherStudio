@@ -66,6 +66,15 @@ alter table public.scorpion_custom_order_requests
 alter table public.scorpion_custom_order_requests
   add column if not exists shopify_draft_order_error text;
 
+alter table public.scorpion_custom_order_requests
+  add column if not exists shopify_invoice_state text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists shopify_invoice_sent_at timestamptz;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists shopify_invoice_error text;
+
 alter table public.scorpion_custom_order_requests enable row level security;
 
 -- Intentionally create no anon/authenticated policies.
