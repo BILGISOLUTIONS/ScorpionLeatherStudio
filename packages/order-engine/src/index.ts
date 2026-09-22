@@ -92,6 +92,9 @@ export interface CommerceResolution {
   basePriceMinor: number
   listedInventoryQuantity?: number | null
   priceStatus: 'catalog' | 'quote'
+  priceSource?: 'shopify-storefront' | 'catalog-snapshot' | 'quote'
+  availabilityStatus?: 'available' | 'unavailable' | 'unknown'
+  commerceRefreshedAt?: string
 }
 
 export interface StudioOrderRequest {
@@ -313,6 +316,9 @@ export function formatOrderSummary(request: StudioOrderRequest): string {
     `Variant: ${request.commerce.variantTitle}`,
     `SKU: ${request.commerce.sku}`,
     `Quantity: ${request.build.quantity}`,
+    `Commerce source: ${request.commerce.priceSource ?? (request.commerce.priceStatus === 'quote' ? 'quote' : 'catalog-snapshot')}`,
+    request.commerce.availabilityStatus ? `Availability: ${request.commerce.availabilityStatus}` : '',
+    request.commerce.commerceRefreshedAt ? `Commerce refreshed: ${request.commerce.commerceRefreshedAt}` : '',
     `Leather finish preference: ${preferenceLabel(construction.leatherFinish)}`,
     `Leather color request: ${construction.leatherColor.trim() || 'As photographed'}`,
     `Stitching preference: ${preferenceLabel(construction.stitching)}`,
