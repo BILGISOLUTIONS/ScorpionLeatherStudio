@@ -7,6 +7,7 @@ const STAFF_STATUSES = new Set([
   'reviewing',
   'quoted',
   'approved',
+  'paid',
   'in_production',
   'completed',
   'cancelled',
@@ -71,6 +72,11 @@ async function listOrders(req: VercelRequest, res: VercelResponse) {
           'shopify_draft_order_state',
           'shopify_invoice_state',
           'shopify_invoice_sent_at',
+          'shopify_reconciled_at',
+          'shopify_order_id',
+          'shopify_order_name',
+          'shopify_financial_status',
+          'shopify_fulfillment_status',
         ].join(','),
   )
   params.set('order', 'created_at.desc')
