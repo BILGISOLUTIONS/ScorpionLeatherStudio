@@ -1,5 +1,5 @@
 {% comment %}
-  Scorpion Western Wear — Custom Leather Studio embed section
+  Scorpion Western Wear — Scorpion Leather Studio embed section
   The configurator remains deployed as a dedicated web app while this section
   makes it behave like a native Shopify page.
 {% endcomment %}
@@ -18,7 +18,7 @@
   <div class="scorpion-leather-studio-section__inner">
     {% if section.settings.studio_url != blank %}
       <div class="scorpion-leather-studio-section__loading" data-sls-loading>
-        Loading Custom Leather Studio…
+        Loading Scorpion Leather Studio…
       </div>
       <iframe
         data-sls-frame
@@ -30,7 +30,7 @@
       ></iframe>
     {% else %}
       <div class="scorpion-leather-studio-section__setup">
-        <strong>Custom Leather Studio URL required</strong>
+        <strong>Scorpion Leather Studio URL required</strong>
         <p>Add the production Studio URL in this section's theme settings.</p>
       </div>
     {% endif %}
@@ -138,7 +138,7 @@
 
 {% schema %}
 {
-  "name": "Custom Leather Studio",
+  "name": "Scorpion Leather Studio",
   "tag": "section",
   "class": "section-custom-leather-studio",
   "settings": [
@@ -152,7 +152,7 @@
       "type": "text",
       "id": "iframe_title",
       "label": "Accessibility title",
-      "default": "Scorpion Western Wear Custom Leather Studio"
+      "default": "Scorpion Western Wear — Scorpion Leather Studio"
     },
     {
       "type": "range",
@@ -183,7 +183,7 @@
   ],
   "presets": [
     {
-      "name": "Custom Leather Studio"
+      "name": "Scorpion Leather Studio"
     }
   ]
 }
