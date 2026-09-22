@@ -79,9 +79,8 @@ export function useLiveCatalogVariant(
         setVariant(payload.variant)
         setStatus('live')
       })
-      .catch((error) => {
+      .catch(() => {
         if (disposed || controller.signal.aborted) return
-        console.warn('Live catalog refresh unavailable; using verified snapshot.', error)
         setVariant(null)
         setStatus('fallback')
       })
