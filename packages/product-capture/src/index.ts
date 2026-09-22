@@ -282,8 +282,8 @@ export function buildProductConstructionPacket(args: {
   const dimensionsMm = Object.fromEntries(
     args.session.dimensions
       .filter((dimension) => requiredDimensionIds.has(dimension.id) && Number.isFinite(dimension.valueMm))
-      .map((dimension) => [dimension.id, dimension.valueMm as number])
-      .sort(([a], [b]) => a.localeCompare(b)),
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((dimension) => [dimension.id, dimension.valueMm as number] as const),
   )
 
   const referenceCoverage = Object.entries(args.session.references)
