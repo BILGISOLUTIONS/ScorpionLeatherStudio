@@ -453,10 +453,17 @@ test('Material Processor generates local draft PBR maps without storefront runti
     buffer: Buffer.from(JSON.stringify(captureManifest)),
   })
 
-  const png = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z9xkAAAAASUVORK5CYII=',
-    'base64',
-  )
+  const pngBase64 = await page.evaluate(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 2
+    canvas.height = 2
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Test canvas unavailable')
+    context.fillStyle = '#808080'
+    context.fillRect(0, 0, 2, 2)
+    return canvas.toDataURL('image/png').split(',')[1]
+  })
+  const png = Buffer.from(pngBase64, 'base64')
 
   const workingInputs = [
     'Cross-polarized working image',
@@ -479,7 +486,7 @@ test('Material Processor generates local draft PBR maps without storefront runti
   await expect(processButton).toBeEnabled()
   await processButton.click()
 
-  await expect(page.getByRole('status')).toContainText('Draft PBR maps generated', { timeout: 15_000 })
+  await expect(page.locator('.processor-status')).toContainText('Draft PBR maps generated', { timeout: 15_000 })
   await expect(page.getByRole('img', { name: 'Base color preview' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Roughness proxy preview' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'Normal draft preview' })).toBeVisible()
