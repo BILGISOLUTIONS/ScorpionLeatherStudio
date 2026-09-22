@@ -136,6 +136,8 @@ describe('material promotion', () => {
         textureRepeat: [2.5, 2.5],
       },
     })
+    expect(result.registryDestination).toBe('apps/configurator/src/material-registry/SCL-005.json')
+    expect(result.assetPlacement.registryDestination).toBe('apps/configurator/src/material-registry/SCL-005.json')
     expect(result.material.textureTiers?.map((tier) => tier.maxEdge)).toEqual([1024, 2048])
     expect(result.assetPlacement.files).toContainEqual({
       tier: 1024,
