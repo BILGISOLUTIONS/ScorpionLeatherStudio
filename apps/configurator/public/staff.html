@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>Scorpion Custom Orders — Staff</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg:#080808; --panel:#11110f; --panel2:#17150f; --border:#302c24;
+      --gold:#b8924c; --gold2:#d3ad61; --text:#eee7da; --muted:#9b9386;
+      --danger:#d58d78; --ok:#8ebc91; --warn:#d4aa63;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-width:320px;background:radial-gradient(circle at 20% 0,rgba(122,84,35,.13),transparent 32rem),var(--bg);color:var(--text)}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .shell{width:min(1500px,calc(100% - 28px));margin:0 auto;padding:24px 0 60px}
+    header{display:flex;justify-content:space-between;gap:20px;align-items:end;padding:4px 0 20px;border-bottom:1px solid var(--border)}
+    .eyebrow{margin:0;color:var(--gold2);font-size:.68rem;font-weight:850;letter-spacing:.13em}
+    h1{margin:5px 0 0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(2rem,5vw,3.6rem);font-weight:500}
+    header p:last-child{margin:7px 0 0;color:var(--muted);font-size:.83rem;max-width:700px;line-height:1.5}
+    .status-dot{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.72rem}
+    .status-dot::before{content:"";width:8px;height:8px;border-radius:50%;background:#766c5a}
+    .status-dot.is-live::before{background:var(--ok);box-shadow:0 0 12px rgba(142,188,145,.45)}
+    .login{max-width:580px;margin:70px auto;padding:24px;border:1px solid var(--border);background:var(--panel)}
+    .login h2,.toolbar h2,.detail h2{margin:0;font-family:Georgia,"Times New Roman",serif;font-weight:500}
+    .login p{color:var(--muted);font-size:.8rem;line-height:1.5}
+    .login-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+    input,select,textarea{border:1px solid #403a30;background:#0b0b0a;color:var(--text);min-height:42px;padding:8px 10px;border-radius:0}
+    textarea{min-height:110px;resize:vertical;line-height:1.45}
+    .primary{border:1px solid var(--gold);background:#9e7839;color:#090806;font-weight:850;padding:0 16px;min-height:42px}
+    .secondary{border:1px solid #4a4134;background:#15120e;color:#d8cebd;padding:0 13px;min-height:40px}
+    .danger{border-color:#74483e;color:#e0a18f}
+    .error{color:var(--danger);font-size:.72rem;min-height:1em;margin-top:10px}
+    .app[hidden],.login[hidden]{display:none!important}
+    .toolbar{display:grid;grid-template-columns:minmax(200px,1fr) minmax(160px,220px) auto auto;gap:8px;align-items:center;margin:18px 0}
+    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 0 14px}
+    .stat{border:1px solid var(--border);background:var(--panel);padding:12px}
+    .stat span{display:block;color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.08em}
+    .stat strong{display:block;margin-top:4px;font-size:1.25rem}
+    .table-wrap{border:1px solid var(--border);background:var(--panel);overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:1050px}
+    th,td{padding:11px 10px;border-bottom:1px solid #29251f;text-align:left;font-size:.72rem;vertical-align:top}
+    th{position:sticky;top:0;z-index:1;background:#15130f;color:#a99c86;font-size:.62rem;text-transform:uppercase;letter-spacing:.06em}
+    tbody tr{cursor:pointer;transition:background .12s ease}
+    tbody tr:hover{background:#19160f}
+    td strong{display:block;font-size:.75rem}
+    td small{display:block;color:var(--muted);margin-top:3px}
+    .pill{display:inline-block;padding:4px 7px;border:1px solid #4a4031;background:#17130e;color:#d7c6a4;font-size:.61rem;font-weight:750;text-transform:uppercase;letter-spacing:.05em}
+    .pill.completed{border-color:#3f6545;color:#abd1ae}.pill.cancelled{border-color:#68453d;color:#d9a08f}.pill.quoted{border-color:#705b34;color:#e2bd72}
+    .empty{padding:40px;text-align:center;color:var(--muted)}
+    dialog{width:min(1050px,calc(100% - 28px));max-height:92vh;padding:0;border:1px solid #5a4b34;background:#0d0d0c;color:var(--text);box-shadow:0 30px 90px rgba(0,0,0,.65)}
+    dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
+    .detail-head{display:flex;justify-content:space-between;gap:18px;align-items:start;padding:18px 20px;border-bottom:1px solid var(--border);background:#15130f}
+    .detail-head small{display:block;color:var(--muted);margin-top:4px}
+    .detail-head button{border:1px solid #443c30;background:#111;color:#ddd;width:38px;height:38px}
+    .detail-body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:0;max-height:calc(92vh - 76px);overflow:auto}
+    .detail-main,.detail-side{padding:20px}
+    .detail-side{border-left:1px solid var(--border);background:#11100e}
+    .meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:16px}
+    .meta{border:1px solid #2f2b25;padding:10px;background:#11110f}
+    .meta span{display:block;color:var(--muted);font-size:.6rem;text-transform:uppercase;letter-spacing:.06em}
+    .meta strong{display:block;margin-top:4px;font-size:.78rem;overflow-wrap:anywhere}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;border:1px solid #2d2922;background:#080808;padding:14px;color:#c5bdae;font:11px/1.5 "SFMono-Regular",Consolas,monospace}
+    .detail-side label{display:grid;gap:6px;margin-bottom:12px;color:#cfc5b4;font-size:.7rem;font-weight:700}
+    .save-row{display:flex;gap:8px;align-items:center}
+    .save-state{font-size:.68rem;color:var(--muted)}
+    @media(max-width:850px){
+      header{display:block}.status-dot{margin-top:12px}
+      .toolbar{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .detail-body{grid-template-columns:1fr}.detail-side{border-left:0;border-top:1px solid var(--border)}
+    }
+    @media(max-width:520px){
+      .shell{width:min(100% - 18px,1500px);padding-top:14px}.toolbar{grid-template-columns:1fr}
+      .stats{grid-template-columns:1fr 1fr}.login-row{grid-template-columns:1fr}.meta-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">SCORPION WESTERN WEAR · INTERNAL</p>
+        <h1>Custom Order Queue</h1>
+        <p>Review Custom Leather Studio requests, record quote totals and internal notes, and move builds through the workshop pipeline.</p>
+      </div>
+      <div id="connection" class="status-dot">Not connected</div>
+    </header>
+
+    <section id="login" class="login">
+      <h2>Staff access</h2>
+      <p>Enter the staff access token configured on the Studio server. The token is kept only for this browser tab/session and is never added to the URL.</p>
+      <div class="login-row">
+        <input id="token" type="password" autocomplete="current-password" placeholder="Staff access token" aria-label="Staff access token" />
+        <button id="connect" class="primary" type="button">Open order queue</button>
+      </div>
+      <div id="loginError" class="error" role="status"></div>
+    </section>
+
+    <section id="app" class="app" hidden>
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search customer, SKU, request ID…" aria-label="Search orders" />
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="">All statuses</option>
+          <option value="received">Received</option>
+          <option value="reviewing">Reviewing</option>
+          <option value="quoted">Quoted</option>
+          <option value="approved">Approved</option>
+          <option value="in_production">In production</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button id="refresh" class="secondary" type="button">Refresh</button>
+        <button id="logout" class="secondary danger" type="button">Lock</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><span>Total loaded</span><strong id="statTotal">0</strong></div>
+        <div class="stat"><span>Needs review</span><strong id="statReview">0</strong></div>
+        <div class="stat"><span>Quoted</span><strong id="statQuoted">0</strong></div>
+        <div class="stat"><span>In production</span><strong id="statProduction">0</strong></div>
+        <div class="stat"><span>Completed</span><strong id="statCompleted">0</strong></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Request</th><th>Customer</th><th>Product</th><th>Qty</th>
+              <th>Status</th><th>Delivery</th><th>Base / Quote</th><th>Received</th>
+            </tr>
+          </thead>
+          <tbody id="orders"></tbody>
+        </table>
+        <div id="empty" class="empty" hidden>No matching custom orders.</div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="detail" class="detail">
+    <div class="detail-head">
+      <div>
+        <p class="eyebrow">CUSTOM ORDER</p>
+        <h2 id="detailTitle">Request</h2>
+        <small id="detailSubtitle"></small>
+      </div>
+      <button id="closeDetail" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="detail-body">
+      <section class="detail-main">
+        <div id="detailMeta" class="meta-grid"></div>
+        <pre id="requestJson"></pre>
+      </section>
+      <aside class="detail-side">
+        <label>Status
+          <select id="editStatus">
+            <option value="received">Received</option>
+            <option value="reviewing">Reviewing</option>
+            <option value="quoted">Quoted</option>
+            <option value="approved">Approved</option>
+            <option value="in_production">In production</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </label>
+        <label>Quote total (USD)
+          <input id="quoteTotal" type="number" min="0" step="0.01" placeholder="0.00" />
+        </label>
+        <label>Internal staff notes
+          <textarea id="staffNotes" maxlength="4000" placeholder="Measurements verified, material availability, quote notes, production instructions…"></textarea>
+        </label>
+        <div class="save-row">
+          <button id="saveOrder" class="primary" type="button">Save changes</button>
+          <span id="saveState" class="save-state"></span>
+        </div>
+      </aside>
+    </div>
+  </dialog>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const TOKEN_KEY = 'scorpion-staff-token';
+      const state = { token: sessionStorage.getItem(TOKEN_KEY) || '', orders: [], selected: null };
+
+      const el = (id) => document.getElementById(id);
+      const login = el('login'), app = el('app'), tokenInput = el('token');
+      const connection = el('connection'), loginError = el('loginError');
+      const ordersBody = el('orders'), empty = el('empty'), detail = el('detail');
+
+      const money = (minor) => minor === null || minor === undefined
+        ? '—'
+        : new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format(Number(minor) / 100);
+
+      const dateTime = (value) => value
+        ? new Intl.DateTimeFormat('en-US', { dateStyle:'medium', timeStyle:'short' }).format(new Date(value))
+        : '—';
+
+      const api = async (path, options = {}) => {
+        const headers = new Headers(options.headers || {});
+        headers.set('Authorization', 'Bearer ' + state.token);
+        if (options.body) headers.set('Content-Type', 'application/json');
+        const response = await fetch(path, { ...options, headers, cache:'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          lock('Staff token was rejected.');
+          throw new Error('Unauthorized');
+        }
+        if (!response.ok) throw new Error(payload.code || 'Request failed');
+        return payload;
+      };
+
+      const setConnected = (connected) => {
+        connection.textContent = connected ? 'Connected to order store' : 'Not connected';
+        connection.classList.toggle('is-live', connected);
+        login.hidden = connected;
+        app.hidden = !connected;
+      };
+
+      const lock = (message = '') => {
+        state.token = '';
+        state.orders = [];
+        state.selected = null;
+        sessionStorage.removeItem(TOKEN_KEY);
+        setConnected(false);
+        loginError.textContent = message;
+        tokenInput.value = '';
+        if (detail.open) detail.close();
+      };
+
+      const filteredOrders = () => {
+        const query = el('search').value.trim().toLowerCase();
+        const status = el('statusFilter').value;
+        return state.orders.filter((order) => {
+          if (status && order.status !== status) return false;
+          if (!query) return true;
+          return [
+            order.request_id, order.build_id, order.customer_name, order.customer_email,
+            order.customer_phone, order.customer_company, order.product_title,
+            order.reference_title, order.sku, order.variant_title,
+          ].some((value) => String(value || '').toLowerCase().includes(query));
+        });
+      };
+
+      const renderStats = () => {
+        const orders = state.orders;
+        el('statTotal').textContent = String(orders.length);
+        el('statReview').textContent = String(orders.filter((o) => ['received','reviewing'].includes(o.status)).length);
+        el('statQuoted').textContent = String(orders.filter((o) => o.status === 'quoted').length);
+        el('statProduction').textContent = String(orders.filter((o) => o.status === 'in_production').length);
+        el('statCompleted').textContent = String(orders.filter((o) => o.status === 'completed').length);
+      };
+
+      const cell = (text, sub) => {
+        const td = document.createElement('td');
+        const strong = document.createElement('strong');
+        strong.textContent = text || '—';
+        td.append(strong);
+        if (sub) {
+          const small = document.createElement('small');
+          small.textContent = sub;
+          td.append(small);
+        }
+        return td;
+      };
+
+      const render = () => {
+        const orders = filteredOrders();
+        ordersBody.replaceChildren();
+        empty.hidden = orders.length > 0;
+
+        for (const order of orders) {
+          const tr = document.createElement('tr');
+          tr.tabIndex = 0;
+          tr.dataset.requestId = order.request_id;
+          tr.append(
+            cell(order.request_id, order.build_id),
+            cell(order.customer_name, order.customer_company || order.customer_email || order.customer_phone),
+            cell(order.reference_title, order.sku + ' · ' + order.variant_title),
+            cell(String(order.quantity)),
+          );
+
+          const statusTd = document.createElement('td');
+          const pill = document.createElement('span');
+          pill.className = 'pill ' + order.status;
+          pill.textContent = String(order.status || 'received').replaceAll('_',' ');
+          statusTd.append(pill);
+          tr.append(statusTd);
+
+          tr.append(
+            cell(String(order.delivery_status || '—').replaceAll('_',' ')),
+            cell(order.quote_total_minor !== null && order.quote_total_minor !== undefined
+              ? money(order.quote_total_minor)
+              : order.base_price_status === 'catalog' ? money(order.base_subtotal_minor) + ' base' : 'Quote required'),
+            cell(dateTime(order.created_at)),
+          );
+
+          tr.addEventListener('click', () => openOrder(order.request_id));
+          tr.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              openOrder(order.request_id);
+            }
+          });
+          ordersBody.append(tr);
+        }
+        renderStats();
+      };
+
+      const meta = (label, value) => {
+        const box = document.createElement('div');
+        box.className = 'meta';
+        const span = document.createElement('span');
+        span.textContent = label;
+        const strong = document.createElement('strong');
+        strong.textContent = value || '—';
+        box.append(span, strong);
+        return box;
+      };
+
+      const openOrder = async (requestId) => {
+        el('saveState').textContent = 'Loading…';
+        try {
+          const payload = await api('/api/staff/orders?request_id=' + encodeURIComponent(requestId));
+          const order = payload.orders && payload.orders[0];
+          if (!order) throw new Error('Order not found');
+          state.selected = order;
+
+          el('detailTitle').textContent = order.request_id;
+          el('detailSubtitle').textContent = order.reference_title + ' · ' + order.sku;
+          el('detailMeta').replaceChildren(
+            meta('Customer', order.customer_name),
+            meta('Contact', order.customer_email || order.customer_phone),
+            meta('Company', order.customer_company),
+            meta('Quantity', String(order.quantity)),
+            meta('Base subtotal', order.base_price_status === 'catalog' ? money(order.base_subtotal_minor) : 'Quote required'),
+            meta('Artwork', order.artwork_name || 'None attached'),
+            meta('Received', dateTime(order.created_at)),
+            meta('Delivery', String(order.delivery_status || '—').replaceAll('_',' ')),
+          );
+          el('requestJson').textContent = JSON.stringify(order.request_payload, null, 2);
+          el('editStatus').value = order.status || 'received';
+          el('quoteTotal').value = order.quote_total_minor === null || order.quote_total_minor === undefined
+            ? ''
+            : (Number(order.quote_total_minor) / 100).toFixed(2);
+          el('staffNotes').value = order.staff_notes || '';
+          el('saveState').textContent = '';
+          detail.showModal();
+        } catch (error) {
+          el('saveState').textContent = error.message || 'Could not load request.';
+        }
+      };
+
+      const loadOrders = async () => {
+        el('refresh').disabled = true;
+        try {
+          const payload = await api('/api/staff/orders?limit=100');
+          state.orders = Array.isArray(payload.orders) ? payload.orders : [];
+          setConnected(true);
+          loginError.textContent = '';
+          render();
+        } catch (error) {
+          if (state.token) loginError.textContent = error.message || 'Could not load order queue.';
+        } finally {
+          el('refresh').disabled = false;
+        }
+      };
+
+      el('connect').addEventListener('click', async () => {
+        const token = tokenInput.value.trim();
+        if (!token) {
+          loginError.textContent = 'Enter the staff token.';
+          return;
+        }
+        state.token = token;
+        sessionStorage.setItem(TOKEN_KEY, token);
+        await loadOrders();
+      });
+
+      tokenInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') el('connect').click();
+      });
+
+      el('refresh').addEventListener('click', loadOrders);
+      el('logout').addEventListener('click', () => lock());
+      el('search').addEventListener('input', render);
+      el('statusFilter').addEventListener('change', render);
+      el('closeDetail').addEventListener('click', () => detail.close());
+
+      el('saveOrder').addEventListener('click', async () => {
+        if (!state.selected) return;
+        const dollars = el('quoteTotal').value.trim();
+        const quoteTotalMinor = dollars === '' ? null : Math.round(Number(dollars) * 100);
+        el('saveOrder').disabled = true;
+        el('saveState').textContent = 'Saving…';
+
+        try {
+          await api('/api/staff/orders', {
+            method:'PATCH',
+            body:JSON.stringify({
+              requestId: state.selected.request_id,
+              status: el('editStatus').value,
+              quoteTotalMinor,
+              staffNotes: el('staffNotes').value,
+            }),
+          });
+          el('saveState').textContent = 'Saved';
+          await loadOrders();
+          const refreshed = state.orders.find((o) => o.request_id === state.selected.request_id);
+          if (refreshed) state.selected = { ...state.selected, ...refreshed };
+        } catch (error) {
+          el('saveState').textContent = error.message || 'Save failed';
+        } finally {
+          el('saveOrder').disabled = false;
+        }
+      });
+
+      if (state.token) loadOrders();
+      else setConnected(false);
+    })();
+  </script>
+</body>
+</html>
