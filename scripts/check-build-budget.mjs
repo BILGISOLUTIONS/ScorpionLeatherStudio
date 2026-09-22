@@ -63,6 +63,7 @@ function sumAssetSet(assetSet, measure) {
 const studioGraph = collectEntryGraph(findEntry('index.html'))
 const materialLabGraph = collectEntryGraph(findEntry('materials.html'))
 const captureGraph = collectEntryGraph(findEntry('capture.html'))
+const processorGraph = collectEntryGraph(findEntry('process.html'))
 
 const STUDIO_JS_RAW_LIMIT = 285 * 1024
 const STUDIO_JS_GZIP_LIMIT = 88 * 1024
@@ -78,6 +79,11 @@ const CAPTURE_JS_RAW_LIMIT = 320 * 1024
 const CAPTURE_JS_GZIP_LIMIT = 100 * 1024
 const CAPTURE_CSS_RAW_LIMIT = 28 * 1024
 const CAPTURE_CSS_GZIP_LIMIT = 9 * 1024
+
+const PROCESSOR_JS_RAW_LIMIT = 340 * 1024
+const PROCESSOR_JS_GZIP_LIMIT = 105 * 1024
+const PROCESSOR_CSS_RAW_LIMIT = 30 * 1024
+const PROCESSOR_CSS_GZIP_LIMIT = 10 * 1024
 
 const LAZY_CHUNK_RAW_LIMIT = 1100 * 1024
 const LAZY_CHUNK_GZIP_LIMIT = 300 * 1024
@@ -103,6 +109,11 @@ enforce('Field Capture initial JS graph (raw)', sumAssetSet(captureGraph.js, byt
 enforce('Field Capture initial JS graph (gzip)', sumAssetSet(captureGraph.js, gzipBytes), CAPTURE_JS_GZIP_LIMIT)
 enforce('Field Capture CSS graph (raw)', sumAssetSet(captureGraph.css, bytes), CAPTURE_CSS_RAW_LIMIT)
 enforce('Field Capture CSS graph (gzip)', sumAssetSet(captureGraph.css, gzipBytes), CAPTURE_CSS_GZIP_LIMIT)
+
+enforce('Material Processor initial JS graph (raw)', sumAssetSet(processorGraph.js, bytes), PROCESSOR_JS_RAW_LIMIT)
+enforce('Material Processor initial JS graph (gzip)', sumAssetSet(processorGraph.js, gzipBytes), PROCESSOR_JS_GZIP_LIMIT)
+enforce('Material Processor CSS graph (raw)', sumAssetSet(processorGraph.css, bytes), PROCESSOR_CSS_RAW_LIMIT)
+enforce('Material Processor CSS graph (gzip)', sumAssetSet(processorGraph.css, gzipBytes), PROCESSOR_CSS_GZIP_LIMIT)
 
 const jsFiles = files.filter((file) => file.endsWith('.js'))
 for (const file of jsFiles) {
@@ -130,5 +141,6 @@ enforce('Staff console assets (gzip)', staffAssetsGzip, STAFF_ASSETS_GZIP_LIMIT)
 console.log(`Studio initial JS files: ${[...studioGraph.js].join(', ')}`)
 console.log(`Material Lab initial JS files: ${[...materialLabGraph.js].join(', ')}`)
 console.log(`Field Capture initial JS files: ${[...captureGraph.js].join(', ')}`)
+console.log(`Material Processor initial JS files: ${[...processorGraph.js].join(', ')}`)
 console.log(`Emitted JS chunks: ${jsFiles.length}`)
 console.log('Performance budgets passed.')
