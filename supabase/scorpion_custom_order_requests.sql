@@ -51,6 +51,21 @@ alter table public.scorpion_custom_order_requests
 alter table public.scorpion_custom_order_requests
   add column if not exists quote_total_minor integer;
 
+alter table public.scorpion_custom_order_requests
+  add column if not exists shopify_draft_order_id text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists shopify_draft_order_name text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists shopify_draft_order_invoice_url text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists shopify_draft_order_state text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists shopify_draft_order_error text;
+
 alter table public.scorpion_custom_order_requests enable row level security;
 
 -- Intentionally create no anon/authenticated policies.
