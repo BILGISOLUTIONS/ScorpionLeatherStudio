@@ -245,17 +245,10 @@ function resolveStudio(
 function ReferenceStage({
   family,
   reference,
-  build,
-  artwork,
 }: {
   family: StudioProductFamily
   reference: StudioReference
-  build: StudioBuildDraft
-  artwork: ArtworkAttachment | null
 }) {
-  const p = build.personalization
-  const tooling = toolingLabels[p.toolingStyle]
-
   return (
     <div className="photo-stage" aria-label="Photographed product preview">
       <img
@@ -265,29 +258,66 @@ function ReferenceStage({
         alt={reference.imageAlt}
         decoding="async"
       />
-      {p.toolingStyle !== 'none' ? (
-        <div className={`tooling-concept tooling-${p.toolingStyle}`} aria-hidden="true" />
-      ) : null}
-      {(p.textEnabled && p.text.trim()) || p.toolingStyle !== 'none' || artwork ? (
-        <div className="mock-personalization" aria-label="Personalization concept preview">
-          <span className="mock-label">CONCEPT PREVIEW · FINAL ART / PLACEMENT CONFIRMED BY SHOP</span>
-          {artwork && artwork.type.startsWith('image/') ? (
-            <img className="mock-artwork" src={artwork.dataUrl} alt="Uploaded artwork concept" />
-          ) : artwork ? (
-            <span className="mock-file">{artwork.name}</span>
-          ) : null}
-          {p.textEnabled && p.text.trim() ? (
-            <strong className={`mock-text mock-text-${p.textStyle}`}>{p.text}</strong>
-          ) : null}
-          {p.toolingStyle !== 'none' ? <span>{tooling}</span> : null}
-          <small>{p.placement}</small>
-        </div>
-      ) : null}
       <div className="photo-stage-meta">
         <span>PHOTOGRAPHED SCORPION PRODUCT</span>
         <strong>{family.shortTitle}</strong>
       </div>
     </div>
+  )
+}
+
+function ConceptSummary({
+  build,
+  artwork,
+}: {
+  build: StudioBuildDraft
+  artwork: ArtworkAttachment | null
+}) {
+  const p = build.personalization
+  const hasText = p.textEnabled && Boolean(p.text.trim())
+  const hasTooling = p.toolingStyle !== 'none'
+  const hasArtwork = Boolean(artwork)
+
+  if (!hasText && !hasTooling && !hasArtwork) return null
+
+  return (
+    <section className="concept-summary" aria-label="Customization concept">
+      <div className="concept-summary-heading">
+        <div>
+          <span>YOUR CONCEPT</span>
+          <strong>Selections stay beside the product — never on top of it.</strong>
+        </div>
+        <small>Final artwork, scale and placement are confirmed by Scorpion before production.</small>
+      </div>
+      <div className="concept-summary-items">
+        {hasTooling ? (
+          <div className="concept-item">
+            <span className={`concept-swatch concept-swatch-${p.toolingStyle}`} aria-hidden="true" />
+            <span><small>Tooling</small><strong>{toolingLabels[p.toolingStyle]}</strong></span>
+          </div>
+        ) : null}
+        {hasText ? (
+          <div className="concept-item">
+            <span className="concept-glyph" aria-hidden="true">Aa</span>
+            <span><small>Text</small><strong className={`concept-text concept-text-${p.textStyle}`}>{p.text}</strong></span>
+          </div>
+        ) : null}
+        {hasArtwork ? (
+          <div className="concept-item">
+            {artwork?.type.startsWith('image/') ? (
+              <img className="concept-artwork" src={artwork.dataUrl} alt="" />
+            ) : (
+              <span className="concept-glyph" aria-hidden="true">PDF</span>
+            )}
+            <span><small>Artwork</small><strong>{artwork?.name}</strong></span>
+          </div>
+        ) : null}
+        <div className="concept-item concept-placement">
+          <span className="concept-glyph" aria-hidden="true">⌖</span>
+          <span><small>Requested placement</small><strong>{p.placement}</strong></span>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -729,6 +759,7 @@ export function App() {
   const [build, setBuild] = useState<StudioBuildDraft>(loadInitialBuild)
   const [artwork, setArtwork] = useState<ArtworkAttachment | null>(loadSessionArtwork)
   const [status, setStatus] = useState('')
+  const [viewerMode, setViewerMode] = useState<'photo' | '3d'>('photo')
 
   const { family, reference, variant } = useMemo(() => resolveStudio(build), [build])
   const liveCatalog = useLiveCatalogVariant(
@@ -833,6 +864,7 @@ export function App() {
       ),
     })
     setArtwork(null)
+    setViewerMode('photo')
     setStatus('')
   }, [])
 
@@ -880,13 +912,16 @@ export function App() {
       <header className="studio-header">
         <div>
           <p className="eyebrow">SCORPION WESTERN WEAR</p>
-          <h1>Custom Leather Studio</h1>
+          <div className="studio-title-row">
+            <h1>Scorpion Leather Studio</h1>
+            <span className="sls-shortmark" aria-label="SLS">SLS</span>
+          </div>
           <p className="studio-subtitle">
-            Select a real Scorpion leather product, personalize the concept, choose the catalog variant, and produce a structured custom-order request for the shop.
+            Start with a real Scorpion product, make it yours, and send the shop a clear build request without losing sight of the product you are customizing.
           </p>
         </div>
         <div className="header-build">
-          <div className="prototype-badge">ORDER STUDIO · V0.8</div>
+          <div className="prototype-badge">SLS · CUSTOM STUDIO</div>
           <div className="configuration-id">
             <span>BUILD</span>
             <strong>{createStudioBuildId(build)}</strong>
@@ -899,14 +934,37 @@ export function App() {
       <section className="studio-grid">
         <div className={`viewer-column ${family.supports3D ? 'has-3d' : 'is-static-preview'}`}>
           {family.supports3D ? (
-            <Suspense fallback={<div className="viewer-panel viewer-loading">Loading 3D studio…</div>}>
+            <div className="preview-mode-switch" role="tablist" aria-label="Product preview mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewerMode === 'photo'}
+                className={viewerMode === 'photo' ? 'is-active' : ''}
+                onClick={() => setViewerMode('photo')}
+              >
+                Photographed product
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewerMode === '3d'}
+                className={viewerMode === '3d' ? 'is-active' : ''}
+                onClick={() => setViewerMode('3d')}
+              >
+                Interactive 3D
+              </button>
+            </div>
+          ) : null}
+
+          {family.supports3D && viewerMode === '3d' ? (
+            <Suspense fallback={<div className="viewer-panel viewer-loading">Loading interactive 3D…</div>}>
               <WeldingHoodViewer referenceId={reference.id} />
             </Suspense>
           ) : (
-            <ReferenceStage family={family} reference={reference} build={build} artwork={artwork} />
+            <ReferenceStage family={family} reference={reference} />
           )}
 
-          {family.supports3D ? <ReferenceStage family={family} reference={reference} build={build} artwork={artwork} /> : null}
+          <ConceptSummary build={build} artwork={artwork} />
 
           <section className="viewer-build-card">
             <div>
