@@ -42,17 +42,21 @@ describe('material processor math', () => {
     expect(pixel[3]).toBe(255)
   })
 
-  it('encodes directional differences into tangent normal channels', () => {
-    const result = deriveNormalMap(
-      solid(128, 128, 128),
-      solid(180, 180, 180),
-      solid(128, 128, 128),
-      solid(80, 80, 80),
-      { strength: 2 },
-    )
+  it('encodes spatial directional differences after per-light exposure normalization', () => {
+    const north = solid(128, 128, 128)
+    const south = solid(128, 128, 128)
+    const east = solid(128, 128, 128)
+    const west = solid(128, 128, 128)
+
+    // Keep east/west global means equal while reversing local response.
+    east.data.set([180, 180, 180, 255, 80, 80, 80, 255], 0)
+    west.data.set([80, 80, 80, 255, 180, 180, 180, 255], 0)
+
+    const result = deriveNormalMap(north, east, south, west, { strength: 2 })
 
     expect(result.data[0]).toBeLessThan(128)
     expect(result.data[2]).toBeGreaterThan(128)
+    expect(result.data[4]).toBeGreaterThan(128)
   })
 
   it('makes stronger reflective response smoother in the roughness proxy', () => {
