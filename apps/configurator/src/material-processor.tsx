@@ -368,6 +368,7 @@ function MaterialProcessor() {
         </div>
         <nav>
           <a href="/capture.html">Field Capture</a>
+          <a href="/material-qa.html">Material QA</a>
           <a href="/materials.html">Material Lab</a>
           <a href="/">Customer Studio</a>
         </nav>
