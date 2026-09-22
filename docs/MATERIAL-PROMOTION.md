@@ -86,11 +86,19 @@ The promotion validator constrains these values to renderer-safe ranges.
 Promotion produces:
 
 ```text
-<MATERIAL>-production-material.json
+<MATERIAL>.json
 <MATERIAL>-asset-placement.json
 ```
 
 and normalized production filenames for each selected tier.
+
+The registry JSON is designed to be placed directly at:
+
+```text
+apps/configurator/src/material-registry/<MATERIAL>.json
+```
+
+CI validates the filename against the material ID before deployment.
 
 Example:
 
