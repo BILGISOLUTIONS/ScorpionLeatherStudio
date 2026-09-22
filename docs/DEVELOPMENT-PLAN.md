@@ -47,6 +47,8 @@ Candidate: a Scorpion leather welding hood because it demonstrates:
 
 Capture reference photography and dimensions, reconstruct/model the real product, clean in Blender, author true Scorpion PBR materials, optimize for web, and connect it through the same manifest used by the placeholder.
 
+V0.18 adds the controlled Product Capture / Construction Specification gate for this stage. It validates required physical measurements, photographic coverage, and semantic node contracts before a reconstruction-ready packet can be exported. Physical capture of the real production hood is still required before the first digital twin can be considered production-ready.
+
 ## Stage 3 — Shopify integration
 
 Package the validated engine for the Scorpion Shopify storefront.

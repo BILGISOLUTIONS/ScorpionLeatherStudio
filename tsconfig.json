@@ -50,6 +50,9 @@
       ],
       "@sls/material-promotion": [
         "packages/material-promotion/src/index.ts"
+      ],
+      "@sls/product-capture": [
+        "packages/product-capture/src/index.ts"
       ]
     }
   },

@@ -19,6 +19,7 @@
     "@sls/material-library": "*",
     "@sls/material-processor": "*",
     "three": "^0.176.0",
-    "@sls/material-promotion": "*"
+    "@sls/material-promotion": "*",
+    "@sls/product-capture": "*"
   }
 }

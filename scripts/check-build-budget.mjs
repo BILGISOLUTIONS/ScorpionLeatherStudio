@@ -72,6 +72,7 @@ const captureGraph = collectEntryGraph(findEntry('capture.html'))
 const processorGraph = collectEntryGraph(findEntry('process.html'))
 const materialQaGraph = collectEntryGraph(findEntry('material-qa.html'))
 const promotionGraph = collectEntryGraph(findEntry('promote.html'))
+const productCaptureGraph = collectEntryGraph(findEntry('product-capture.html'))
 const materialQaViewerGraph = collectEntryGraph(findChunk('src/MaterialQaViewer.tsx'))
 
 const STUDIO_JS_RAW_LIMIT = 285 * 1024
@@ -105,6 +106,11 @@ const PROMOTION_JS_RAW_LIMIT = 330 * 1024
 const PROMOTION_JS_GZIP_LIMIT = 105 * 1024
 const PROMOTION_CSS_RAW_LIMIT = 34 * 1024
 const PROMOTION_CSS_GZIP_LIMIT = 11 * 1024
+
+const PRODUCT_CAPTURE_JS_RAW_LIMIT = 330 * 1024
+const PRODUCT_CAPTURE_JS_GZIP_LIMIT = 105 * 1024
+const PRODUCT_CAPTURE_CSS_RAW_LIMIT = 32 * 1024
+const PRODUCT_CAPTURE_CSS_GZIP_LIMIT = 11 * 1024
 
 const LAZY_CHUNK_RAW_LIMIT = 1100 * 1024
 const LAZY_CHUNK_GZIP_LIMIT = 300 * 1024
@@ -148,6 +154,11 @@ enforce('Material Promotion initial JS graph (gzip)', sumAssetSet(promotionGraph
 enforce('Material Promotion CSS graph (raw)', sumAssetSet(promotionGraph.css, bytes), PROMOTION_CSS_RAW_LIMIT)
 enforce('Material Promotion CSS graph (gzip)', sumAssetSet(promotionGraph.css, gzipBytes), PROMOTION_CSS_GZIP_LIMIT)
 
+enforce('Product Capture initial JS graph (raw)', sumAssetSet(productCaptureGraph.js, bytes), PRODUCT_CAPTURE_JS_RAW_LIMIT)
+enforce('Product Capture initial JS graph (gzip)', sumAssetSet(productCaptureGraph.js, gzipBytes), PRODUCT_CAPTURE_JS_GZIP_LIMIT)
+enforce('Product Capture CSS graph (raw)', sumAssetSet(productCaptureGraph.css, bytes), PRODUCT_CAPTURE_CSS_RAW_LIMIT)
+enforce('Product Capture CSS graph (gzip)', sumAssetSet(productCaptureGraph.css, gzipBytes), PRODUCT_CAPTURE_CSS_GZIP_LIMIT)
+
 const jsFiles = files.filter((file) => file.endsWith('.js'))
 for (const file of jsFiles) {
   const path = join(assetDir, file)
@@ -178,5 +189,6 @@ console.log(`Material Processor initial JS files: ${[...processorGraph.js].join(
 console.log(`Material QA initial JS files: ${[...materialQaGraph.js].join(', ')}`)
 console.log(`Material QA lazy 3D files: ${[...materialQaViewerGraph.js].join(', ')}`)
 console.log(`Material Promotion initial JS files: ${[...promotionGraph.js].join(', ')}`)
+console.log(`Product Capture initial JS files: ${[...productCaptureGraph.js].join(', ')}`)
 console.log(`Emitted JS chunks: ${jsFiles.length}`)
 console.log('Performance budgets passed.')

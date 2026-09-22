@@ -18,6 +18,7 @@ export default defineConfig({
         process: fileURLToPath(new URL('./process.html', import.meta.url)),
         materialQa: fileURLToPath(new URL('./material-qa.html', import.meta.url)),
         promote: fileURLToPath(new URL('./promote.html', import.meta.url)),
+        productCapture: fileURLToPath(new URL('./product-capture.html', import.meta.url)),
       },
     },
   },
