@@ -18,8 +18,6 @@
     "@sls/order-engine": "*",
     "@sls/material-library": "*",
     "@sls/material-processor": "*",
-    "@react-three/fiber": "^9.1.0",
-    "@react-three/drei": "^10.0.0",
     "three": "^0.176.0",
     "@sls/material-promotion": "*"
   }
