@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "budget": "node scripts/check-build-budget.mjs",
-    "budget:functions": "node scripts/check-vercel-functions.mjs"
+    "budget:functions": "node scripts/check-vercel-functions.mjs",
+    "validate:materials": "node scripts/check-material-registry.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
