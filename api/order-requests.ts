@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import nodemailer from 'nodemailer'
 import { formatOrderSummary, type StudioOrderRequest } from '@sls/order-engine'
-import { markOrderDelivery, persistOrderRequest } from './lib/order-store'
+import { markOrderDelivery, persistOrderRequest } from '../server/lib/order-store'
 
 interface ArtworkAttachmentInput {
   name: string
