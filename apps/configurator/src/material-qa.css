@@ -15,3 +15,60 @@ button,input,select,textarea{font:inherit}
 .approval-state{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:14px;padding:13px;border-left:2px solid #6e533c;background:#16100d}.approval-state.is-ready{border-left-color:#60764c;background:#0f150c}.approval-state strong{font-size:.75rem}.approval-state p{margin:4px 0 0;color:#958b7e;font-size:.67rem;line-height:1.45}.approval-state button{min-height:42px;padding:0 14px;border:1px solid #9f7c43;background:#8d6933;color:#0a0805;font-weight:850;white-space:nowrap}.approval-state button:disabled{opacity:.4;cursor:not-allowed}
 @media(max-width:1000px){.load-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.viewer-layout{grid-template-columns:1fr}.qa-viewer{height:520px}.viewer-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.map-facts{grid-column:1/-1}}
 @media(max-width:700px){.qa-shell{width:min(100% - 20px,1460px);padding-top:20px}.qa-header{display:grid}.qa-header nav{justify-content:flex-start}.load-grid,.checklist,.review-fields,.viewer-controls{grid-template-columns:1fr}.qa-viewer{height:420px}.approval-state{display:grid}.approval-state button{width:100%}}
+
+
+/* V0.18 — defer the heavy WebGL QA runtime until review is actionable */
+.qa-viewer-placeholder {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  color: #8f877a;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(173, 133, 70, .08), transparent 42%),
+    #0b0b09;
+}
+
+.qa-viewer-placeholder::before {
+  content: '';
+  width: 28px;
+  height: 28px;
+  border: 1px solid #645238;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(198, 161, 93, .16);
+  animation: qa-runtime-pulse 2.2s ease-out infinite;
+}
+
+.qa-viewer-placeholder strong {
+  color: #cdbb98;
+  font-size: .76rem;
+}
+
+.qa-viewer-placeholder span {
+  max-width: 430px;
+  font-size: .66rem;
+  line-height: 1.5;
+}
+
+.qa-viewer canvas {
+  animation: qa-viewer-enter 180ms ease-out both;
+}
+
+@keyframes qa-runtime-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(198, 161, 93, .18); }
+  65%, 100% { box-shadow: 0 0 0 16px rgba(198, 161, 93, 0); }
+}
+
+@keyframes qa-viewer-enter {
+  from { opacity: 0; transform: scale(.998); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qa-viewer-placeholder::before,
+  .qa-viewer canvas {
+    animation: none;
+  }
+}
