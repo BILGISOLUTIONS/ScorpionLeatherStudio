@@ -1,5 +1,5 @@
 import type { StudioOrderRequest } from '@sls/order-engine'
-import { isShopifyConfigured, shopifyGraphQl } from './shopify-client'
+import { isShopifyConfigured, shopifyGraphQl as sharedShopifyGraphQl } from './shopify-client'
 
 export interface ShopifyDraftOrderResult {
   id: string
@@ -17,6 +17,14 @@ export interface ShopifyDraftOrderState extends ShopifyDraftOrderResult {
     displayFinancialStatus: string | null
     displayFulfillmentStatus: string
   } | null
+}
+
+async function shopifyGraphQl<T>(
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  if (!isShopifyConfigured()) throw new Error('SHOPIFY_DRAFT_ORDER_NOT_CONFIGURED')
+  return sharedShopifyGraphQl<T>(query, variables)
 }
 
 function dollars(minor: number): string {
