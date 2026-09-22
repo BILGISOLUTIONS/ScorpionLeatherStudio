@@ -75,6 +75,8 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue('2')
 
   const requestPanel = page.getByRole('region', { name: 'Custom order request' })
+  await requestPanel.scrollIntoViewIfNeeded()
+  await expect(requestPanel.getByRole('textbox', { name: /^Name/ })).toBeVisible()
   await requestPanel.getByRole('textbox', { name: /^Name/ }).fill('Test Customer')
   await requestPanel.getByRole('textbox', { name: 'Email', exact: true }).fill('customer@example.com')
   await requestPanel.getByRole('button', { name: 'Create Order Request' }).click()
@@ -156,6 +158,12 @@ test('Shopify embed deep link opens the requested real catalog product without l
   await expect(page.locator('main')).toHaveClass(/is-embedded/)
   await expect(page.locator('canvas')).toHaveCount(0)
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
+  expect(scriptRequests.some((url) => url.includes('OrderCapture-'))).toBe(false)
+
+  const deferredOrder = page.getByTestId('order-capture-deferred')
+  await deferredOrder.scrollIntoViewIfNeeded()
+  await expect(page.getByRole('region', { name: 'Custom order request' }).getByRole('textbox', { name: /^Name/ })).toBeVisible()
+  await expect.poll(() => scriptRequests.some((url) => url.includes('OrderCapture-'))).toBe(true)
 })
 
 
