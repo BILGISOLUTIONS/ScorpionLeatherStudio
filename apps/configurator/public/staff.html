@@ -185,8 +185,10 @@
         <section class="commerce-card" aria-label="Shopify draft order">
           <span>SHOPIFY DRAFT ORDER</span>
           <p id="draftState">Save a quote and move the request to Quoted or Approved before creating a Shopify draft order.</p>
+          <p id="invoiceState">After reviewing the Shopify draft, move the request to Approved to enable invoice sending.</p>
           <div class="commerce-actions">
             <button id="createDraft" class="secondary" type="button">Create Shopify draft</button>
+            <button id="sendInvoice" class="secondary" type="button">Send Shopify invoice</button>
             <a id="draftInvoice" href="#" target="_blank" rel="noopener noreferrer" hidden>Open invoice checkout</a>
           </div>
         </section>
@@ -368,15 +370,27 @@
           el('saveState').textContent = '';
 
           const createDraft = el('createDraft');
+          const sendInvoice = el('sendInvoice');
           const invoice = el('draftInvoice');
           const hasQuote = Number.isInteger(order.quote_total_minor) && order.quote_total_minor > 0;
           const eligibleStatus = ['quoted','approved'].includes(order.status);
           const existingDraft = Boolean(order.shopify_draft_order_id);
+          const invoiceSent = Boolean(order.shopify_invoice_sent_at);
 
           createDraft.disabled = existingDraft || !hasQuote || !eligibleStatus || order.shopify_draft_order_state === 'creating';
           createDraft.textContent = existingDraft
             ? (order.shopify_draft_order_name || 'Shopify draft created')
             : order.shopify_draft_order_state === 'creating' ? 'Creating…' : 'Create Shopify draft';
+
+          sendInvoice.disabled =
+            !existingDraft ||
+            order.status !== 'approved' ||
+            !order.customer_email ||
+            invoiceSent ||
+            order.shopify_invoice_state === 'sending';
+          sendInvoice.textContent = invoiceSent
+            ? 'Invoice sent'
+            : order.shopify_invoice_state === 'sending' ? 'Sending invoice…' : 'Send Shopify invoice';
 
           if (existingDraft) {
             el('draftState').textContent = 'Linked to ' + (order.shopify_draft_order_name || 'a Shopify draft order') + '.';
@@ -384,6 +398,20 @@
             el('draftState').textContent = 'The last Shopify draft attempt failed. Review the quote/configuration and retry.';
           } else {
             el('draftState').textContent = 'Save a quote and move the request to Quoted or Approved before creating a Shopify draft order.';
+          }
+
+          if (invoiceSent) {
+            el('invoiceState').textContent = 'Shopify invoice sent ' + dateTime(order.shopify_invoice_sent_at) + '.';
+          } else if (!existingDraft) {
+            el('invoiceState').textContent = 'Create and review the Shopify draft before sending an invoice.';
+          } else if (!order.customer_email) {
+            el('invoiceState').textContent = 'A customer email address is required before Shopify can send the invoice.';
+          } else if (order.status !== 'approved') {
+            el('invoiceState').textContent = 'Move the request to Approved after reviewing the draft to enable invoice sending.';
+          } else if (order.shopify_invoice_state === 'failed') {
+            el('invoiceState').textContent = 'The last invoice attempt failed. Review the draft/customer email and retry.';
+          } else {
+            el('invoiceState').textContent = 'Approved and ready. Sending the invoice will email Shopify’s secure checkout link to the customer.';
           }
 
           if (order.shopify_draft_order_invoice_url) {
@@ -504,6 +532,40 @@
         } catch (error) {
           el('draftState').textContent = error.message || 'Shopify draft creation failed.';
           el('createDraft').disabled = false;
+        }
+      });
+
+      el('sendInvoice').addEventListener('click', async () => {
+        if (!state.selected) return;
+
+        const requestId = state.selected.request_id;
+        const customerEmail = state.selected.customer_email || '';
+        const confirmed = window.confirm(
+          'Send the Shopify payment invoice to ' + customerEmail + '?\n\n' +
+          'Only continue if the draft order and approved quote have been reviewed.'
+        );
+        if (!confirmed) return;
+
+        el('sendInvoice').disabled = true;
+        el('invoiceState').textContent = 'Sending Shopify invoice…';
+
+        try {
+          const payload = await api('/api/staff/shopify-invoice', {
+            method:'POST',
+            body:JSON.stringify({ requestId }),
+          });
+
+          el('invoiceState').textContent = payload.existing
+            ? 'Invoice was already sent ' + dateTime(payload.sentAt) + '.'
+            : 'Shopify invoice sent ' + dateTime(payload.sentAt) + '.';
+          el('sendInvoice').textContent = 'Invoice sent';
+
+          await loadOrders();
+          const refreshed = state.orders.find((o) => o.request_id === requestId);
+          if (refreshed) state.selected = { ...state.selected, ...refreshed };
+        } catch (error) {
+          el('invoiceState').textContent = error.message || 'Shopify invoice send failed.';
+          el('sendInvoice').disabled = false;
         }
       });
 
