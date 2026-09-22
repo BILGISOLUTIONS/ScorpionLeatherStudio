@@ -77,6 +77,7 @@ export interface PromotionIssue {
 
 export interface PromotionResult {
   material: ScorpionMaterialDefinition
+  registryDestination: string
   assetPlacement: {
     materialId: string
     root: string
@@ -279,8 +280,11 @@ export function promoteMaterial(args: {
     throw new Error(definitionIssues.map((entry) => `${entry.path}: ${entry.message}`).join('\n'))
   }
 
+  const registryDestination = `apps/configurator/src/material-registry/${material.id}.json`
+
   const assetPlacement = {
     materialId: material.id,
+    registryDestination,
     root,
     files: args.tiers.flatMap((tier) => {
       const folder = tier.maxEdge === 1024 ? '1k' : tier.maxEdge === 2048 ? '2k' : '4k'
@@ -292,5 +296,5 @@ export function promoteMaterial(args: {
     }),
   }
 
-  return { material, assetPlacement }
+  return { material, registryDestination, assetPlacement }
 }
