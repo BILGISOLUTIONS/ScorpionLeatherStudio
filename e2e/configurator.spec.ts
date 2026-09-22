@@ -175,3 +175,66 @@ test('staff console stays isolated and locked without credentials', async ({ pag
   await expect(page.getByText('Not connected')).toBeVisible()
   await expect(page.locator('canvas')).toHaveCount(0)
 })
+
+
+test('live Shopify reconciliation updates price inventory and order packet', async ({ page }) => {
+  await page.route('**/api/catalog-variant?*', async (route) => {
+    const url = new URL(route.request().url())
+    expect(url.searchParams.get('productId')).toBe('gid://shopify/Product/10403653812504')
+    expect(url.searchParams.get('variantId')).toBe('gid://shopify/ProductVariant/52616019837208')
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        variant: {
+          productId: 'gid://shopify/Product/10403653812504',
+          productTitle: 'Cowhide Radio Harness - Black',
+          productStatus: 'ACTIVE',
+          variantId: 'gid://shopify/ProductVariant/52616019837208',
+          variantTitle: 'X-Large',
+          sku: 'SC-LRH-BLK-XL-002',
+          priceMinor: 36000,
+          inventoryQuantity: 1,
+          fetchedAt: '2026-09-22T04:30:00.000Z',
+        },
+      }),
+    })
+  })
+
+  await page.goto('/?product=cowhide-radio-harness-black&variant=SC-LRH-BLK-XL-002')
+
+  await expect(page.getByTestId('catalog-freshness')).toContainText('Live Shopify data')
+  await expect(page.getByTestId('base-price')).toHaveText('$360.00')
+
+  const buildSummary = page.getByRole('region', { name: 'Build summary' })
+  await expect(buildSummary.getByText('1', { exact: true })).toBeVisible()
+
+  await page.getByRole('spinbutton', { name: 'Quantity' }).fill('2')
+  await expect(page.getByTestId('base-price')).toHaveText('$720.00')
+  await expect(buildSummary).toContainText('exceeds the currently listed inventory of 1')
+
+  const requestPanel = page.getByRole('region', { name: 'Custom order request' })
+  await requestPanel.scrollIntoViewIfNeeded()
+  await expect(requestPanel.getByRole('textbox', { name: /^Name/ })).toBeVisible()
+  await requestPanel.getByRole('textbox', { name: /^Name/ }).fill('Live Catalog Customer')
+  await requestPanel.getByRole('textbox', { name: 'Email', exact: true }).fill('live@example.com')
+  await requestPanel.getByRole('button', { name: 'Create Order Request' }).click()
+
+  await expect(requestPanel.locator('pre')).toContainText('Listed inventory at configuration: 1')
+  await expect(requestPanel.locator('pre')).toContainText('Catalog base: $360.00 each · $720.00 base subtotal')
+})
+
+test('quote-only products do not request live Shopify pricing', async ({ page }) => {
+  let catalogRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/api/catalog-variant')) catalogRequests += 1
+  })
+
+  await page.goto('/?family=welding-hood&reference=hood-cognac')
+  await expect(page.getByTestId('base-price')).toHaveText('QUOTE')
+  await expect(page.getByTestId('catalog-freshness')).toHaveText('Quote workflow')
+  await page.waitForTimeout(250)
+  expect(catalogRequests).toBe(0)
+})
