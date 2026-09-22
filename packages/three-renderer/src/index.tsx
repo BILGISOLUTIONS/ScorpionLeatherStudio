@@ -385,18 +385,23 @@ export function ThreeProductViewer(props: ThreeProductViewerProps) {
       dpr={[1, 1.75]}
       shadows
       gl={{ antialias: true, powerPreference: 'high-performance' }}
+      onCreated={({ gl }) => {
+        gl.toneMapping = THREE.ACESFilmicToneMapping
+        gl.toneMappingExposure = 1.08
+      }}
     >
-      <color attach="background" args={['#0e0e0d']} />
-      <ambientLight intensity={0.9} />
-      <directionalLight position={[3.2, 4.2, 4.8]} intensity={2.35} castShadow />
-      <directionalLight position={[-3, 1.5, -2]} intensity={0.72} />
-      <directionalLight position={[0, -1.5, 2.5]} intensity={0.22} />
+      <color attach="background" args={['#12110f']} />
+      <hemisphereLight args={['#fff0d5', '#211810', 1.05]} />
+      <ambientLight intensity={0.72} />
+      <directionalLight color="#ffe7bf" position={[3.2, 4.2, 4.8]} intensity={2.65} castShadow />
+      <directionalLight color="#dbe7f2" position={[-3, 1.8, -2]} intensity={0.92} />
+      <directionalLight color="#d3aa67" position={[0, -1.2, 2.8]} intensity={0.38} />
 
       <Suspense fallback={<LoadingFallback />}>
         <ProductModel {...props} />
         <ContactShadows
           position={[0, -0.34, 0]}
-          opacity={0.52}
+          opacity={0.44}
           scale={1.2}
           blur={2.6}
           far={1.2}
