@@ -45,6 +45,12 @@ create index if not exists scorpion_custom_order_requests_customer_email_idx
 create index if not exists scorpion_custom_order_requests_sku_idx
   on public.scorpion_custom_order_requests (sku, created_at desc);
 
+alter table public.scorpion_custom_order_requests
+  add column if not exists staff_notes text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists quote_total_minor integer;
+
 alter table public.scorpion_custom_order_requests enable row level security;
 
 -- Intentionally create no anon/authenticated policies.
