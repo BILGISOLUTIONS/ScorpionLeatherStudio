@@ -58,9 +58,9 @@ self.onmessage = (event: MessageEvent<ProcessRequest>) => {
       },
       {
         transfer: [
-          baseColor.data.buffer,
-          roughness.data.buffer,
-          normal.data.buffer,
+          baseColor.data.buffer as ArrayBuffer,
+          roughness.data.buffer as ArrayBuffer,
+          normal.data.buffer as ArrayBuffer,
         ],
       },
     )
