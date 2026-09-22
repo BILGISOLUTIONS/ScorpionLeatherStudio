@@ -26,14 +26,13 @@ export interface LiveVariantCommerce {
 
 const productRequestCache = new Map<string, Promise<LiveProductPayload | null>>()
 
-async function fetchLiveProduct(handle: string, signal: AbortSignal): Promise<LiveProductPayload | null> {
+async function fetchLiveProduct(handle: string): Promise<LiveProductPayload | null> {
   const cached = productRequestCache.get(handle)
   if (cached) return cached
 
   const request = fetch(`/api/catalog-product?handle=${encodeURIComponent(handle)}`, {
     method: 'GET',
     headers: { Accept: 'application/json' },
-    signal,
   })
     .then(async (response) => {
       if (!response.ok) return null
@@ -41,10 +40,8 @@ async function fetchLiveProduct(handle: string, signal: AbortSignal): Promise<Li
       if (payload.ok !== true || payload.source !== 'shopify-storefront' || !Array.isArray(payload.variants)) return null
       return payload as LiveProductPayload
     })
-    .catch((error) => {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        productRequestCache.delete(handle)
-      }
+    .catch(() => {
+      productRequestCache.delete(handle)
       return null
     })
 
@@ -74,10 +71,9 @@ export function useLiveVariantCommerce(
     }
 
     let active = true
-    const controller = new AbortController()
     setState({ status: 'loading', priceMinor: variant.priceMinor, available: null })
 
-    void fetchLiveProduct(reference.handle, controller.signal).then((product) => {
+    void fetchLiveProduct(reference.handle).then((product) => {
       if (!active) return
 
       const targetId = variantNumericId(variant.id)
@@ -102,7 +98,6 @@ export function useLiveVariantCommerce(
 
     return () => {
       active = false
-      controller.abort()
     }
   }, [enabled, reference.handle, variant.id, variant.priceMinor, variant.sku, variant.title])
 
