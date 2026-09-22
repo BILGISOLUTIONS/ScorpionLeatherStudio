@@ -24,12 +24,20 @@ test('multi-product studio builds and captures a customized order request', asyn
 
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: 'Custom Leather Studio' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Scorpion Leather Studio' })).toBeVisible()
+  await expect(page.getByText('SLS', { exact: true }).first()).toBeVisible()
   const productRail = page.getByRole('navigation', { name: 'Customizable products' })
   await expect(productRail).toBeVisible()
   await expect(productRail.getByRole('button')).toHaveCount(8)
+
+  // The photographed catalog product is now the default authority. The heavier
+  // development 3D runtime loads only when the customer explicitly asks for it.
+  await expect(page.locator('canvas')).toHaveCount(0)
+  await page.getByRole('tab', { name: 'Interactive 3D' }).click()
   await expect(page.locator('canvas')).toBeVisible()
   await expect(page.getByText('3D contract validated')).toHaveText('3D contract validated')
+  await page.getByRole('tab', { name: 'Photographed product' }).click()
+  await expect(page.locator('canvas')).toHaveCount(0)
 
   await page.getByRole('button', { name: /Thigh Protector/i }).click()
   await expect(page.getByRole('heading', { name: 'Leather Thigh Protector - Brown' }).first()).toBeVisible()
@@ -58,6 +66,13 @@ test('multi-product studio builds and captures a customized order request', asyn
   await page.getByPlaceholder('Name, initials, company, unit, etc.').fill('ZAN CREW')
   await page.getByRole('button', { name: 'Block', exact: true }).click()
   await page.getByLabel('Requested placement').selectOption({ label: 'Front chest panel' })
+
+  const conceptSummary = page.getByRole('region', { name: 'Customization concept' })
+  await expect(conceptSummary).toBeVisible()
+  await expect(conceptSummary).toContainText('Western floral')
+  await expect(conceptSummary).toContainText('ZAN CREW')
+  await expect(page.locator('.photo-stage .tooling-concept')).toHaveCount(0)
+  await expect(page.locator('.photo-stage .mock-personalization')).toHaveCount(0)
 
   const artworkInput = page.locator('input[type="file"]')
   await artworkInput.setInputFiles({
@@ -164,7 +179,7 @@ test('Shopify embed deep link opens the requested real catalog product without l
 
   await page.goto('/?embed=1&product=cowhide-radio-harness-black&variant=SC-LRH-BLK-XL-002')
 
-  await expect(page.getByRole('heading', { name: 'Custom Leather Studio' })).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Scorpion Leather Studio' })).toBeHidden()
   await expect(page.getByRole('heading', { name: 'Cowhide Radio Harness - Black' }).first()).toBeVisible()
   await expect(page.getByTestId('base-price')).toHaveText('$350.00')
   await expect(page.getByText('SC-LRH-BLK-XL-002').first()).toBeVisible()
