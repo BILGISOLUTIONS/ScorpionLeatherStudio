@@ -62,6 +62,7 @@ function sumAssetSet(assetSet, measure) {
 
 const studioGraph = collectEntryGraph(findEntry('index.html'))
 const materialLabGraph = collectEntryGraph(findEntry('materials.html'))
+const captureGraph = collectEntryGraph(findEntry('capture.html'))
 
 const STUDIO_JS_RAW_LIMIT = 285 * 1024
 const STUDIO_JS_GZIP_LIMIT = 88 * 1024
@@ -72,6 +73,11 @@ const MATERIAL_LAB_JS_RAW_LIMIT = 300 * 1024
 const MATERIAL_LAB_JS_GZIP_LIMIT = 95 * 1024
 const MATERIAL_LAB_CSS_RAW_LIMIT = 24 * 1024
 const MATERIAL_LAB_CSS_GZIP_LIMIT = 8 * 1024
+
+const CAPTURE_JS_RAW_LIMIT = 320 * 1024
+const CAPTURE_JS_GZIP_LIMIT = 100 * 1024
+const CAPTURE_CSS_RAW_LIMIT = 28 * 1024
+const CAPTURE_CSS_GZIP_LIMIT = 9 * 1024
 
 const LAZY_CHUNK_RAW_LIMIT = 1100 * 1024
 const LAZY_CHUNK_GZIP_LIMIT = 300 * 1024
@@ -92,6 +98,11 @@ enforce('Material Lab initial JS graph (raw)', sumAssetSet(materialLabGraph.js, 
 enforce('Material Lab initial JS graph (gzip)', sumAssetSet(materialLabGraph.js, gzipBytes), MATERIAL_LAB_JS_GZIP_LIMIT)
 enforce('Material Lab CSS graph (raw)', sumAssetSet(materialLabGraph.css, bytes), MATERIAL_LAB_CSS_RAW_LIMIT)
 enforce('Material Lab CSS graph (gzip)', sumAssetSet(materialLabGraph.css, gzipBytes), MATERIAL_LAB_CSS_GZIP_LIMIT)
+
+enforce('Field Capture initial JS graph (raw)', sumAssetSet(captureGraph.js, bytes), CAPTURE_JS_RAW_LIMIT)
+enforce('Field Capture initial JS graph (gzip)', sumAssetSet(captureGraph.js, gzipBytes), CAPTURE_JS_GZIP_LIMIT)
+enforce('Field Capture CSS graph (raw)', sumAssetSet(captureGraph.css, bytes), CAPTURE_CSS_RAW_LIMIT)
+enforce('Field Capture CSS graph (gzip)', sumAssetSet(captureGraph.css, gzipBytes), CAPTURE_CSS_GZIP_LIMIT)
 
 const jsFiles = files.filter((file) => file.endsWith('.js'))
 for (const file of jsFiles) {
@@ -118,5 +129,6 @@ enforce('Staff console assets (gzip)', staffAssetsGzip, STAFF_ASSETS_GZIP_LIMIT)
 
 console.log(`Studio initial JS files: ${[...studioGraph.js].join(', ')}`)
 console.log(`Material Lab initial JS files: ${[...materialLabGraph.js].join(', ')}`)
+console.log(`Field Capture initial JS files: ${[...captureGraph.js].join(', ')}`)
 console.log(`Emitted JS chunks: ${jsFiles.length}`)
 console.log('Performance budgets passed.')
