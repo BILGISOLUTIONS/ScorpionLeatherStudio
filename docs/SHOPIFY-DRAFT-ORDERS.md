@@ -55,11 +55,19 @@ This is not a distributed transaction, but it substantially reduces accidental d
 
 ## Invoice sending
 
-V0.11 creates the draft order but does **not** automatically email the Shopify invoice to the customer.
+Draft creation still does **not** automatically contact the customer.
 
-That separation is intentional. Staff should verify the final draft before an invoice is sent.
+After staff reviews the Shopify draft, the request must be moved to `Approved`. The staff console then enables **Send Shopify invoice**.
 
-A later release can add an explicit **Send Shopify Invoice** action after the draft has been reviewed.
+The server calls Shopify Admin GraphQL `draftOrderInvoiceSend`. Shopify sends its secure checkout/payment link to the email already attached to the draft order.
+
+The database tracks:
+
+- `shopify_invoice_state`
+- `shopify_invoice_sent_at`
+- `shopify_invoice_error`
+
+A previously sent invoice is treated idempotently by the Scorpion backend: the staff action reports the recorded send instead of intentionally sending it again.
 
 ## Pricing authority
 
