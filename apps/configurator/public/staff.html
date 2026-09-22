@@ -167,6 +167,7 @@
             <option value="reviewing">Reviewing</option>
             <option value="quoted">Quoted</option>
             <option value="approved">Approved</option>
+            <option value="paid">Paid</option>
             <option value="in_production">In production</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
@@ -189,6 +190,7 @@
           <div class="commerce-actions">
             <button id="createDraft" class="secondary" type="button">Create Shopify draft</button>
             <button id="sendInvoice" class="secondary" type="button">Send Shopify invoice</button>
+            <button id="reconcileShopify" class="secondary" type="button">Refresh payment status</button>
             <a id="draftInvoice" href="#" target="_blank" rel="noopener noreferrer" hidden>Open invoice checkout</a>
           </div>
         </section>
@@ -371,6 +373,7 @@
 
           const createDraft = el('createDraft');
           const sendInvoice = el('sendInvoice');
+          const reconcileShopify = el('reconcileShopify');
           const invoice = el('draftInvoice');
           const hasQuote = Number.isInteger(order.quote_total_minor) && order.quote_total_minor > 0;
           const eligibleStatus = ['quoted','approved'].includes(order.status);
@@ -392,6 +395,11 @@
             ? 'Invoice sent'
             : order.shopify_invoice_state === 'sending' ? 'Sending invoice…' : 'Send Shopify invoice';
 
+          reconcileShopify.disabled = !existingDraft;
+          reconcileShopify.textContent = order.shopify_financial_status === 'PAID'
+            ? 'Payment confirmed'
+            : 'Refresh payment status';
+
           if (existingDraft) {
             el('draftState').textContent = 'Linked to ' + (order.shopify_draft_order_name || 'a Shopify draft order') + '.';
           } else if (order.shopify_draft_order_state === 'failed') {
@@ -400,7 +408,12 @@
             el('draftState').textContent = 'Save a quote and move the request to Quoted or Approved before creating a Shopify draft order.';
           }
 
-          if (invoiceSent) {
+          if (order.shopify_financial_status === 'PAID') {
+            el('invoiceState').textContent =
+              'Payment confirmed in Shopify' +
+              (order.shopify_order_name ? ' · Order ' + order.shopify_order_name : '') +
+              (order.shopify_reconciled_at ? ' · synced ' + dateTime(order.shopify_reconciled_at) : '') + '.';
+          } else if (invoiceSent) {
             el('invoiceState').textContent = 'Shopify invoice sent ' + dateTime(order.shopify_invoice_sent_at) + '.';
           } else if (!existingDraft) {
             el('invoiceState').textContent = 'Create and review the Shopify draft before sending an invoice.';
@@ -566,6 +579,46 @@
         } catch (error) {
           el('invoiceState').textContent = error.message || 'Shopify invoice send failed.';
           el('sendInvoice').disabled = false;
+        }
+      });
+
+      el('reconcileShopify').addEventListener('click', async () => {
+        if (!state.selected) return;
+
+        const requestId = state.selected.request_id;
+        el('reconcileShopify').disabled = true;
+        el('reconcileShopify').textContent = 'Checking Shopify…';
+
+        try {
+          const payload = await api('/api/staff/shopify-reconcile', {
+            method:'POST',
+            body:JSON.stringify({ requestId }),
+          });
+
+          if (payload.paid) {
+            el('invoiceState').textContent =
+              'Payment confirmed in Shopify' +
+              (payload.draftOrder && payload.draftOrder.order ? ' · Order ' + payload.draftOrder.order.name : '') + '.';
+            el('reconcileShopify').textContent = 'Payment confirmed';
+          } else {
+            const draftStatus = payload.draftOrder && payload.draftOrder.status
+              ? String(payload.draftOrder.status).replaceAll('_',' ')
+              : 'open';
+            el('invoiceState').textContent = 'Shopify draft status: ' + draftStatus + '. Payment has not been confirmed.';
+            el('reconcileShopify').disabled = false;
+            el('reconcileShopify').textContent = 'Refresh payment status';
+          }
+
+          await loadOrders();
+          const refreshed = state.orders.find((o) => o.request_id === requestId);
+          if (refreshed) {
+            state.selected = { ...state.selected, ...refreshed };
+            el('editStatus').value = refreshed.status || el('editStatus').value;
+          }
+        } catch (error) {
+          el('invoiceState').textContent = error.message || 'Shopify status refresh failed.';
+          el('reconcileShopify').disabled = false;
+          el('reconcileShopify').textContent = 'Refresh payment status';
         }
       });
 
