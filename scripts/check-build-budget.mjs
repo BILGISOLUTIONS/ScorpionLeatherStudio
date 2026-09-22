@@ -39,11 +39,14 @@ const jsFiles = files.filter((file) => file.endsWith('.js'))
 const cssFiles = files.filter((file) => file.endsWith('.css'))
 const lazyJs = jsFiles.filter((file) => file !== entryFile)
 
-const ENTRY_RAW_LIMIT = 325 * 1024
-const ENTRY_GZIP_LIMIT = 100 * 1024
+const ENTRY_RAW_LIMIT = 285 * 1024
+const ENTRY_GZIP_LIMIT = 88 * 1024
 const CSS_RAW_LIMIT = 50 * 1024
 const CSS_GZIP_LIMIT = 15 * 1024
 const LAZY_CHUNK_RAW_LIMIT = 1100 * 1024
+const LAZY_CHUNK_GZIP_LIMIT = 300 * 1024
+const ORDER_CAPTURE_RAW_LIMIT = 24 * 1024
+const ORDER_CAPTURE_GZIP_LIMIT = 10 * 1024
 const STAFF_HTML_RAW_LIMIT = 10 * 1024
 const STAFF_HTML_GZIP_LIMIT = 4 * 1024
 const STAFF_ASSETS_RAW_LIMIT = 28 * 1024
@@ -58,7 +61,14 @@ enforce('CSS total (raw)', cssRaw, CSS_RAW_LIMIT)
 enforce('CSS total (gzip)', cssGzip, CSS_GZIP_LIMIT)
 
 for (const file of lazyJs) {
-  enforce(`Lazy JS chunk ${file} (raw)`, bytes(join(assetDir, file)), LAZY_CHUNK_RAW_LIMIT)
+  const path = join(assetDir, file)
+  enforce(`Lazy JS chunk ${file} (raw)`, bytes(path), LAZY_CHUNK_RAW_LIMIT)
+  enforce(`Lazy JS chunk ${file} (gzip)`, gzipBytes(path), LAZY_CHUNK_GZIP_LIMIT)
+
+  if (file.startsWith('OrderCapture-')) {
+    enforce('Order capture chunk (raw)', bytes(path), ORDER_CAPTURE_RAW_LIMIT)
+    enforce('Order capture chunk (gzip)', gzipBytes(path), ORDER_CAPTURE_GZIP_LIMIT)
+  }
 }
 
 const staffPath = new URL('staff.html', dist).pathname
