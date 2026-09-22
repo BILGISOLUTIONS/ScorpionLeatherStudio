@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { authorizeStaff, isStaffAccessConfigured } from '../lib/staff-auth'
-import { isShopifyDraftOrderConfigured, sendShopifyDraftInvoice } from '../lib/shopify-draft'
-import { getSupabaseConfiguration, supabaseHeaders } from '../lib/supabase'
+import { authorizeStaff, isStaffAccessConfigured } from '../../server/lib/staff-auth'
+import { isShopifyDraftOrderConfigured, sendShopifyDraftInvoice } from '../../server/lib/shopify-draft'
+import { getSupabaseConfiguration, supabaseHeaders } from '../../server/lib/supabase'
 
 interface StoredOrder {
   request_id: string
