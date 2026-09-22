@@ -16,6 +16,7 @@ export default defineConfig({
         materials: fileURLToPath(new URL('./materials.html', import.meta.url)),
         capture: fileURLToPath(new URL('./capture.html', import.meta.url)),
         process: fileURLToPath(new URL('./process.html', import.meta.url)),
+        materialQa: fileURLToPath(new URL('./material-qa.html', import.meta.url)),
       },
     },
   },
