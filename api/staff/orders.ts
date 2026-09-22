@@ -29,6 +29,11 @@ async function listOrders(req: VercelRequest, res: VercelResponse) {
   }
 
   const requestId = queryValue(req.query.request_id).trim()
+  if (requestId && !/^SC-REQ-/u.test(requestId)) {
+    res.status(422).json({ ok: false, code: 'INVALID_REQUEST_ID' })
+    return
+  }
+
   const rawLimit = Number(queryValue(req.query.limit) || '100')
   const limit = Math.max(1, Math.min(100, Number.isFinite(rawLimit) ? Math.floor(rawLimit) : 100))
 
