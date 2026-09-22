@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "captureSessionId": "SC-YYYY-NNN",
+  "client": "Scorpion Western Wear",
+  "materialId": "SCL-NNN",
+  "label": "",
+  "operator": "",
+  "capturedAt": "",
+  "physical": {
+    "materialType": "",
+    "hide": "",
+    "grain": "",
+    "finish": "",
+    "thicknessMm": null,
+    "supplier": "",
+    "supplierItem": ""
+  },
+  "availability": "unverified",
+  "capture": {
+    "camera": "",
+    "lensOrPhoneCamera": "",
+    "whiteBalanceKelvin": 5600,
+    "colorTarget": "",
+    "crossPolarized": true,
+    "directionalLighting": true,
+    "scaleReference": true,
+    "sampleWidthMm": null,
+    "sampleHeightMm": null
+  },
+  "frames": {
+    "identification": "00-identification.dng",
+    "crossPolarized": "01-cross-polarized.dng",
+    "parallel": "02-parallel.dng",
+    "north": "03-north.dng",
+    "east": "04-east.dng",
+    "south": "05-south.dng",
+    "west": "06-west.dng",
+    "macro": "07-macro.dng",
+    "edge": "08-edge.dng"
+  },
+  "notes": ""
+}
