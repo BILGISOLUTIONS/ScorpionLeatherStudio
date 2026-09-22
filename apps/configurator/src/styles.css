@@ -2095,3 +2095,12 @@ input:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+
+@media (min-width: 901px) {
+  .multi-studio .viewer-column.is-static-preview {
+    position: sticky;
+    top: 18px;
+    align-self: start;
+  }
+}
