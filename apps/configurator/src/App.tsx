@@ -1183,7 +1183,7 @@ export function App() {
       <section className="studio-grid">
         <div className="viewer-column">
           {family.supports3D ? (
-            <Suspense fallback={<div className="viewer-loading">Loading 3D studio…</div>}>
+            <Suspense fallback={<div className="viewer-panel viewer-loading">Loading 3D studio…</div>}>
               <WeldingHoodViewer referenceId={reference.id} />
             </Suspense>
           ) : (
