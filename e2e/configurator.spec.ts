@@ -157,3 +157,13 @@ test('Shopify embed deep link opens the requested real catalog product without l
   await expect(page.locator('canvas')).toHaveCount(0)
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
 })
+
+
+test('staff console stays isolated and locked without credentials', async ({ page }) => {
+  await page.goto('/staff.html')
+  await expect(page.getByRole('heading', { name: 'Custom Order Queue' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Staff access' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open order queue' })).toBeVisible()
+  await expect(page.getByText('Not connected')).toBeVisible()
+  await expect(page.locator('canvas')).toHaveCount(0)
+})
