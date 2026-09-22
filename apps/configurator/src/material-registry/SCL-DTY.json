@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "SCL-DTY",
+  "label": "Dark Textured Reference",
+  "kind": "leather",
+  "lifecycle": "reference-only",
+  "availability": "quote",
+  "previewColor": "#24211d",
+  "physical": {
+    "materialType": "Leather",
+    "grain": "Textured",
+    "finish": "Dark textured reference"
+  },
+  "provenance": {
+    "source": "photographed-product-reference",
+    "notes": "Approximation derived from the current Scorpion catalog photo. Replace with calibrated field capture before production color approval."
+  },
+  "renderer": {
+    "roughness": 0.86,
+    "metalness": 0,
+    "sheen": 0.1,
+    "sheenRoughness": 0.84
+  }
+}
