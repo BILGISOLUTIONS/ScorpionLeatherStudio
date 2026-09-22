@@ -393,6 +393,20 @@ const referenceByHandle = new Map(
   ),
 )
 
+const referenceByFamilyAndId = new Map(
+  studioFamilies.flatMap((family) =>
+    family.references.map((reference) => [`${family.id}:${reference.id}`, reference] as const),
+  ),
+)
+
+const variantByReferenceAndId = new Map(
+  studioFamilies.flatMap((family) =>
+    family.references.flatMap((reference) =>
+      reference.variants.map((variant) => [`${reference.id}:${variant.id}`, variant] as const),
+    ),
+  ),
+)
+
 export function getFamily(familyId: string): StudioProductFamily {
   return familyById.get(familyId as StudioFamilyKind) ?? studioFamilies[0]
 }
@@ -406,9 +420,9 @@ export function findReferenceByHandle(handle: string): { family: StudioProductFa
 }
 
 export function getReference(family: StudioProductFamily, referenceId: string): StudioReference {
-  return family.references.find((reference) => reference.id === referenceId) ?? family.references[0]
+  return referenceByFamilyAndId.get(`${family.id}:${referenceId}`) ?? family.references[0]
 }
 
 export function getVariant(reference: StudioReference, variantId: string): StudioVariant {
-  return reference.variants.find((variant) => variant.id === variantId) ?? reference.variants[0]
+  return variantByReferenceAndId.get(`${reference.id}:${variantId}`) ?? reference.variants[0]
 }
