@@ -108,9 +108,11 @@ Production digital twins should follow these rules:
 
 The current application catalog is a verified Shopify snapshot, not a permanent source of truth.
 
-Before broad public launch, price and availability should be refreshed from a server-side Shopify integration. The browser must not receive Shopify Admin credentials.
+V0.9 adds a server-side refresh against Shopify's public product Ajax endpoint for catalog-priced products. The endpoint sanitizes the response, caches it briefly at the edge, and returns only variant id/title/SKU/price/availability fields to the browser. No Shopify Admin credential is required or exposed.
 
-Until live catalog refresh exists:
+The Studio still retains the verified snapshot as a fallback because storefront refresh can fail during outages, password protection, DNS transitions, or product publication changes.
+
+When live refresh is unavailable:
 
 - quote-only products remain QUOTE;
 - custom work remains subject to Scorpion confirmation;
