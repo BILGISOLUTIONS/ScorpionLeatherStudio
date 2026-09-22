@@ -540,6 +540,7 @@ test('Material QA renders processed maps and exports an explicit approval packet
 
   await page.goto('/material-qa.html')
   await expect(page.getByRole('heading', { name: 'Material QA' })).toBeVisible()
+  expect(scriptRequests.some((url) => url.includes('MaterialQaViewer'))).toBe(false)
 
   const processingManifest = {
     schemaVersion: 1,
@@ -580,7 +581,12 @@ test('Material QA renders processed maps and exports an explicit approval packet
     })
   }
 
+  const deferredViewer = page.getByTestId('material-qa-viewer-deferred')
+  if (await deferredViewer.count()) {
+    await deferredViewer.scrollIntoViewIfNeeded()
+  }
   await expect(page.getByLabel('3D material QA viewer').locator('canvas')).toBeVisible()
+  await expect.poll(() => scriptRequests.some((url) => url.includes('MaterialQaViewer'))).toBe(true)
   await expect(page.getByText('3 / 3')).toBeVisible()
 
   await page.getByLabel('Lighting').selectOption('raking-left')
