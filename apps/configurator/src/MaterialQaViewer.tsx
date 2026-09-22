@@ -134,7 +134,7 @@ export default function MaterialQaViewer({
 
       const width = Math.max(1, Math.floor(rect.width))
       const height = Math.max(1, Math.floor(rect.height))
-      renderer.setSize(width, height, false)
+      renderer.setSize(width, height, true)
       camera.aspect = width / height
       camera.updateProjectionMatrix()
       render()
