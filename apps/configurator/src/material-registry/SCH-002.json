@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "SCH-002",
+  "label": "Brass-tone Renderer Reference",
+  "kind": "metal",
+  "lifecycle": "reference-only",
+  "availability": "unverified",
+  "previewColor": "#8b6a2f",
+  "provenance": {
+    "source": "synthetic-placeholder",
+    "notes": "Renderer reference only. Independent hardware availability has not been confirmed by Scorpion."
+  },
+  "renderer": {
+    "roughness": 0.34,
+    "metalness": 0.86,
+    "clearcoat": 0.08,
+    "clearcoatRoughness": 0.35
+  }
+}
