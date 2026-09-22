@@ -47,6 +47,9 @@
       ],
       "@sls/material-processor": [
         "packages/material-processor/src/index.ts"
+      ],
+      "@sls/material-promotion": [
+        "packages/material-promotion/src/index.ts"
       ]
     }
   },
