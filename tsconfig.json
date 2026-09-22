@@ -49,6 +49,7 @@
     "apps/**/*.tsx",
     "packages/**/*.ts",
     "packages/**/*.tsx",
-    "api/**/*.ts"
+    "api/**/*.ts",
+    "server/**/*.ts"
   ]
 }
