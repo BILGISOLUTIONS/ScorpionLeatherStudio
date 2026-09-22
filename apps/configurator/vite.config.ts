@@ -15,6 +15,7 @@ export default defineConfig({
         studio: fileURLToPath(new URL('./index.html', import.meta.url)),
         materials: fileURLToPath(new URL('./materials.html', import.meta.url)),
         capture: fileURLToPath(new URL('./capture.html', import.meta.url)),
+        process: fileURLToPath(new URL('./process.html', import.meta.url)),
       },
     },
   },
