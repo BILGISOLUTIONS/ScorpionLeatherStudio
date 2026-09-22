@@ -1,20 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Canvas, useThree } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
-import * as THREE from 'three'
+import type {
+  MaterialQaLightingPreset,
+  MaterialQaMapAsset,
+  MaterialQaMapKey,
+  MaterialQaShape,
+} from './material-qa-types'
 import './material-qa.css'
 
-type MapKey = 'baseColor' | 'roughness' | 'normal'
-type Shape = 'sphere' | 'flat' | 'cylinder'
-type LightingPreset = 'studio' | 'raking-left' | 'raking-right' | 'top'
-
-interface MapAsset {
-  file: File
-  url: string
-  width: number
-  height: number
-}
+const MaterialQaViewer = lazy(() => import('./MaterialQaViewer'))
 
 interface ProcessingManifest {
   materialId?: string
@@ -66,142 +60,8 @@ async function inspectImage(file: File): Promise<{ width: number; height: number
   }
 }
 
-function useQaMaterial(
-  maps: Partial<Record<MapKey, MapAsset>>,
-  repeat: number,
-  normalScale: number,
-  roughnessScalar: number,
-) {
-  const { gl, invalidate } = useThree()
-  const material = useMemo(
-    () => new THREE.MeshPhysicalMaterial({
-      color: '#ffffff',
-      metalness: 0,
-      roughness: roughnessScalar,
-      sheen: 0.15,
-      sheenRoughness: 0.75,
-    }),
-    [],
-  )
-
-  useEffect(() => {
-    material.roughness = roughnessScalar
-    material.normalScale.set(normalScale, normalScale)
-    material.needsUpdate = true
-    invalidate()
-  }, [invalidate, material, normalScale, roughnessScalar])
-
-  useEffect(() => {
-    const loader = new THREE.TextureLoader()
-    const loaded: THREE.Texture[] = []
-    let disposed = false
-    const maxAnisotropy = Math.max(1, Math.min(8, gl.capabilities.getMaxAnisotropy()))
-
-    const load = (
-      asset: MapAsset | undefined,
-      assign: (texture: THREE.Texture) => void,
-      colorTexture = false,
-    ) => {
-      if (!asset) return
-      loader.load(
-        asset.url,
-        (texture) => {
-          if (disposed) {
-            texture.dispose()
-            return
-          }
-          texture.wrapS = THREE.RepeatWrapping
-          texture.wrapT = THREE.RepeatWrapping
-          texture.repeat.set(repeat, repeat)
-          texture.anisotropy = maxAnisotropy
-          if (colorTexture) texture.colorSpace = THREE.SRGBColorSpace
-          loaded.push(texture)
-          assign(texture)
-          material.needsUpdate = true
-          invalidate()
-        },
-        undefined,
-        () => undefined,
-      )
-    }
-
-    material.map = null
-    material.roughnessMap = null
-    material.normalMap = null
-
-    load(maps.baseColor, (texture) => { material.map = texture }, true)
-    load(maps.roughness, (texture) => { material.roughnessMap = texture })
-    load(maps.normal, (texture) => { material.normalMap = texture })
-
-    invalidate()
-
-    return () => {
-      disposed = true
-      for (const texture of loaded) texture.dispose()
-    }
-  }, [gl, invalidate, maps.baseColor, maps.normal, maps.roughness, material, repeat])
-
-  useEffect(() => () => material.dispose(), [material])
-
-  return material
-}
-
-function QaMesh({
-  maps,
-  shape,
-  repeat,
-  normalScale,
-  roughnessScalar,
-}: {
-  maps: Partial<Record<MapKey, MapAsset>>
-  shape: Shape
-  repeat: number
-  normalScale: number
-  roughnessScalar: number
-}) {
-  const material = useQaMaterial(maps, repeat, normalScale, roughnessScalar)
-
-  if (shape === 'flat') {
-    return (
-      <mesh material={material}>
-        <planeGeometry args={[2.15, 2.15, 64, 64]} />
-      </mesh>
-    )
-  }
-
-  if (shape === 'cylinder') {
-    return (
-      <mesh material={material} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.82, 0.82, 1.8, 96, 16, false]} />
-      </mesh>
-    )
-  }
-
-  return (
-    <mesh material={material}>
-      <sphereGeometry args={[0.95, 96, 64]} />
-    </mesh>
-  )
-}
-
-function Lighting({ preset }: { preset: LightingPreset }) {
-  const positions: Record<LightingPreset, [number, number, number]> = {
-    studio: [3.4, 4.2, 4.5],
-    'raking-left': [-4.8, 0.8, 2.2],
-    'raking-right': [4.8, 0.8, 2.2],
-    top: [0.4, 5.2, 1.4],
-  }
-
-  return (
-    <>
-      <ambientLight intensity={preset === 'studio' ? 0.55 : 0.2} />
-      <directionalLight position={positions[preset]} intensity={preset === 'studio' ? 2.2 : 3.4} />
-      {preset === 'studio' ? <directionalLight position={[-3, 1.8, -2.5]} intensity={0.55} /> : null}
-    </>
-  )
-}
-
-function QaViewer({
+function DeferredQaViewer({
+  enabled,
   maps,
   shape,
   lighting,
@@ -209,48 +69,82 @@ function QaViewer({
   normalScale,
   roughnessScalar,
 }: {
-  maps: Partial<Record<MapKey, MapAsset>>
-  shape: Shape
-  lighting: LightingPreset
+  enabled: boolean
+  maps: Partial<Record<MaterialQaMapKey, MaterialQaMapAsset>>
+  shape: MaterialQaShape
+  lighting: MaterialQaLightingPreset
   repeat: number
   normalScale: number
   roughnessScalar: number
 }) {
+  const anchorRef = useRef<HTMLDivElement | null>(null)
+  const [active, setActive] = useState(false)
+
+  useEffect(() => {
+    if (!enabled || active) return
+    const node = anchorRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setActive(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        setActive(true)
+        observer.disconnect()
+      },
+      { rootMargin: '480px 0px' },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [active, enabled])
+
+  if (!enabled) {
+    return (
+      <div ref={anchorRef} className="qa-viewer qa-viewer-placeholder" data-testid="material-qa-viewer-deferred">
+        <strong>3D inspection is sleeping</strong>
+        <span>Load matching base-color, roughness, and normal maps to enable the WebGL reviewer.</span>
+      </div>
+    )
+  }
+
+  if (!active) {
+    return (
+      <div ref={anchorRef} className="qa-viewer qa-viewer-placeholder" data-testid="material-qa-viewer-deferred">
+        <strong>3D inspection ready</strong>
+        <span>The WebGL runtime loads only when this review surface approaches the viewport.</span>
+      </div>
+    )
+  }
+
   return (
-    <div className="qa-viewer" aria-label="3D material QA viewer">
-      <Canvas
-        frameloop="demand"
-        dpr={[1, 1.6]}
-        camera={{ position: [0, 0.15, 3.2], fov: 36 }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
-      >
-        <color attach="background" args={['#0d0d0b']} />
-        <Lighting preset={lighting} />
-        <QaMesh
-          maps={maps}
-          shape={shape}
-          repeat={repeat}
-          normalScale={normalScale}
-          roughnessScalar={roughnessScalar}
-        />
-        <OrbitControls
-          enablePan={false}
-          minDistance={1.8}
-          maxDistance={5}
-          autoRotate={false}
-          makeDefault
-        />
-      </Canvas>
-    </div>
+    <Suspense
+      fallback={
+        <div className="qa-viewer qa-viewer-placeholder">
+          <strong>Loading 3D inspection…</strong>
+          <span>Three.js is being loaded on demand.</span>
+        </div>
+      }
+    >
+      <MaterialQaViewer
+        maps={maps}
+        shape={shape}
+        lighting={lighting}
+        repeat={repeat}
+        normalScale={normalScale}
+        roughnessScalar={roughnessScalar}
+      />
+    </Suspense>
   )
 }
 
 function MaterialQa() {
   const [manifest, setManifest] = useState<ProcessingManifest | null>(null)
   const [manifestName, setManifestName] = useState('')
-  const [maps, setMaps] = useState<Partial<Record<MapKey, MapAsset>>>({})
-  const [shape, setShape] = useState<Shape>('sphere')
-  const [lighting, setLighting] = useState<LightingPreset>('studio')
+  const [maps, setMaps] = useState<Partial<Record<MaterialQaMapKey, MaterialQaMapAsset>>>({})
+  const [shape, setShape] = useState<MaterialQaShape>('sphere')
+  const [lighting, setLighting] = useState<MaterialQaLightingPreset>('studio')
   const [repeat, setRepeat] = useState(2)
   const [normalScale, setNormalScale] = useState(1)
   const [roughnessScalar, setRoughnessScalar] = useState(1)
@@ -276,7 +170,7 @@ function MaterialQa() {
 
   const allMapsLoaded = Boolean(maps.baseColor && maps.roughness && maps.normal)
   const matchingDimensions = useMemo(() => {
-    const assets = Object.values(maps).filter(Boolean) as MapAsset[]
+    const assets = Object.values(maps).filter(Boolean) as MaterialQaMapAsset[]
     if (assets.length < 2) return true
     return assets.every((asset) => asset.width === assets[0].width && asset.height === assets[0].height)
   }, [maps])
@@ -415,7 +309,8 @@ function MaterialQa() {
         </div>
 
         <div className="viewer-layout">
-          <QaViewer
+          <DeferredQaViewer
+            enabled={allMapsLoaded && matchingDimensions}
             maps={maps}
             shape={shape}
             lighting={lighting}
@@ -426,14 +321,14 @@ function MaterialQa() {
 
           <aside className="viewer-controls">
             <label>Test shape
-              <select value={shape} onChange={(event) => setShape(event.target.value as Shape)}>
+              <select value={shape} onChange={(event) => setShape(event.target.value as MaterialQaShape)}>
                 <option value="sphere">Sphere</option>
                 <option value="cylinder">Cylinder</option>
                 <option value="flat">Flat swatch</option>
               </select>
             </label>
             <label>Lighting
-              <select value={lighting} onChange={(event) => setLighting(event.target.value as LightingPreset)}>
+              <select value={lighting} onChange={(event) => setLighting(event.target.value as MaterialQaLightingPreset)}>
                 <option value="studio">Studio</option>
                 <option value="raking-left">Raking left</option>
                 <option value="raking-right">Raking right</option>
