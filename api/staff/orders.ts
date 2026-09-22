@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { authorizeStaff, isStaffAccessConfigured } from '../lib/staff-auth'
-import { getSupabaseConfiguration, supabaseHeaders } from '../lib/supabase'
+import { authorizeStaff, isStaffAccessConfigured } from '../../server/lib/staff-auth'
+import { getSupabaseConfiguration, supabaseHeaders } from '../../server/lib/supabase'
 
 const STAFF_STATUSES = new Set([
   'received',
