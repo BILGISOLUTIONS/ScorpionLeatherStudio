@@ -253,3 +253,45 @@ test('quote-only products do not request live Shopify pricing', async ({ page })
   await page.waitForTimeout(250)
   expect(catalogRequests).toBe(0)
 })
+
+
+test('Material Lab inspects the registry without loading customer 3D runtime', async ({ page }, testInfo) => {
+  const scriptRequests: string[] = []
+  const consoleErrors: string[] = []
+
+  page.on('request', (request) => {
+    if (request.resourceType() === 'script') scriptRequests.push(request.url())
+  })
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+
+  await page.goto('/materials.html')
+
+  await expect(page.getByRole('heading', { name: 'Material Lab' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(7)
+  await expect(page.getByText('SCL-COGNAC')).toBeVisible()
+  await expect(page.getByText('Cognac Textured Reference')).toBeVisible()
+  await expect(page.getByText('Production approved', { exact: true })).toHaveCount(1)
+
+  await page.getByRole('searchbox', { name: 'Search materials' }).fill('cognac')
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(1)
+
+  await page.getByRole('searchbox', { name: 'Search materials' }).fill('')
+  await page.getByRole('combobox', { name: 'Filter materials' }).selectOption('unverified')
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(3)
+
+  expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
+  expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
+  expect(consoleErrors, `Material Lab console errors: ${consoleErrors.join('\n')}`).toEqual([])
+
+  const screenshotName = testInfo.project.name.includes('mobile')
+    ? 'material-lab-mobile.png'
+    : 'material-lab-desktop.png'
+
+  await page.screenshot({
+    path: `playwright-output/screenshots/${screenshotName}`,
+    fullPage: true,
+  })
+})
