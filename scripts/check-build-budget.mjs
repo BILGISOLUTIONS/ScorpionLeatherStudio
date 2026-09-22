@@ -44,8 +44,10 @@ const ENTRY_GZIP_LIMIT = 100 * 1024
 const CSS_RAW_LIMIT = 50 * 1024
 const CSS_GZIP_LIMIT = 15 * 1024
 const LAZY_CHUNK_RAW_LIMIT = 1100 * 1024
-const STAFF_HTML_RAW_LIMIT = 40 * 1024
-const STAFF_HTML_GZIP_LIMIT = 10 * 1024
+const STAFF_HTML_RAW_LIMIT = 10 * 1024
+const STAFF_HTML_GZIP_LIMIT = 4 * 1024
+const STAFF_ASSETS_RAW_LIMIT = 28 * 1024
+const STAFF_ASSETS_GZIP_LIMIT = 9 * 1024
 
 enforce('Initial JS (raw)', bytes(entryPath), ENTRY_RAW_LIMIT)
 enforce('Initial JS (gzip)', gzipBytes(entryPath), ENTRY_GZIP_LIMIT)
@@ -60,8 +62,15 @@ for (const file of lazyJs) {
 }
 
 const staffPath = new URL('staff.html', dist).pathname
+const staffCssPath = new URL('staff.css', dist).pathname
+const staffJsPath = new URL('staff.js', dist).pathname
 enforce('Staff console HTML (raw)', bytes(staffPath), STAFF_HTML_RAW_LIMIT)
 enforce('Staff console HTML (gzip)', gzipBytes(staffPath), STAFF_HTML_GZIP_LIMIT)
+
+const staffAssetsRaw = bytes(staffCssPath) + bytes(staffJsPath)
+const staffAssetsGzip = gzipBytes(staffCssPath) + gzipBytes(staffJsPath)
+enforce('Staff console assets (raw)', staffAssetsRaw, STAFF_ASSETS_RAW_LIMIT)
+enforce('Staff console assets (gzip)', staffAssetsGzip, STAFF_ASSETS_GZIP_LIMIT)
 
 console.log(`Entry: ${entryFile}`)
 console.log(`Lazy JS chunks: ${lazyJs.length}`)
