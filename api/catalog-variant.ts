@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { fetchLiveShopifyVariant } from './lib/shopify-catalog'
+import { fetchLiveShopifyVariant } from '../server/lib/shopify-catalog'
 
 function single(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? '' : value ?? ''
