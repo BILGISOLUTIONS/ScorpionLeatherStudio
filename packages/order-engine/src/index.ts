@@ -174,26 +174,150 @@ export function createStudioBuildId(build: StudioBuildDraft): string {
   return `SLS-${fnv1a(stableJson(build))}`
 }
 
+type CompactShareTokenV2 = [
+  2,
+  string,
+  string,
+  string,
+  number,
+  [
+    LeatherFinishPreference,
+    string,
+    StitchingPreference,
+    HardwarePreference,
+    EdgePreference,
+    string,
+    ToolingStyle,
+    string,
+    0 | 1,
+    string,
+    TextStyle,
+    string,
+    string,
+    string,
+  ],
+  unknown?,
+]
+
+function compactShareBuild(build: StudioBuildDraft): CompactShareTokenV2 {
+  const p = build.personalization
+  const construction = p.construction
+
+  return [
+    2,
+    build.familyId,
+    build.referenceId,
+    build.variantId,
+    build.quantity,
+    [
+      construction.leatherFinish,
+      construction.leatherColor,
+      construction.stitching,
+      construction.hardware,
+      construction.edgeTreatment,
+      construction.notes,
+      p.toolingStyle,
+      p.toolingNotes,
+      p.textEnabled ? 1 : 0,
+      p.text,
+      p.textStyle,
+      p.placement,
+      p.artworkNotes,
+      p.additionalNotes,
+    ],
+    build.hoodConfiguration,
+  ]
+}
+
+function expandShareBuild(value: unknown): StudioBuildDraft {
+  if (Array.isArray(value) && value[0] === 2) {
+    const [
+      ,
+      familyId,
+      referenceId,
+      variantId,
+      quantity,
+      personalization,
+      hoodConfiguration,
+    ] = value as CompactShareTokenV2
+
+    if (!Array.isArray(personalization) || personalization.length < 14) {
+      throw new Error('invalid')
+    }
+
+    const [
+      leatherFinish,
+      leatherColor,
+      stitching,
+      hardware,
+      edgeTreatment,
+      constructionNotes,
+      toolingStyle,
+      toolingNotes,
+      textEnabled,
+      text,
+      textStyle,
+      placement,
+      artworkNotes,
+      additionalNotes,
+    ] = personalization
+
+    return {
+      schemaVersion: 1,
+      familyId,
+      referenceId,
+      variantId,
+      quantity,
+      personalization: {
+        construction: {
+          leatherFinish,
+          leatherColor,
+          stitching,
+          hardware,
+          edgeTreatment,
+          notes: constructionNotes,
+        },
+        toolingStyle,
+        toolingNotes,
+        textEnabled: textEnabled === 1,
+        text,
+        textStyle,
+        placement,
+        artworkNotes,
+        additionalNotes,
+      },
+      ...(hoodConfiguration === undefined ? {} : { hoodConfiguration }),
+    }
+  }
+
+  return value as StudioBuildDraft
+}
+
+function validateSharedBuild(parsed: StudioBuildDraft): StudioBuildDraft {
+  if (
+    parsed.schemaVersion !== 1 ||
+    typeof parsed.familyId !== 'string' ||
+    typeof parsed.referenceId !== 'string' ||
+    typeof parsed.variantId !== 'string' ||
+    !Number.isInteger(parsed.quantity) ||
+    parsed.quantity < 1 ||
+    typeof parsed.personalization !== 'object' ||
+    !parsed.personalization ||
+    typeof parsed.personalization.construction !== 'object' ||
+    !parsed.personalization.construction
+  ) {
+    throw new Error('invalid')
+  }
+  return parsed
+}
+
 export function createStudioShareToken(build: StudioBuildDraft): string {
-  return encodeBase64Url(stableJson(build))
+  return encodeBase64Url(stableJson(compactShareBuild(build)))
 }
 
 export function restoreStudioShareToken(token: string): StudioBuildDraft {
   try {
-    const parsed = JSON.parse(decodeBase64Url(token)) as StudioBuildDraft
-    if (
-      parsed.schemaVersion !== 1 ||
-      typeof parsed.familyId !== 'string' ||
-      typeof parsed.referenceId !== 'string' ||
-      typeof parsed.variantId !== 'string' ||
-      !Number.isInteger(parsed.quantity) ||
-      parsed.quantity < 1 ||
-      typeof parsed.personalization !== 'object' ||
-      !parsed.personalization
-    ) {
-      throw new Error('invalid')
-    }
-    return parsed
+    return validateSharedBuild(expandShareBuild(JSON.parse(decodeBase64Url(token))))
   } catch {
     throw new Error('This shared Scorpion build is invalid or incompatible.')
   }
