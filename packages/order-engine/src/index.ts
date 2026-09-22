@@ -8,7 +8,50 @@ export type ToolingStyle =
 
 export type TextStyle = 'block' | 'western' | 'script' | 'monogram' | 'shop-choice'
 
+export type LeatherFinishPreference =
+  | 'as-photographed'
+  | 'smooth'
+  | 'textured'
+  | 'roughout-suede'
+  | 'shop-choice'
+  | 'custom-request'
+
+export type StitchingPreference =
+  | 'as-photographed'
+  | 'matching'
+  | 'contrast'
+  | 'heavy-contrast'
+  | 'shop-choice'
+  | 'custom-request'
+
+export type HardwarePreference =
+  | 'as-photographed'
+  | 'antique-brass'
+  | 'brass'
+  | 'nickel'
+  | 'black'
+  | 'shop-choice'
+  | 'custom-request'
+
+export type EdgePreference =
+  | 'as-photographed'
+  | 'natural'
+  | 'dark'
+  | 'contrast'
+  | 'shop-choice'
+  | 'custom-request'
+
+export interface ConstructionPreferences {
+  leatherFinish: LeatherFinishPreference
+  leatherColor: string
+  stitching: StitchingPreference
+  hardware: HardwarePreference
+  edgeTreatment: EdgePreference
+  notes: string
+}
+
 export interface StudioPersonalization {
+  construction: ConstructionPreferences
   toolingStyle: ToolingStyle
   toolingNotes: string
   textEnabled: boolean
@@ -76,6 +119,14 @@ export interface DraftIssue {
 
 export function createDefaultPersonalization(placement = 'Shop recommendation'): StudioPersonalization {
   return {
+    construction: {
+      leatherFinish: 'as-photographed',
+      leatherColor: '',
+      stitching: 'as-photographed',
+      hardware: 'as-photographed',
+      edgeTreatment: 'as-photographed',
+      notes: '',
+    },
     toolingStyle: 'none',
     toolingNotes: '',
     textEnabled: false,
@@ -172,6 +223,22 @@ export function validateOrderDraft(build: StudioBuildDraft, customer: CustomerDr
   if (build.personalization.toolingStyle === 'custom-concept' && !build.personalization.toolingNotes.trim()) {
     issues.push({ path: 'build.personalization.toolingNotes', message: 'Describe the custom tooling concept.' })
   }
+  if (build.personalization.construction.leatherColor.length > 80) {
+    issues.push({ path: 'build.personalization.construction.leatherColor', message: 'Leather color request must be 80 characters or fewer.' })
+  }
+  if (build.personalization.construction.notes.length > 700) {
+    issues.push({ path: 'build.personalization.construction.notes', message: 'Construction notes must be 700 characters or fewer.' })
+  }
+
+  const customConstruction = [
+    build.personalization.construction.leatherFinish,
+    build.personalization.construction.stitching,
+    build.personalization.construction.hardware,
+    build.personalization.construction.edgeTreatment,
+  ].includes('custom-request')
+  if (customConstruction && !build.personalization.construction.notes.trim()) {
+    issues.push({ path: 'build.personalization.construction.notes', message: 'Describe the custom construction request.' })
+  }
 
   return issues
 }
@@ -218,8 +285,16 @@ export function createOrderRequest(args: {
   }
 }
 
+function preferenceLabel(value: string): string {
+  return value
+    .split('-')
+    .map((part) => part ? part[0].toUpperCase() + part.slice(1) : part)
+    .join(' ')
+}
+
 export function formatOrderSummary(request: StudioOrderRequest): string {
   const p = request.build.personalization
+  const construction = p.construction
   const lines = [
     'SCORPION WESTERN WEAR — CUSTOM ORDER REQUEST',
     `Request: ${request.requestId}`,
@@ -238,6 +313,12 @@ export function formatOrderSummary(request: StudioOrderRequest): string {
     `Variant: ${request.commerce.variantTitle}`,
     `SKU: ${request.commerce.sku}`,
     `Quantity: ${request.build.quantity}`,
+    `Leather finish preference: ${preferenceLabel(construction.leatherFinish)}`,
+    `Leather color request: ${construction.leatherColor.trim() || 'As photographed'}`,
+    `Stitching preference: ${preferenceLabel(construction.stitching)}`,
+    `Hardware preference: ${preferenceLabel(construction.hardware)}`,
+    `Edge / binding preference: ${preferenceLabel(construction.edgeTreatment)}`,
+    construction.notes ? `Construction notes: ${construction.notes}` : '',
     request.commerce.listedInventoryQuantity === null || request.commerce.listedInventoryQuantity === undefined
       ? ''
       : `Listed inventory at configuration: ${request.commerce.listedInventoryQuantity}`,
