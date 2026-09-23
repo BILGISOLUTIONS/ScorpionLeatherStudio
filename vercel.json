@@ -4,6 +4,13 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "outputDirectory": "apps/configurator/dist",
+  "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
+  "git": {
+    "deploymentEnabled": {
+      "feature/*": false,
+      "main": true
+    }
+  },
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 10
