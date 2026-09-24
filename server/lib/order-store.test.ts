@@ -111,6 +111,46 @@ describe('order persistence adapter', () => {
     expect(body.artwork_storage_path).toBeNull()
   })
 
+  it('falls back to the pre-V0.20 order schema without losing the customer request', async () => {
+    process.env.SUPABASE_URL = 'https://project.supabase.co'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key'
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: 'PGRST204',
+        message: "Could not find the 'artwork_storage_path' column in the schema cache",
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(null, { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await persistOrderRequest(request, {
+      name: 'legacy-logo.png',
+      type: 'image/png',
+      size: 4,
+      buffer: Buffer.from([1, 2, 3, 4]),
+    })
+
+    expect(result).toMatchObject({
+      configured: true,
+      persisted: true,
+      artworkStored: false,
+    })
+    expect(result.artworkError).toMatch(/V0\.20 database migration is required/u)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+
+    const [, modernInit] = fetchMock.mock.calls[1] as [string, RequestInit]
+    const modernBody = JSON.parse(String(modernInit.body))
+    expect(modernBody.artwork_storage_path).toMatch(new RegExp('^' + request.requestId + '/'))
+
+    const [, legacyInit] = fetchMock.mock.calls[2] as [string, RequestInit]
+    const legacyBody = JSON.parse(String(legacyInit.body))
+    expect(legacyBody.request_id).toBe(request.requestId)
+    expect(legacyBody.request_payload).toEqual(request)
+    expect(legacyBody).not.toHaveProperty('artwork_storage_path')
+    expect(legacyBody).not.toHaveProperty('artwork_sha256')
+  })
+
   it('stores submitted artwork privately before persisting the order row', async () => {
     process.env.SUPABASE_URL = 'https://project.supabase.co'
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key'

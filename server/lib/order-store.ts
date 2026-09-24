@@ -110,6 +110,58 @@ export async function createArtworkSignedUrl(
   }
 }
 
+function missingV020ArtworkColumns(status: number, detail: string): boolean {
+  return status === 400 && /PGRST204|schema cache|artwork_storage_path|artwork_sha256/iu.test(detail)
+}
+
+function orderRow(
+  request: StudioOrderRequest,
+  artwork: ArtworkPersistenceInput | null | undefined,
+  artworkResult: { stored: boolean; path?: string; sha256?: string },
+  includeV020ArtworkColumns: boolean,
+): Record<string, unknown> {
+  return {
+    request_id: request.requestId,
+    build_id: request.buildId,
+    status: 'received',
+    created_at: request.createdAt,
+    updated_at: new Date().toISOString(),
+    customer_name: request.customer.name,
+    customer_email: request.customer.email || null,
+    customer_phone: request.customer.phone || null,
+    customer_company: request.customer.company || null,
+    product_title: request.commerce.productTitle,
+    reference_title: request.commerce.referenceTitle,
+    sku: request.commerce.sku,
+    variant_title: request.commerce.variantTitle,
+    quantity: request.build.quantity,
+    base_subtotal_minor: request.pricing.baseSubtotalMinor,
+    base_price_status: request.pricing.basePriceStatus,
+    request_payload: request,
+    artwork_name: artwork?.name ?? null,
+    artwork_type: artwork?.type ?? null,
+    artwork_size: artwork?.size ?? null,
+    ...(includeV020ArtworkColumns ? {
+      artwork_storage_path: artworkResult.stored ? artworkResult.path : null,
+      artwork_sha256: artworkResult.sha256 ?? null,
+    } : {}),
+  }
+}
+
+async function upsertOrderRow(
+  config: SupabaseServerConfiguration,
+  row: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(
+    `${config.url}/rest/v1/scorpion_custom_order_requests?on_conflict=request_id`,
+    {
+      method: 'POST',
+      headers: supabaseHeaders(config.serviceKey, 'resolution=merge-duplicates,return=minimal'),
+      body: JSON.stringify(row),
+    },
+  )
+}
+
 export async function persistOrderRequest(
   request: StudioOrderRequest,
   artwork?: ArtworkPersistenceInput | null,
@@ -122,65 +174,46 @@ export async function persistOrderRequest(
     : { stored: false as const }
 
   try {
-    const response = await fetch(
-      `${config.url}/rest/v1/scorpion_custom_order_requests?on_conflict=request_id`,
-      {
-        method: 'POST',
-        headers: supabaseHeaders(config.serviceKey, 'resolution=merge-duplicates,return=minimal'),
-        body: JSON.stringify({
-          request_id: request.requestId,
-          build_id: request.buildId,
-          status: 'received',
-          created_at: request.createdAt,
-          updated_at: new Date().toISOString(),
-          customer_name: request.customer.name,
-          customer_email: request.customer.email || null,
-          customer_phone: request.customer.phone || null,
-          customer_company: request.customer.company || null,
-          product_title: request.commerce.productTitle,
-          reference_title: request.commerce.referenceTitle,
-          sku: request.commerce.sku,
-          variant_title: request.commerce.variantTitle,
-          quantity: request.build.quantity,
-          base_subtotal_minor: request.pricing.baseSubtotalMinor,
-          base_price_status: request.pricing.basePriceStatus,
-          request_payload: request,
-          artwork_name: artwork?.name ?? null,
-          artwork_type: artwork?.type ?? null,
-          artwork_size: artwork?.size ?? null,
-          artwork_storage_path: artworkResult.stored ? artworkResult.path : null,
-          artwork_sha256: artworkResult.sha256 ?? null,
-        }),
-      },
-    )
+    let response = await upsertOrderRow(config, orderRow(request, artwork, artworkResult, true))
+    let usedLegacySchemaFallback = false
+    let firstFailureDetail = ''
+
+    if (!response.ok) {
+      firstFailureDetail = (await response.text()).slice(0, 500)
+      if (missingV020ArtworkColumns(response.status, firstFailureDetail)) {
+        usedLegacySchemaFallback = true
+        response = await upsertOrderRow(config, orderRow(request, artwork, artworkResult, false))
+      }
+    }
 
     if (!response.ok) {
       const detail = (await response.text()).slice(0, 500)
       return {
         configured: true,
         persisted: false,
-        artworkStored: artworkResult.stored,
-        artworkStoragePath: artworkResult.path,
+        artworkStored: false,
         artworkSha256: artworkResult.sha256,
         artworkError: artworkResult.error,
-        error: `Supabase persistence failed (${response.status}): ${detail}`,
+        error: `Supabase persistence failed (${response.status}): ${detail || firstFailureDetail}`,
       }
     }
 
+    const artworkLinked = Boolean(artworkResult.stored && !usedLegacySchemaFallback)
     return {
       configured: true,
       persisted: true,
-      artworkStored: artworkResult.stored,
-      artworkStoragePath: artworkResult.path,
+      artworkStored: artworkLinked,
+      artworkStoragePath: artworkLinked ? artworkResult.path : undefined,
       artworkSha256: artworkResult.sha256,
-      artworkError: artworkResult.error,
+      artworkError: usedLegacySchemaFallback && artworkResult.stored
+        ? 'V0.20 database migration is required before durable artwork can be linked to the order record.'
+        : artworkResult.error,
     }
   } catch (error) {
     return {
       configured: true,
       persisted: false,
-      artworkStored: artworkResult.stored,
-      artworkStoragePath: artworkResult.path,
+      artworkStored: false,
       artworkSha256: artworkResult.sha256,
       artworkError: artworkResult.error,
       error: error instanceof Error ? error.message : String(error),

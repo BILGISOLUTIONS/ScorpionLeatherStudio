@@ -232,3 +232,57 @@ test('staff workshop release requires resolutions and then locks the released re
   await expect(page.getByRole('button', { name:'Save production resolutions' })).toBeDisabled()
   await expect(page.getByRole('button', { name:'Download packet' })).toBeEnabled()
 })
+
+
+test('staff console degrades safely when the V0.20 database migration is not installed', async ({ page }) => {
+  await page.route('**/api/staff/orders**', async (route) => {
+    const request = route.request()
+    const isDetail = request.url().includes('request_id=')
+    if (request.method() !== 'GET') {
+      await route.fulfill({
+        status: 503,
+        json: {
+          ok: false,
+          code: 'WORKSHOP_SCHEMA_NOT_MIGRATED',
+          message: 'The V0.20 Scorpion workshop database migration must be applied before production-release features can be used.',
+        },
+      })
+      return
+    }
+
+    if (isDetail) {
+      await route.fulfill({
+        json: {
+          ok: true,
+          orders: [{
+            ...listOrder,
+            request_payload: requestPayload,
+            workshop_schema_ready: false,
+            workshop_preview: null,
+            artwork_signed_url: null,
+          }],
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        ok: true,
+        workshopSchemaReady: false,
+        orders: [{ ...listOrder, workshop_schema_ready: false }],
+      },
+    })
+  })
+
+  await page.goto('/staff.html')
+  await page.getByLabel('Staff access token').fill('test-token')
+  await page.getByRole('button', { name:'Open order queue' }).click()
+  await page.getByText(listOrder.request_id).first().click()
+
+  await expect(page.getByText('Workshop release is temporarily unavailable until the V0.20 database migration is applied.')).toBeVisible()
+  await expect(page.getByText('Database migration required. Existing order review/quoting remains available.')).toBeVisible()
+  await expect(page.getByRole('button', { name:'Save production resolutions' })).toBeDisabled()
+  await expect(page.getByRole('button', { name:'Release to workshop' })).toBeDisabled()
+  await expect(page.getByRole('button', { name:'Save changes' })).toBeEnabled()
+})

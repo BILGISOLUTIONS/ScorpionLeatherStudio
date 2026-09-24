@@ -42,16 +42,16 @@ interface StoredOrder {
   artwork_name: string | null
   artwork_type: string | null
   artwork_size: number | null
-  artwork_storage_path: string | null
-  artwork_sha256: string | null
+  artwork_storage_path?: string | null
+  artwork_sha256?: string | null
   staff_notes: string | null
   quote_total_minor: number | null
   shopify_financial_status: string | null
-  workshop_resolutions: WorkshopResolutions | null
-  workshop_release_packet: unknown | null
-  workshop_revision_id: string | null
-  workshop_released_at: string | null
-  workshop_released_by: string | null
+  workshop_resolutions?: WorkshopResolutions | null
+  workshop_release_packet?: unknown | null
+  workshop_revision_id?: string | null
+  workshop_released_at?: string | null
+  workshop_released_by?: string | null
   [key: string]: unknown
 }
 
@@ -92,6 +92,18 @@ function paymentConfirmed(order: StoredOrder): boolean {
     ['paid', 'in_production', 'completed'].includes(order.status)
 }
 
+function workshopSchemaReady(order: StoredOrder): boolean {
+  return Object.prototype.hasOwnProperty.call(order, 'workshop_resolutions') &&
+    Object.prototype.hasOwnProperty.call(order, 'workshop_release_packet') &&
+    Object.prototype.hasOwnProperty.call(order, 'workshop_revision_id') &&
+    Object.prototype.hasOwnProperty.call(order, 'workshop_released_at') &&
+    Object.prototype.hasOwnProperty.call(order, 'workshop_released_by')
+}
+
+function missingV020Columns(status: number, detail: string): boolean {
+  return status === 400 && /PGRST204|schema cache|artwork_storage_path|workshop_/iu.test(detail)
+}
+
 function workshopPreview(
   order: StoredOrder,
   overrides: {
@@ -129,11 +141,15 @@ async function readOrder(
 }
 
 async function enrichDetail(order: StoredOrder) {
-  const artworkSignedUrl = await createArtworkSignedUrl(order.artwork_storage_path, 900)
+  const schemaReady = workshopSchemaReady(order)
+  const artworkSignedUrl = schemaReady
+    ? await createArtworkSignedUrl(order.artwork_storage_path, 900)
+    : null
   return {
     ...order,
     artwork_signed_url: artworkSignedUrl,
-    workshop_preview: workshopPreview(order),
+    workshop_schema_ready: schemaReady,
+    workshop_preview: schemaReady ? workshopPreview(order) : null,
   }
 }
 
@@ -153,73 +169,90 @@ async function listOrders(req: VercelRequest, res: VercelResponse) {
   const rawLimit = Number(queryValue(req.query.limit) || '100')
   const limit = Math.max(1, Math.min(100, Number.isFinite(rawLimit) ? Math.floor(rawLimit) : 100))
 
-  const params = new URLSearchParams()
-  params.set(
-    'select',
-    requestId
-      ? '*'
-      : [
-          'request_id',
-          'build_id',
-          'status',
-          'delivery_status',
-          'created_at',
-          'updated_at',
-          'customer_name',
-          'customer_email',
-          'customer_phone',
-          'customer_company',
-          'product_title',
-          'reference_title',
-          'sku',
-          'variant_title',
-          'quantity',
-          'base_subtotal_minor',
-          'base_price_status',
-          'artwork_name',
-          'artwork_type',
-          'artwork_size',
-          'artwork_storage_path',
-          'staff_notes',
-          'quote_total_minor',
-          'shopify_draft_order_id',
-          'shopify_draft_order_name',
-          'shopify_draft_order_invoice_url',
-          'shopify_draft_order_state',
-          'shopify_invoice_state',
-          'shopify_invoice_sent_at',
-          'shopify_reconciled_at',
-          'shopify_order_id',
-          'shopify_order_name',
-          'shopify_financial_status',
-          'shopify_fulfillment_status',
-          'workshop_revision_id',
-          'workshop_released_at',
-          'workshop_released_by',
-        ].join(','),
-  )
-  params.set('order', 'created_at.desc')
-  params.set('limit', requestId ? '1' : String(limit))
-  if (requestId) params.set('request_id', `eq.${requestId}`)
+  if (requestId) {
+    const order = await readOrder(config, requestId)
+    res.status(200).json({ ok: true, orders: order ? [await enrichDetail(order)] : [] })
+    return
+  }
 
-  const response = await fetch(
-    `${config.url}/rest/v1/scorpion_custom_order_requests?${params.toString()}`,
-    { headers: supabaseHeaders(config.serviceKey) },
-  )
+  const baseColumns = [
+    'request_id',
+    'build_id',
+    'status',
+    'delivery_status',
+    'created_at',
+    'updated_at',
+    'customer_name',
+    'customer_email',
+    'customer_phone',
+    'customer_company',
+    'product_title',
+    'reference_title',
+    'sku',
+    'variant_title',
+    'quantity',
+    'base_subtotal_minor',
+    'base_price_status',
+    'artwork_name',
+    'artwork_type',
+    'artwork_size',
+    'staff_notes',
+    'quote_total_minor',
+    'shopify_draft_order_id',
+    'shopify_draft_order_name',
+    'shopify_draft_order_invoice_url',
+    'shopify_draft_order_state',
+    'shopify_invoice_state',
+    'shopify_invoice_sent_at',
+    'shopify_reconciled_at',
+    'shopify_order_id',
+    'shopify_order_name',
+    'shopify_financial_status',
+    'shopify_fulfillment_status',
+  ]
+  const v020Columns = [
+    'artwork_storage_path',
+    'workshop_revision_id',
+    'workshop_released_at',
+    'workshop_released_by',
+  ]
+
+  const load = async (columns: string[]) => {
+    const params = new URLSearchParams({
+      select: columns.join(','),
+      order: 'created_at.desc',
+      limit: String(limit),
+    })
+    return fetch(
+      `${config.url}/rest/v1/scorpion_custom_order_requests?${params.toString()}`,
+      { headers: supabaseHeaders(config.serviceKey) },
+    )
+  }
+
+  let response = await load([...baseColumns, ...v020Columns])
+  let schemaReady = true
+  let firstDetail = ''
+
+  if (!response.ok) {
+    firstDetail = (await response.text()).slice(0, 500)
+    if (missingV020Columns(response.status, firstDetail)) {
+      schemaReady = false
+      response = await load(baseColumns)
+    }
+  }
 
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 500)
-    res.status(502).json({ ok: false, code: 'ORDER_STORE_READ_FAILED', detail })
+    res.status(502).json({ ok: false, code: 'ORDER_STORE_READ_FAILED', detail: detail || firstDetail })
     return
   }
 
   const rows = await response.json() as StoredOrder[]
-  if (requestId && rows[0]) {
-    res.status(200).json({ ok: true, orders: [await enrichDetail(rows[0])] })
-    return
-  }
-
-  res.status(200).json({ ok: true, orders: rows })
+  res.status(200).json({
+    ok: true,
+    workshopSchemaReady: schemaReady,
+    orders: rows.map((order) => ({ ...order, workshop_schema_ready: schemaReady })),
+  })
 }
 
 async function updateOrder(req: VercelRequest, res: VercelResponse) {
@@ -286,6 +319,22 @@ async function updateOrder(req: VercelRequest, res: VercelResponse) {
     return
   }
 
+  const schemaReady = workshopSchemaReady(stored)
+  const workshopActionRequested =
+    body.workshopResolutions !== undefined ||
+    releaseToProduction ||
+    status === 'in_production' ||
+    status === 'completed'
+
+  if (workshopActionRequested && !schemaReady) {
+    res.status(503).json({
+      ok: false,
+      code: 'WORKSHOP_SCHEMA_NOT_MIGRATED',
+      message: 'The V0.20 Scorpion workshop database migration must be applied before production-release features can be used.',
+    })
+    return
+  }
+
   if (stored.workshop_released_at && body.workshopResolutions !== undefined) {
     res.status(409).json({
       ok: false,
@@ -323,8 +372,10 @@ async function updateOrder(req: VercelRequest, res: VercelResponse) {
     status,
     staff_notes: nextNotes || null,
     quote_total_minor: nextQuote,
-    workshop_resolutions: resolutions,
     updated_at: new Date().toISOString(),
+    ...(schemaReady && body.workshopResolutions !== undefined
+      ? { workshop_resolutions: resolutions }
+      : {}),
   }
 
   let releasedPacket: ReturnType<typeof buildWorkshopSpecification> | null = null

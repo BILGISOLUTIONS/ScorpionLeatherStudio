@@ -173,7 +173,22 @@
   };
 
   const renderWorkshop = (order) => {
+    const schemaReady = order.workshop_schema_ready !== false;
     const packet = order.workshop_release_packet || order.workshop_preview || null;
+    if (!schemaReady) {
+      state.workshopPacket = null;
+      document.querySelector('.workshop-card').classList.remove('is-released');
+      el('workshopState').textContent = 'Workshop release is temporarily unavailable until the V0.20 database migration is applied.';
+      renderWorkshopBlockers([{ message:'Database migration required. Existing order review/quoting remains available.' }]);
+      el('saveWorkshop').disabled = true;
+      el('releaseWorkshop').disabled = true;
+      el('downloadWorkshop').disabled = true;
+      el('printWorkshop').disabled = true;
+      const artwork = el('artworkSource');
+      artwork.removeAttribute('href');
+      artwork.hidden = true;
+      return;
+    }
     state.workshopPacket = packet;
     const released = Boolean(order.workshop_released_at);
     const card = document.querySelector('.workshop-card');
