@@ -317,7 +317,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         emailSent: false,
         deliveryStatus: 'stored',
         artworkAttached: Boolean(envelope.artwork && artworkBuffer),
-      artworkStored: Boolean(persistence.artworkStored),
         artworkStored: Boolean(persistence.artworkStored),
       })
       return
@@ -413,7 +412,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         emailSent: false,
         deliveryStatus: 'stored_email_failed',
         artworkAttached: Boolean(envelope.artwork && artworkBuffer),
-      artworkStored: Boolean(persistence.artworkStored),
         artworkStored: Boolean(persistence.artworkStored),
       })
     } else {

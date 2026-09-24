@@ -57,7 +57,7 @@ async function persistArtwork(
           'Content-Type': artwork.type,
           'x-upsert': 'true',
         },
-        body: artwork.buffer,
+        body: new Uint8Array(artwork.buffer),
       },
     )
 
