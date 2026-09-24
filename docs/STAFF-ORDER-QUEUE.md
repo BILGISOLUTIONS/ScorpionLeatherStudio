@@ -2,109 +2,44 @@
 
 ## Purpose
 
-The staff console turns durable Custom Leather Studio submissions into an operational review queue without adding React, Three.js, or any other dependency to the customer storefront.
+The staff console turns durable Scorpion Leather Studio submissions into an operational quote, payment, workshop-release, and production queue without adding React or Three.js to the customer storefront.
 
-The page is built as a static asset:
-
-```text
-/staff.html
-```
-
-and talks only to:
-
-```text
-/api/staff/orders
-```
-
-The API keeps the Supabase service-role key server-side.
+The page remains `/staff.html` and talks only to authenticated server endpoints.
 
 ## Required server configuration
 
-Configure:
+Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SCORPION_STAFF_TOKEN`. Shopify draft/invoice features also require the existing Shopify server configuration.
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SCORPION_STAFF_TOKEN`
+The staff token is stored only in `sessionStorage`, never in the URL, and is cleared when the session closes or staff presses **Lock**.
 
-Use a long random value for `SCORPION_STAFF_TOKEN` (32+ characters recommended).
+## Workflow
 
-The token is entered by staff in the browser and stored only in `sessionStorage`. It is not included in the URL and is cleared when the browser session is closed or the user presses **Lock**.
+Supported states are `received`, `reviewing`, `quoted`, `approved`, `paid`, `in_production`, `completed`, and `cancelled`.
 
-## Order workflow
+`in_production` is protected by the V0.20 workshop release gate. Ordinary status saving cannot bypass manufacturing checks.
 
-Supported statuses:
+### Release to workshop
 
-1. `received`
-2. `reviewing`
-3. `quoted`
-4. `approved`
-5. `in_production`
-6. `completed`
-7. `cancelled`
+Before release, final quote/payment must be satisfied, ambiguous shop decisions must be resolved, required source artwork must exist in durable private storage, and a named staff member must release the exact revision.
 
-Staff can also record:
+A successful release stores the exact packet snapshot and revision ID, records releasing staff/time, locks manufacturing resolutions, and moves the order to `in_production`.
 
-- internal notes
-- quote total in cents / USD
-- current status
+Released packets can be downloaded or printed from the staff console.
 
-The complete original structured request remains stored in `request_payload`.
+## Artwork
 
-## Security model
+Customer artwork is privately stored in Supabase Storage instead of depending only on email. The detail API returns a short-lived signed URL to authenticated staff.
 
-- The public browser never receives the Supabase service-role key.
-- Staff API calls require `Authorization: Bearer <SCORPION_STAFF_TOKEN>`.
-- Bearer-token comparison uses Node's constant-time `timingSafeEqual`.
-- Staff API responses use `Cache-Control: no-store`.
-- `staff.html` declares `noindex,nofollow,noarchive`.
-- The Supabase table has RLS enabled and intentionally has no public browser policies.
-- The staff token is not committed to GitHub.
+## Security
 
-This is appropriate for a small internal team. A future multi-user phase should replace the shared staff token with individual authenticated staff accounts and audit trails.
+The Supabase service-role key remains server-side; staff APIs require bearer authorization; responses use `Cache-Control: no-store`; the staff page is noindex; order-table RLS exposes no public policy; the artwork bucket is private; and manufacturing packets omit customer email/phone.
 
-## Efficiency contract
+The shared token remains a small-team mechanism. Individual staff identities and per-user audit trails are still a later hardening target.
 
-The staff console is intentionally dependency-free vanilla HTML/CSS/JavaScript. It does not participate in the customer React entry bundle.
+## Efficiency
 
-CI enforces separate staff-page budgets:
+The staff console remains dependency-free vanilla HTML/CSS/JavaScript, isolated from customer React/3D bundles. V0.20 raises the internal static-asset ceiling only enough to accommodate production-resolution and release controls.
 
-- raw HTML: <= 40 kB
-- gzip HTML: <= 10 kB
+## Migration
 
-The existing customer JS/CSS/3D budgets continue independently.
-
-## Database migration
-
-Run:
-
-```text
-supabase/scorpion_custom_order_requests.sql
-```
-
-The migration is re-runnable and adds the staff-review columns when upgrading an existing order table.
-
-## Current operational path
-
-```text
-Customer Custom Leather Studio
-        ↓
-POST /api/order-requests
-        ↓
-Supabase durable record
-        ├── email notification
-        └── /staff.html queue
-                  ↓
-             Reviewing
-                  ↓
-               Quoted
-                  ↓
-              Approved
-                  ↓
-           In production
-                  ↓
-              Completed
-```
-
-## Next phase
-
-The next logical upgrade is to let an approved/quoted request create or link a Shopify Draft Order, while preserving the original request/build IDs as traceability metadata.
+Run/re-run `supabase/scorpion_custom_order_requests.sql`. See `WORKSHOP-SPEC.md` for V0.20 fields and release semantics.

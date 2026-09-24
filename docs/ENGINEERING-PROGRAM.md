@@ -8,7 +8,7 @@ Scorpion Leather Studio is being treated as a product platform rather than a sin
 2. **Digital-twin pipeline** — physical capture, reconstruction contracts, asset QA, controlled promotion, LOD/compression, visual regression and fidelity review.
 3. **Material pipeline** — calibrated field capture, processing, QA, promotion, texture-tier governance and renderer parity.
 4. **Commerce integrity** — live Shopify reconciliation, trusted pricing, inventory/SKU mapping, draft-order delivery, idempotency and order reconstruction.
-5. **Workshop operations** — manufacturing specifications, build sheets, QR/configuration identity, work status, QC checkpoints and revision history.
+5. **Workshop operations** — V0.20 now provides release-gated manufacturing specifications, build sheets, revision identity, durable artwork provenance and QC checklists; digital signoff/revision history remains next.
 6. **Staff operations** — authenticated order queue, asset/material administration, failure recovery and auditability.
 7. **Reliability/observability** — structured client/API errors, release health, performance telemetry, order-delivery telemetry and alert thresholds.
 8. **Security/privacy** — staff authorization, secret isolation, bounded uploads, input validation, rate limiting, data retention and least-privilege service access.
@@ -25,11 +25,12 @@ Scorpion Leather Studio is being treated as a product platform rather than a sin
 - preserve photo-first customer UX while 3D fidelity matures
 
 ### Next
-- manufacturing/build specification generated from the same authoritative order configuration
-- authenticated staff asset/material surfaces
+- individual authenticated staff accounts and immutable audit events
+- digital workshop QC completion, controlled production revisions and final-photo evidence
 - structured telemetry and customer-safe recovery states
 - accessibility + keyboard/focus + reduced-motion audit
 - production Shopify theme compatibility/smoke suite
+- customer save/share continuity beyond a single browser device
 
 ### Before broad catalog expansion
 The welding hood must prove:

@@ -77,15 +77,21 @@ Add:
 
 ## Stage 5 — Workshop system
 
-Generate a structured manufacturing specification from the same configuration:
-- product/build ID
-- materials
-- components
-- measurements
-- personalization
-- build checklist
-- QC fields
-- QR/reference code
+V0.20 establishes the first production-release and workshop-specification layer from the same authoritative order configuration.
+
+Implemented:
+- deterministic work-order and revision IDs
+- privacy-minimized workshop payload
+- resolved construction/personalization decisions
+- durable private source-artwork provenance
+- quote/payment/release blockers
+- explicit staff release to production
+- manufacturing checklist
+- final QC checklist
+- scanner/reference payload
+- locked released manufacturing snapshot
+
+Next workshop iterations should add controlled post-release revisions, digital QC completion/signoff, final-photo attachment, and individual staff identity/audit attribution.
 
 ## Stage 6 — Catalog expansion
 
