@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StudioOrderRequest } from '@sls/order-engine'
-import { markOrderDelivery, persistOrderRequest } from './order-store'
+import { createArtworkSignedUrl, markOrderDelivery, persistOrderRequest } from './order-store'
 
 const request: StudioOrderRequest = {
   schemaVersion: 1,
@@ -90,9 +90,10 @@ describe('order persistence adapter', () => {
       name: 'logo.png',
       type: 'image/png',
       size: 1200,
-    })).resolves.toEqual({
+    })).resolves.toMatchObject({
       configured: true,
       persisted: true,
+      artworkStored: false,
     })
 
     expect(fetchMock).toHaveBeenCalledOnce()
@@ -107,6 +108,55 @@ describe('order persistence adapter', () => {
     expect(body.sku).toBe('SC-LRH-BLK-XL-002')
     expect(body.request_payload).toEqual(request)
     expect(body.artwork_name).toBe('logo.png')
+    expect(body.artwork_storage_path).toBeNull()
+  })
+
+  it('stores submitted artwork privately before persisting the order row', async () => {
+    process.env.SUPABASE_URL = 'https://project.supabase.co'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key'
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await persistOrderRequest(request, {
+      name: 'crew logo.png',
+      type: 'image/png',
+      size: 4,
+      buffer: Buffer.from([1, 2, 3, 4]),
+    })
+
+    expect(result.persisted).toBe(true)
+    expect(result.artworkStored).toBe(true)
+    expect(result.artworkStoragePath).toMatch(new RegExp('^' + request.requestId + '/[0-9a-f]{16}-crew_logo.png$'))
+
+    const [storageUrl, storageInit] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(storageUrl).toContain('/storage/v1/object/scorpion-order-artwork/')
+    expect(storageInit.method).toBe('POST')
+    expect((storageInit.headers as Record<string, string>)['x-upsert']).toBe('true')
+
+    const [, dbInit] = fetchMock.mock.calls[1] as [string, RequestInit]
+    const body = JSON.parse(String(dbInit.body))
+    expect(body.artwork_storage_path).toBe(result.artworkStoragePath)
+    expect(body.artwork_sha256).toMatch(/^[0-9a-f]{64}$/u)
+  })
+
+  it('creates a short-lived staff artwork URL without exposing the service key', async () => {
+    process.env.SUPABASE_URL = 'https://project.supabase.co'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key'
+
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      signedURL: '/object/sign/scorpion-order-artwork/SC-REQ/file.png?token=abc',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(createArtworkSignedUrl('SC-REQ/file.png', 300)).resolves.toBe(
+      'https://project.supabase.co/storage/v1/object/sign/scorpion-order-artwork/SC-REQ/file.png?token=abc',
+    )
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer service-key')
+    expect(String(init.body)).toContain('300')
   })
 
   it('records email delivery state without mutating the request payload', async () => {

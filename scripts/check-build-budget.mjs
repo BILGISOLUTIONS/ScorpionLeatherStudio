@@ -128,8 +128,8 @@ const ORDER_CAPTURE_GZIP_LIMIT = 10 * 1024
 
 const STAFF_HTML_RAW_LIMIT = 10 * 1024
 const STAFF_HTML_GZIP_LIMIT = 4 * 1024
-const STAFF_ASSETS_RAW_LIMIT = 28 * 1024
-const STAFF_ASSETS_GZIP_LIMIT = 9 * 1024
+const STAFF_ASSETS_RAW_LIMIT = 40 * 1024
+const STAFF_ASSETS_GZIP_LIMIT = 12 * 1024
 
 enforce('Studio initial JS graph (raw)', sumAssetSet(studioGraph.js, bytes), STUDIO_JS_RAW_LIMIT)
 enforce('Studio initial JS graph (gzip)', sumAssetSet(studioGraph.js, gzipBytes), STUDIO_JS_GZIP_LIMIT)

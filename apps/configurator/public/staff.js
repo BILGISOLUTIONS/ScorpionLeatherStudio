@@ -27,7 +27,11 @@
       lock('Staff token was rejected.');
       throw new Error('Unauthorized');
     }
-    if (!response.ok) throw new Error(payload.code || 'Request failed');
+    if (!response.ok) {
+      const error = new Error(payload.message || payload.code || 'Request failed');
+      error.payload = payload;
+      throw error;
+    }
     return payload;
   };
 
@@ -142,6 +146,121 @@
     return box;
   };
 
+  const workshopFieldIds = {
+    leatherFinish:'wsLeatherFinish', leatherColor:'wsLeatherColor', stitching:'wsStitching', hardware:'wsHardware',
+    edgeTreatment:'wsEdge', tooling:'wsTooling', placement:'wsPlacement',
+    textExecution:'wsText', artworkInstructions:'wsArtwork', productionNotes:'wsProductionNotes',
+  };
+
+  const workshopResolutions = () => Object.fromEntries(
+    Object.entries(workshopFieldIds).map(([key,id]) => [key, el(id).value.trim()])
+  );
+
+  const setWorkshopFields = (order) => {
+    const values = order.workshop_resolutions || {};
+    for (const [key,id] of Object.entries(workshopFieldIds)) el(id).value = values[key] || '';
+    el('wsReleasedBy').value = order.workshop_released_by || '';
+  };
+
+  const renderWorkshopBlockers = (items = []) => {
+    const root = el('workshopBlockers');
+    root.replaceChildren();
+    for (const item of items) {
+      const row = document.createElement('div');
+      row.textContent = '• ' + (item.message || item.code || String(item));
+      root.append(row);
+    }
+  };
+
+  const renderWorkshop = (order) => {
+    const packet = order.workshop_release_packet || order.workshop_preview || null;
+    state.workshopPacket = packet;
+    const released = Boolean(order.workshop_released_at);
+    const card = document.querySelector('.workshop-card');
+    card.classList.toggle('is-released', released);
+    const blockers = packet && packet.release ? packet.release.blockers || [] : [];
+    renderWorkshopBlockers(blockers);
+
+    if (released) {
+      el('workshopState').textContent =
+        'Released ' + dateTime(order.workshop_released_at) +
+        ' by ' + (order.workshop_released_by || 'staff') +
+        ' · ' + (order.workshop_revision_id || 'revision recorded') + '. Manufacturing resolutions are locked.';
+    } else if (packet && blockers.length) {
+      el('workshopState').textContent = blockers.length + ' release blocker' + (blockers.length === 1 ? '' : 's') + ' remain.';
+    } else if (packet) {
+      el('workshopState').textContent = 'Workshop gate is clear. A named staff member can release this paid build to production.';
+    } else {
+      el('workshopState').textContent = 'Workshop packet is unavailable until the stored request can be evaluated.';
+    }
+
+    el('saveWorkshop').disabled = released;
+    el('releaseWorkshop').disabled = released || !packet || blockers.length > 0;
+    el('downloadWorkshop').disabled = !packet;
+    el('printWorkshop').disabled = !packet;
+
+    const artwork = el('artworkSource');
+    if (order.artwork_signed_url) {
+      artwork.href = order.artwork_signed_url;
+      artwork.hidden = false;
+    } else {
+      artwork.removeAttribute('href');
+      artwork.hidden = true;
+    }
+  };
+
+  const downloadWorkshopPacket = (packet) => {
+    if (!packet) return;
+    const blob = new Blob([JSON.stringify(packet, null, 2) + '\n'], { type:'application/json' });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = packet.workOrderId + '-' + packet.revisionId + '.json';
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(href);
+  };
+
+  const printWorkshopPacket = (packet) => {
+    if (!packet) return;
+    const popup = window.open('', '_blank');
+    if (!popup) {
+      el('workshopState').textContent = 'Popup blocked. Allow popups to print the workshop packet.';
+      return;
+    }
+    const esc = (value) => String(value ?? '')
+      .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+    const decision = (label, value) =>
+      '<tr><th>' + esc(label) + '</th><td>' + esc(value && value.resolved || '[UNRESOLVED]') + '</td></tr>';
+    const checks = (items) => items.filter((item) => item.required)
+      .map((item) => '<li>☐ ' + esc(item.label) + '</li>').join('');
+
+    popup.document.write('<!doctype html><html><head><title>' + esc(packet.workOrderId) + '</title><style>' +
+      'body{font-family:Arial,sans-serif;margin:26px;color:#171717}h1{margin:0 0 4px;font-size:24px}small{color:#666}' +
+      '.bar{margin:14px 0;padding:10px;border:2px solid #111;font-weight:700}table{width:100%;border-collapse:collapse;margin:14px 0}' +
+      'th,td{border:1px solid #bbb;padding:7px;text-align:left;font-size:12px}th{width:30%}section{break-inside:avoid;margin:18px 0}' +
+      'ul{list-style:none;padding:0;margin:8px 0}li{padding:4px 0;font-size:12px}.ref{font-family:monospace;font-size:10px;overflow-wrap:anywhere}' +
+      '@media print{button{display:none}}</style></head><body>' +
+      '<h1>Scorpion Leather Studio — Workshop Build Packet</h1><small>' + esc(packet.workOrderId) + ' · ' + esc(packet.revisionId) + '</small>' +
+      '<div class="bar">RELEASE: ' + esc(packet.release.state).toUpperCase().replaceAll('_',' ') + '</div>' +
+      '<table><tr><th>Request</th><td>' + esc(packet.requestId) + '</td></tr><tr><th>Build</th><td>' + esc(packet.buildId) +
+      '</td></tr><tr><th>Customer</th><td>' + esc(packet.customer.displayName) + '</td></tr><tr><th>Product</th><td>' +
+      esc(packet.product.referenceTitle) + '</td></tr><tr><th>SKU / Variant</th><td>' + esc(packet.product.sku + ' · ' + packet.product.variantTitle) +
+      '</td></tr><tr><th>Quantity</th><td>' + esc(packet.product.quantity) + '</td></tr></table>' +
+      '<section><h2>Construction</h2><table>' +
+      decision('Leather finish', packet.construction.leatherFinish) + decision('Leather color', packet.construction.leatherColor) +
+      decision('Stitching', packet.construction.stitching) + decision('Hardware', packet.construction.hardware) +
+      decision('Edge / binding', packet.construction.edgeTreatment) + decision('Tooling', packet.personalization.tooling) +
+      decision('Text', {resolved:packet.personalization.text || 'None'}) + decision('Text execution', packet.personalization.textStyle) +
+      decision('Placement', packet.personalization.placement) + '</table></section>' +
+      '<section><h2>Manufacturing</h2><ul>' + checks(packet.manufacturingChecklist) + '</ul></section>' +
+      '<section><h2>Final QC</h2><ul>' + checks(packet.qualityChecklist) + '</ul></section>' +
+      '<p class="ref">Machine reference: ' + esc(packet.scanPayload) + '</p><button onclick="window.print()">Print packet</button>' +
+      '</body></html>');
+    popup.document.close();
+  };
+
   const openOrder = async (requestId) => {
     el('saveState').textContent = 'Loading…';
     try {
@@ -168,6 +287,8 @@
         ? ''
         : (Number(order.quote_total_minor) / 100).toFixed(2);
       el('staffNotes').value = order.staff_notes || '';
+      setWorkshopFields(order);
+      renderWorkshop(order);
       el('saveState').textContent = '';
 
       const createDraft = el('createDraft');
@@ -278,13 +399,17 @@
 
   el('saveOrder').addEventListener('click', async () => {
     if (!state.selected) return;
+    if (el('editStatus').value === 'in_production') {
+      el('saveState').textContent = 'Use Release to workshop so production gates are enforced.';
+      return;
+    }
     const dollars = el('quoteTotal').value.trim();
     const quoteTotalMinor = dollars === '' ? null : Math.round(Number(dollars) * 100);
     el('saveOrder').disabled = true;
     el('saveState').textContent = 'Saving…';
 
     try {
-      await api('/api/staff/orders', {
+      const payload = await api('/api/staff/orders', {
         method:'PATCH',
         body:JSON.stringify({
           requestId: state.selected.request_id,
@@ -294,15 +419,91 @@
         }),
       });
       el('saveState').textContent = 'Saved';
+      if (payload.order) {
+        state.selected = payload.order;
+        setWorkshopFields(payload.order);
+        renderWorkshop(payload.order);
+      }
       await loadOrders();
-      const refreshed = state.orders.find((o) => o.request_id === state.selected.request_id);
-      if (refreshed) state.selected = { ...state.selected, ...refreshed };
     } catch (error) {
       el('saveState').textContent = error.message || 'Save failed';
     } finally {
       el('saveOrder').disabled = false;
     }
   });
+
+  el('saveWorkshop').addEventListener('click', async () => {
+    if (!state.selected) return;
+    const dollars = el('quoteTotal').value.trim();
+    const quoteTotalMinor = dollars === '' ? null : Math.round(Number(dollars) * 100);
+    el('saveWorkshop').disabled = true;
+    el('workshopState').textContent = 'Saving production resolutions…';
+
+    try {
+      const payload = await api('/api/staff/orders', {
+        method:'PATCH',
+        body:JSON.stringify({
+          requestId: state.selected.request_id,
+          status: state.selected.status,
+          quoteTotalMinor,
+          staffNotes: el('staffNotes').value,
+          workshopResolutions: workshopResolutions(),
+        }),
+      });
+      state.selected = payload.order;
+      setWorkshopFields(payload.order);
+      renderWorkshop(payload.order);
+      await loadOrders();
+    } catch (error) {
+      el('workshopState').textContent = error.message || 'Workshop resolutions could not be saved.';
+      el('saveWorkshop').disabled = false;
+    }
+  });
+
+  el('releaseWorkshop').addEventListener('click', async () => {
+    if (!state.selected) return;
+    const releasedBy = el('wsReleasedBy').value.trim();
+    if (!releasedBy) {
+      el('workshopState').textContent = 'Enter the staff member releasing this build.';
+      return;
+    }
+    if (!window.confirm('Release this exact revision to the workshop?\n\nManufacturing resolutions will be locked and the order will move to In production.')) return;
+
+    const dollars = el('quoteTotal').value.trim();
+    const quoteTotalMinor = dollars === '' ? null : Math.round(Number(dollars) * 100);
+    el('releaseWorkshop').disabled = true;
+    el('workshopState').textContent = 'Running production release gates…';
+
+    try {
+      const payload = await api('/api/staff/orders', {
+        method:'PATCH',
+        body:JSON.stringify({
+          requestId: state.selected.request_id,
+          status: 'in_production',
+          quoteTotalMinor,
+          staffNotes: el('staffNotes').value,
+          workshopResolutions: workshopResolutions(),
+          releaseToProduction: true,
+          releasedBy,
+        }),
+      });
+      state.selected = payload.order;
+      el('editStatus').value = 'in_production';
+      setWorkshopFields(payload.order);
+      renderWorkshop(payload.order);
+      await loadOrders();
+    } catch (error) {
+      const blockers = error.payload && Array.isArray(error.payload.blockers) ? error.payload.blockers : [];
+      renderWorkshopBlockers(blockers);
+      el('workshopState').textContent = blockers.length
+        ? blockers.length + ' production release blocker' + (blockers.length === 1 ? '' : 's') + ' must be resolved.'
+        : error.message || 'Workshop release failed.';
+      el('releaseWorkshop').disabled = false;
+    }
+  });
+
+  el('downloadWorkshop').addEventListener('click', () => downloadWorkshopPacket(state.workshopPacket));
+  el('printWorkshop').addEventListener('click', () => printWorkshopPacket(state.workshopPacket));
 
   el('createDraft').addEventListener('click', async () => {
     if (!state.selected) return;

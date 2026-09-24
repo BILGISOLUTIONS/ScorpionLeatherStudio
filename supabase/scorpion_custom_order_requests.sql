@@ -96,3 +96,51 @@ alter table public.scorpion_custom_order_requests enable row level security;
 -- The order API writes with the server-only service-role key, which bypasses RLS.
 -- A future staff dashboard should use its own authenticated server endpoint rather
 -- than exposing this table directly to the public browser.
+
+
+-- V0.20 — durable artwork provenance + workshop release state.
+alter table public.scorpion_custom_order_requests
+  add column if not exists artwork_storage_path text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists artwork_sha256 text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_resolutions jsonb not null default '{}'::jsonb;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_release_packet jsonb;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_revision_id text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_released_at timestamptz;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_released_by text;
+
+create index if not exists scorpion_custom_order_requests_workshop_revision_idx
+  on public.scorpion_custom_order_requests (workshop_revision_id)
+  where workshop_revision_id is not null;
+
+-- Private durable source artwork. Service-role API access only; no public policy.
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'scorpion-order-artwork',
+  'scorpion-order-artwork',
+  false,
+  2097152,
+  array['image/png','image/jpeg','image/webp','application/pdf']::text[]
+)
+on conflict (id) do update
+set
+  public = false,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;

@@ -37,6 +37,7 @@
           <option value="reviewing">Reviewing</option>
           <option value="quoted">Quoted</option>
           <option value="approved">Approved</option>
+          <option value="paid">Paid</option>
           <option value="in_production">In production</option>
           <option value="completed">Completed</option>
           <option value="cancelled">Cancelled</option>
@@ -105,6 +106,32 @@
           <button id="saveOrder" class="primary" type="button">Save changes</button>
           <span id="saveState" class="save-state"></span>
         </div>
+        <section class="workshop-card" aria-label="Workshop release">
+          <span>WORKSHOP BUILD PACKET</span>
+          <p id="workshopState">Production resolutions and payment must be complete before workshop release.</p>
+          <div id="workshopBlockers" class="workshop-blockers"></div>
+          <div class="workshop-fields">
+            <label>Leather finish resolution<input id="wsLeatherFinish" placeholder="Only needed when the request is ambiguous/custom" /></label>
+            <label>Leather color resolution<input id="wsLeatherColor" placeholder="Leave blank to match the photographed reference" /></label>
+            <label>Stitching resolution<input id="wsStitching" /></label>
+            <label>Hardware resolution<input id="wsHardware" /></label>
+            <label>Edge / binding resolution<input id="wsEdge" /></label>
+            <label>Tooling resolution<input id="wsTooling" /></label>
+            <label>Final placement<input id="wsPlacement" /></label>
+            <label>Text execution<input id="wsText" /></label>
+            <label>Artwork execution<textarea id="wsArtwork" maxlength="700"></textarea></label>
+            <label>Production notes<textarea id="wsProductionNotes" maxlength="2000"></textarea></label>
+            <label>Released by<input id="wsReleasedBy" maxlength="120" placeholder="Staff name" /></label>
+          </div>
+          <div class="commerce-actions">
+            <button id="saveWorkshop" class="secondary" type="button">Save production resolutions</button>
+            <button id="releaseWorkshop" class="primary" type="button">Release to workshop</button>
+            <button id="downloadWorkshop" class="secondary" type="button">Download packet</button>
+            <button id="printWorkshop" class="secondary" type="button">Print packet</button>
+            <a id="artworkSource" href="#" target="_blank" rel="noopener noreferrer" hidden>Open source artwork</a>
+          </div>
+        </section>
+
         <section class="commerce-card" aria-label="Shopify draft order">
           <span>SHOPIFY DRAFT ORDER</span>
           <p id="draftState">Save a quote and move the request to Quoted or Approved before creating a Shopify draft order.</p>

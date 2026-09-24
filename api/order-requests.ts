@@ -288,8 +288,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       name: envelope.artwork.name,
       type: envelope.artwork.type,
       size: envelope.artwork.size,
+      buffer: artworkBuffer ?? undefined,
     } : null,
   )
+
+  if (persistence.artworkError) {
+    console.error('Scorpion order artwork persistence failed', {
+      requestId: request.requestId,
+      error: persistence.artworkError,
+    })
+  }
 
   if (persistence.error) {
     console.error('Scorpion order persistence failed', {
@@ -309,6 +317,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         emailSent: false,
         deliveryStatus: 'stored',
         artworkAttached: Boolean(envelope.artwork && artworkBuffer),
+      artworkStored: Boolean(persistence.artworkStored),
+        artworkStored: Boolean(persistence.artworkStored),
       })
       return
     }
@@ -386,6 +396,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       emailSent: true,
       deliveryStatus: 'emailed',
       artworkAttached: Boolean(envelope.artwork && artworkBuffer),
+      artworkStored: Boolean(persistence.artworkStored),
     })
   } catch (error) {
     await markOrderDelivery(request.requestId, 'email_failed')
@@ -402,6 +413,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         emailSent: false,
         deliveryStatus: 'stored_email_failed',
         artworkAttached: Boolean(envelope.artwork && artworkBuffer),
+      artworkStored: Boolean(persistence.artworkStored),
+        artworkStored: Boolean(persistence.artworkStored),
       })
     } else {
       res.status(502).json({ accepted: false, code: 'DELIVERY_FAILED' })
