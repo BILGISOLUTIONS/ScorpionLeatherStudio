@@ -49,6 +49,8 @@ Capture reference photography and dimensions, reconstruct/model the real product
 
 V0.18 adds the controlled Product Capture / Construction Specification gate for this stage. It validates required physical measurements, photographic coverage, and semantic node contracts before a reconstruction-ready packet can be exported. Physical capture of the real production hood is still required before the first digital twin can be considered production-ready.
 
+V0.19 adds Product Asset QA and controlled digital-twin promotion. The reconstructed model is inspected against physical envelope dimensions, semantic nodes, asset-manifest contracts, production material lifecycle, geometry/texture budgets, and explicit human fidelity review. Promotion generates deterministic production metadata and placement instructions while preserving a manual final asset-registry gate.
+
 ## Stage 3 — Shopify integration
 
 Package the validated engine for the Scorpion Shopify storefront.

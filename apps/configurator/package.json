@@ -20,6 +20,7 @@
     "@sls/material-processor": "*",
     "three": "^0.176.0",
     "@sls/material-promotion": "*",
-    "@sls/product-capture": "*"
+    "@sls/product-capture": "*",
+    "@sls/product-asset-qa": "*"
   }
 }

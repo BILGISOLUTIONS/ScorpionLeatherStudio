@@ -73,7 +73,9 @@ const processorGraph = collectEntryGraph(findEntry('process.html'))
 const materialQaGraph = collectEntryGraph(findEntry('material-qa.html'))
 const promotionGraph = collectEntryGraph(findEntry('promote.html'))
 const productCaptureGraph = collectEntryGraph(findEntry('product-capture.html'))
+const productAssetQaGraph = collectEntryGraph(findEntry('product-asset-qa.html'))
 const materialQaViewerGraph = collectEntryGraph(findChunk('src/MaterialQaViewer.tsx'))
+const productAssetQaViewerGraph = collectEntryGraph(findChunk('src/ProductAssetQaViewer.tsx'))
 
 const STUDIO_JS_RAW_LIMIT = 285 * 1024
 const STUDIO_JS_GZIP_LIMIT = 88 * 1024
@@ -111,6 +113,13 @@ const PRODUCT_CAPTURE_JS_RAW_LIMIT = 330 * 1024
 const PRODUCT_CAPTURE_JS_GZIP_LIMIT = 105 * 1024
 const PRODUCT_CAPTURE_CSS_RAW_LIMIT = 32 * 1024
 const PRODUCT_CAPTURE_CSS_GZIP_LIMIT = 11 * 1024
+
+const PRODUCT_ASSET_QA_JS_RAW_LIMIT = 350 * 1024
+const PRODUCT_ASSET_QA_JS_GZIP_LIMIT = 110 * 1024
+const PRODUCT_ASSET_QA_3D_RAW_LIMIT = 1100 * 1024
+const PRODUCT_ASSET_QA_3D_GZIP_LIMIT = 300 * 1024
+const PRODUCT_ASSET_QA_CSS_RAW_LIMIT = 38 * 1024
+const PRODUCT_ASSET_QA_CSS_GZIP_LIMIT = 12 * 1024
 
 const LAZY_CHUNK_RAW_LIMIT = 1100 * 1024
 const LAZY_CHUNK_GZIP_LIMIT = 300 * 1024
@@ -159,6 +168,13 @@ enforce('Product Capture initial JS graph (gzip)', sumAssetSet(productCaptureGra
 enforce('Product Capture CSS graph (raw)', sumAssetSet(productCaptureGraph.css, bytes), PRODUCT_CAPTURE_CSS_RAW_LIMIT)
 enforce('Product Capture CSS graph (gzip)', sumAssetSet(productCaptureGraph.css, gzipBytes), PRODUCT_CAPTURE_CSS_GZIP_LIMIT)
 
+enforce('Product Asset QA initial JS graph (raw)', sumAssetSet(productAssetQaGraph.js, bytes), PRODUCT_ASSET_QA_JS_RAW_LIMIT)
+enforce('Product Asset QA initial JS graph (gzip)', sumAssetSet(productAssetQaGraph.js, gzipBytes), PRODUCT_ASSET_QA_JS_GZIP_LIMIT)
+enforce('Product Asset QA CSS graph (raw)', sumAssetSet(productAssetQaGraph.css, bytes), PRODUCT_ASSET_QA_CSS_RAW_LIMIT)
+enforce('Product Asset QA CSS graph (gzip)', sumAssetSet(productAssetQaGraph.css, gzipBytes), PRODUCT_ASSET_QA_CSS_GZIP_LIMIT)
+enforce('Product Asset QA lazy 3D graph (raw)', sumAssetSet(productAssetQaViewerGraph.js, bytes), PRODUCT_ASSET_QA_3D_RAW_LIMIT)
+enforce('Product Asset QA lazy 3D graph (gzip)', sumAssetSet(productAssetQaViewerGraph.js, gzipBytes), PRODUCT_ASSET_QA_3D_GZIP_LIMIT)
+
 const jsFiles = files.filter((file) => file.endsWith('.js'))
 for (const file of jsFiles) {
   const path = join(assetDir, file)
@@ -190,5 +206,7 @@ console.log(`Material QA initial JS files: ${[...materialQaGraph.js].join(', ')}
 console.log(`Material QA lazy 3D files: ${[...materialQaViewerGraph.js].join(', ')}`)
 console.log(`Material Promotion initial JS files: ${[...promotionGraph.js].join(', ')}`)
 console.log(`Product Capture initial JS files: ${[...productCaptureGraph.js].join(', ')}`)
+console.log(`Product Asset QA initial JS files: ${[...productAssetQaGraph.js].join(', ')}`)
+console.log(`Product Asset QA lazy 3D files: ${[...productAssetQaViewerGraph.js].join(', ')}`)
 console.log(`Emitted JS chunks: ${jsFiles.length}`)
 console.log('Performance budgets passed.')
