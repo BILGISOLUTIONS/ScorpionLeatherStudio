@@ -3,6 +3,7 @@ import type { StudioOrderRequest } from '@sls/order-engine'
 import { getSupabaseConfiguration, supabaseHeaders, type SupabaseServerConfiguration } from './supabase'
 
 const ARTWORK_BUCKET = 'scorpion-order-artwork'
+const WORKSHOP_QC_BUCKET = 'scorpion-workshop-qc'
 
 export interface ArtworkMetadata {
   name: string
@@ -243,5 +244,80 @@ export async function markOrderDelivery(
   } catch {
     // Delivery status is diagnostic only; never turn a successful order capture
     // into a customer-facing failure because a status annotation failed.
+  }
+}
+
+
+export interface WorkshopPhotoPersistenceResult {
+  stored: boolean
+  path?: string
+  sha256?: string
+  error?: string
+}
+
+export async function persistWorkshopFinalPhoto(
+  requestId: string,
+  photo: ArtworkPersistenceInput,
+): Promise<WorkshopPhotoPersistenceResult> {
+  const config = getSupabaseConfiguration()
+  if (!config) return { stored: false, error: 'SUPABASE_NOT_CONFIGURED' }
+  if (!photo.buffer?.length) return { stored: false, error: 'FINAL_PHOTO_BYTES_REQUIRED' }
+
+  const sha256 = createHash('sha256').update(photo.buffer).digest('hex')
+  const path = `${requestId}/${sha256.slice(0, 16)}-${safeStorageName(photo.name)}`
+
+  try {
+    const response = await fetch(
+      `${config.url}/storage/v1/object/${WORKSHOP_QC_BUCKET}/${encodeStoragePath(path)}`,
+      {
+        method: 'POST',
+        headers: {
+          ...supabaseHeaders(config.serviceKey),
+          'Content-Type': photo.type,
+          'x-upsert': 'true',
+        },
+        body: new Uint8Array(photo.buffer),
+      },
+    )
+    if (!response.ok) {
+      const detail = (await response.text()).slice(0, 500)
+      return { stored: false, sha256, error: `Supabase workshop photo storage failed (${response.status}): ${detail}` }
+    }
+    return { stored: true, path, sha256 }
+  } catch (error) {
+    return {
+      stored: false,
+      sha256,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+export async function createWorkshopFinalPhotoSignedUrl(
+  storagePath: string | null | undefined,
+  expiresIn = 900,
+): Promise<string | null> {
+  const path = storagePath?.trim()
+  if (!path) return null
+  const config = getSupabaseConfiguration()
+  if (!config) return null
+
+  try {
+    const response = await fetch(
+      `${config.url}/storage/v1/object/sign/${WORKSHOP_QC_BUCKET}/${encodeStoragePath(path)}`,
+      {
+        method: 'POST',
+        headers: supabaseHeaders(config.serviceKey),
+        body: JSON.stringify({ expiresIn: Math.max(60, Math.min(3600, Math.floor(expiresIn))) }),
+      },
+    )
+    if (!response.ok) return null
+    const payload = await response.json() as { signedURL?: string; signedUrl?: string }
+    const signed = payload.signedURL ?? payload.signedUrl
+    if (!signed) return null
+    if (/^https?:\/\//iu.test(signed)) return signed
+    return `${config.url}/storage/v1${signed.startsWith('/') ? signed : '/' + signed}`
+  } catch {
+    return null
   }
 }
