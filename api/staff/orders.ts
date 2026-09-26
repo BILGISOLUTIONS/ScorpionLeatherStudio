@@ -52,6 +52,7 @@ interface StoredOrder {
   workshop_revision_id?: string | null
   workshop_released_at?: string | null
   workshop_released_by?: string | null
+  workshop_audit_log?: unknown[] | null
   [key: string]: unknown
 }
 
@@ -98,6 +99,10 @@ function workshopSchemaReady(order: StoredOrder): boolean {
     Object.prototype.hasOwnProperty.call(order, 'workshop_revision_id') &&
     Object.prototype.hasOwnProperty.call(order, 'workshop_released_at') &&
     Object.prototype.hasOwnProperty.call(order, 'workshop_released_by')
+}
+
+function workshopV021Ready(order: StoredOrder): boolean {
+  return Object.prototype.hasOwnProperty.call(order, 'workshop_audit_log')
 }
 
 function missingV020Columns(status: number, detail: string): boolean {
@@ -353,11 +358,11 @@ async function updateOrder(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  if (status === 'completed' && !stored.workshop_released_at) {
+  if (status === 'completed') {
     res.status(422).json({
       ok: false,
-      code: 'WORKSHOP_RELEASE_REQUIRED',
-      message: 'An order cannot be completed without a released workshop packet.',
+      code: 'WORKSHOP_FINAL_QC_REQUIRED',
+      message: 'Use Complete final QC so required production checks, final photo evidence, and staff signoff are enforced.',
     })
     return
   }
@@ -415,6 +420,18 @@ async function updateOrder(req: VercelRequest, res: VercelResponse) {
     patch.workshop_revision_id = releasedPacket.revisionId
     patch.workshop_released_at = releasedPacket.release.releasedAt
     patch.workshop_released_by = releasedPacket.release.releasedBy
+    if (workshopV021Ready(stored)) {
+      const audit = Array.isArray(stored.workshop_audit_log) ? stored.workshop_audit_log : []
+      patch.workshop_audit_log = [
+        ...audit.slice(-99),
+        {
+          at: releasedPacket.release.releasedAt,
+          actor: releasedPacket.release.releasedBy,
+          action: 'released-to-production',
+          revisionId: releasedPacket.revisionId,
+        },
+      ]
+    }
   }
 
   const response = await fetch(
