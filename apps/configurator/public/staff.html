@@ -135,6 +135,19 @@
             <label>Revised by<input id="revisionBy" maxlength="120" placeholder="Staff name" /></label>
             <button id="createRevision" class="secondary" type="button">Create controlled revision</button>
           </div>
+          <section id="revisionHistoryPanel" class="revision-history-panel" aria-label="Workshop revision history" hidden>
+            <div class="revision-history-head">
+              <div>
+                <span>REVISION HISTORY</span>
+                <p id="revisionHistoryState">No prior released revisions.</p>
+              </div>
+              <div class="revision-history-actions">
+                <button id="printRevisionDiff" class="secondary" type="button" disabled>Print latest change sheet</button>
+              </div>
+            </div>
+            <div id="revisionDiffSummary" class="revision-diff-summary" hidden></div>
+            <div id="revisionHistoryList" class="revision-history-list"></div>
+          </section>
         </section>
 
         <section class="workshop-qc-card" aria-label="Workshop progress and final QC">
