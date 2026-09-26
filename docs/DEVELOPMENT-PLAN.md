@@ -91,7 +91,9 @@ Implemented:
 - scanner/reference payload
 - locked released manufacturing snapshot
 
-Next workshop iterations should add controlled post-release revisions, digital QC completion/signoff, final-photo attachment, and individual staff identity/audit attribution.
+V0.21 adds controlled post-release revisions, persisted manufacturing/QC progress, mandatory final-QC signoff, private final-photo evidence, and per-action staff audit attribution.
+
+Next workshop iterations should focus on printable/scan-first shop-floor ergonomics, revision comparison/diff views, optional QR rendering from the existing scanner payload, and production analytics without increasing the storefront runtime.
 
 ## Stage 6 — Catalog expansion
 
