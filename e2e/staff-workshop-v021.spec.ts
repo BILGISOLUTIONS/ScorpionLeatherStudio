@@ -285,7 +285,7 @@ test('V0.21 workshop tracks checklist progress final photo and final QC signoff'
   await page.getByRole('button', { name:'Complete final QC' }).click()
   await expect(page.getByText(/Final QC completed/)).toBeVisible()
   await expect(page.locator('#editStatus')).toHaveValue('completed')
-  await expect(page.getByText('final qc completed')).toBeVisible()
+  await expect(page.locator('#qcAudit').getByText('final qc completed', { exact:true })).toBeVisible()
 })
 
 test('V0.21 controlled revision archives the old revision and resets progress', async ({ page }) => {
