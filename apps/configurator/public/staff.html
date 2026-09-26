@@ -130,6 +130,42 @@
             <button id="printWorkshop" class="secondary" type="button">Print packet</button>
             <a id="artworkSource" href="#" target="_blank" rel="noopener noreferrer" hidden>Open source artwork</a>
           </div>
+          <div id="revisionControls" class="revision-controls" hidden>
+            <label>Revision reason<textarea id="revisionReason" maxlength="800" placeholder="Explain exactly why the released manufacturing packet must change."></textarea></label>
+            <label>Revised by<input id="revisionBy" maxlength="120" placeholder="Staff name" /></label>
+            <button id="createRevision" class="secondary" type="button">Create controlled revision</button>
+          </div>
+        </section>
+
+        <section class="workshop-qc-card" aria-label="Workshop progress and final QC">
+          <span>PRODUCTION PROGRESS + FINAL QC</span>
+          <p id="qcState">Release a workshop packet before recording production progress.</p>
+          <div class="qc-identity">
+            <label>Staff / QC operator<input id="qcActor" maxlength="120" placeholder="Staff name" /></label>
+          </div>
+          <div class="qc-columns">
+            <div>
+              <strong>Manufacturing</strong>
+              <div id="manufacturingChecks" class="qc-checks"></div>
+            </div>
+            <div>
+              <strong>Final QC</strong>
+              <div id="qualityChecks" class="qc-checks"></div>
+            </div>
+          </div>
+          <div class="qc-photo">
+            <label>Final QC photo
+              <input id="qcPhoto" type="file" accept="image/png,image/jpeg,image/webp" />
+            </label>
+            <small>PNG/JPEG/WebP, maximum 2 MB. Stored privately with the work order.</small>
+            <a id="qcPhotoSource" href="#" target="_blank" rel="noopener noreferrer" hidden>Open stored final photo</a>
+          </div>
+          <div class="commerce-actions">
+            <button id="saveQcProgress" class="secondary" type="button">Save progress</button>
+            <button id="uploadQcPhoto" class="secondary" type="button">Store final photo</button>
+            <button id="completeWorkshop" class="primary" type="button">Complete final QC</button>
+          </div>
+          <div id="qcAudit" class="qc-audit"></div>
         </section>
 
         <section class="commerce-card" aria-label="Shopify draft order">
