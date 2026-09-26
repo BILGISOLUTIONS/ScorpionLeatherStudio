@@ -194,7 +194,7 @@ values (
   'scorpion-workshop-qc',
   'scorpion-workshop-qc',
   false,
-  4194304,
+  2097152,
   array['image/png','image/jpeg','image/webp']::text[]
 )
 on conflict (id) do update
