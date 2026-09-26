@@ -562,3 +562,161 @@ export function formatWorkshopSpecification(packet: WorkshopSpecification): stri
   ]
   return lines.filter((line, index, all) => line || (index > 0 && all[index - 1] !== '')).join('\n')
 }
+
+
+export interface WorkshopProgress {
+  manufacturingCompleted: string[]
+  qualityCompleted: string[]
+  updatedBy?: string
+  updatedAt?: string
+}
+
+export interface WorkshopFinalPhotoReference {
+  name: string
+  type: string
+  size: number
+  storagePath?: string | null
+  sha256?: string | null
+}
+
+export interface WorkshopCompletionIssue {
+  code: string
+  message: string
+}
+
+export interface WorkshopCompletionResult {
+  ready: boolean
+  issues: WorkshopCompletionIssue[]
+  completedAt?: string
+  completedBy?: string
+  revisionId: string
+}
+
+function uniqueIds(values: unknown): string[] {
+  if (!Array.isArray(values)) return []
+  const ids = values
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim())
+    .filter(Boolean)
+  return [...new Set(ids)]
+}
+
+export function normalizeWorkshopProgress(
+  progress: Partial<WorkshopProgress> | null | undefined,
+): WorkshopProgress {
+  return {
+    manufacturingCompleted: uniqueIds(progress?.manufacturingCompleted),
+    qualityCompleted: uniqueIds(progress?.qualityCompleted),
+    ...(trimmed(progress?.updatedBy) ? { updatedBy: progress!.updatedBy!.trim() } : {}),
+    ...(validTimestamp(progress?.updatedAt) ? { updatedAt: new Date(progress!.updatedAt!).toISOString() } : {}),
+  }
+}
+
+export function validateWorkshopProgress(
+  packet: WorkshopSpecification,
+  progress: Partial<WorkshopProgress> | null | undefined,
+): WorkshopCompletionIssue[] {
+  const normalized = normalizeWorkshopProgress(progress)
+  const issues: WorkshopCompletionIssue[] = []
+  const manufacturingIds = new Set(packet.manufacturingChecklist.map((item) => item.id))
+  const qualityIds = new Set(packet.qualityChecklist.map((item) => item.id))
+
+  for (const id of normalized.manufacturingCompleted) {
+    if (!manufacturingIds.has(id)) {
+      issues.push({ code: 'unknown-manufacturing-check', message: `Unknown manufacturing checklist id: ${id}` })
+    }
+  }
+  for (const id of normalized.qualityCompleted) {
+    if (!qualityIds.has(id)) {
+      issues.push({ code: 'unknown-quality-check', message: `Unknown quality checklist id: ${id}` })
+    }
+  }
+  if (normalized.updatedBy && normalized.updatedBy.length > 120) {
+    issues.push({ code: 'progress-actor-too-long', message: 'Workshop progress staff identity exceeds 120 characters.' })
+  }
+
+  return issues
+}
+
+export function evaluateWorkshopCompletion(
+  packet: WorkshopSpecification,
+  progress: Partial<WorkshopProgress> | null | undefined,
+  completedBy: string,
+  finalPhoto?: WorkshopFinalPhotoReference | null,
+  now = new Date(),
+): WorkshopCompletionResult {
+  const normalized = normalizeWorkshopProgress(progress)
+  const issues = validateWorkshopProgress(packet, normalized)
+  const manufacturingDone = new Set(normalized.manufacturingCompleted)
+  const qualityDone = new Set(normalized.qualityCompleted)
+  const signer = completedBy.trim()
+
+  if (packet.release.state !== 'released-for-production') {
+    issues.push({ code: 'packet-not-released', message: 'Only a released workshop revision can be completed.' })
+  }
+
+  for (const item of packet.manufacturingChecklist) {
+    if (item.required && !manufacturingDone.has(item.id)) {
+      issues.push({ code: `manufacturing-${item.id}`, message: `Manufacturing check incomplete: ${item.label}` })
+    }
+  }
+  for (const item of packet.qualityChecklist) {
+    if (item.required && !qualityDone.has(item.id)) {
+      issues.push({ code: `quality-${item.id}`, message: `Final QC check incomplete: ${item.label}` })
+    }
+  }
+
+  if (!signer || signer.length > 120) {
+    issues.push({ code: 'qc-signer-required', message: 'A named staff member must sign final QC.' })
+  }
+
+  if (!finalPhoto?.storagePath || !finalPhoto.sha256) {
+    issues.push({ code: 'final-photo-required', message: 'A durably stored final QC photo is required before completion.' })
+  }
+
+  if (issues.length) {
+    return { ready: false, issues, revisionId: packet.revisionId }
+  }
+
+  return {
+    ready: true,
+    issues: [],
+    completedAt: now.toISOString(),
+    completedBy: signer,
+    revisionId: packet.revisionId,
+  }
+}
+
+export interface WorkshopRevisionArchiveEntry {
+  archivedAt: string
+  archivedBy: string
+  reason: string
+  revisionId: string
+  packet: WorkshopSpecification
+}
+
+export function createWorkshopRevisionArchiveEntry(
+  packet: WorkshopSpecification,
+  reason: string,
+  archivedBy: string,
+  now = new Date(),
+): WorkshopRevisionArchiveEntry {
+  const cleanReason = reason.trim()
+  const actor = archivedBy.trim()
+  if (!cleanReason || cleanReason.length > 800) {
+    throw new Error('A revision reason between 1 and 800 characters is required.')
+  }
+  if (!actor || actor.length > 120) {
+    throw new Error('A named staff member is required to create a controlled revision.')
+  }
+  if (packet.release.state !== 'released-for-production') {
+    throw new Error('Only a released workshop packet can be archived as a revision.')
+  }
+  return {
+    archivedAt: now.toISOString(),
+    archivedBy: actor,
+    reason: cleanReason,
+    revisionId: packet.revisionId,
+    packet,
+  }
+}
