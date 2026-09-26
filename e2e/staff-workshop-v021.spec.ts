@@ -361,3 +361,103 @@ test('V0.21 controlled revision archives the old revision and resets progress', 
   await expect(page.getByText(/manufacturing 0\/2/)).toBeVisible()
   await expect(page.locator('#qcAudit').getByText('controlled revision created', { exact:true })).toBeVisible()
 })
+
+
+test('V0.22 compares archived revisions and prints a scan-first change sheet', async ({ page }) => {
+  const previousPacket = {
+    ...packet,
+    revisionId:'REV-V021A',
+    scanPayload:'SLS:WORKSHOP:1:' + requestId + ':REV-V021A',
+    construction:{
+      ...packet.construction,
+      hardware:{ requested:'Shop Choice', resolved:'Antique brass', source:'staff-resolution', requiresResolution:false },
+    },
+    personalization:{
+      ...packet.personalization,
+      placement:{ requested:'Shop recommendation', resolved:'Rear panel center', source:'staff-resolution', requiresResolution:false },
+    },
+  }
+
+  const activePacket = {
+    ...packet,
+    revisionId:'REV-V022B',
+    scanPayload:'SLS:WORKSHOP:1:' + requestId + ':REV-V022B',
+    construction:{
+      ...packet.construction,
+      hardware:{ requested:'Shop Choice', resolved:'Nickel', source:'staff-resolution', requiresResolution:false },
+    },
+    personalization:{
+      ...packet.personalization,
+      placement:{ requested:'Shop recommendation', resolved:'Left side panel', source:'staff-resolution', requiresResolution:false },
+    },
+  }
+
+  await page.route('**/api/staff/orders**', async (route) => {
+    const req = route.request()
+    if (req.method() !== 'GET') {
+      await route.fulfill({json:{ok:true,order}})
+      return
+    }
+    const detail = req.url().includes('request_id=')
+    await route.fulfill({
+      json: detail
+        ? {ok:true,orders:[{
+            ...order,
+            workshop_release_packet:activePacket,
+            workshop_preview:activePacket,
+            workshop_revision_id:'REV-V022B',
+            artwork_signed_url:null,
+          }]}
+        : {ok:true,orders:[{...order,workshop_revision_id:'REV-V022B'}]},
+    })
+  })
+
+  await page.route('**/api/staff/workshop**', async (route) => {
+    await route.fulfill({json:{
+      ok:true,
+      schemaReady:true,
+      progress:{manufacturingCompleted:[],qualityCompleted:[]},
+      revisionHistory:[{
+        archivedAt:'2026-09-26T12:40:00.000Z',
+        archivedBy:'Ray',
+        reason:'Customer approved nickel hardware and moved personalization before cutting.',
+        revisionId:'REV-V021A',
+        packet:previousPacket,
+      }],
+      auditLog:[],
+      qcCompletedAt:null,
+      qcCompletedBy:null,
+      finalPhoto:null,
+      finalPhotoSignedUrl:null,
+      revisionId:'REV-V022B',
+      releasedAt:'2026-09-26T12:41:00.000Z',
+      releasedBy:'Ray',
+    }})
+  })
+
+  await page.goto('/staff.html')
+  await page.getByLabel('Staff access token').fill('test-token')
+  await page.getByRole('button', { name:'Open order queue' }).click()
+  await page.getByText(requestId).first().click()
+
+  const history = page.getByRole('region', { name:'Workshop revision history' })
+  await expect(history).toBeVisible()
+  await expect(history).toContainText('1 archived released revision')
+  await expect(history).toContainText('REV-V021A → REV-V022B')
+  await expect(history).toContainText('2 manufacturing changes')
+  await expect(history).toContainText('Antique brass')
+  await expect(history).toContainText('Nickel')
+  await expect(history).toContainText('Rear panel center')
+  await expect(history).toContainText('Left side panel')
+
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.getByRole('button', { name:'Print latest change sheet' }).click(),
+  ])
+  await popup.waitForLoadState('domcontentloaded')
+  await expect(popup.getByRole('heading', { name:'Scorpion Leather Studio — Revision Change Sheet' })).toBeVisible()
+  await expect(popup.locator('body')).toContainText('REV-V021A → REV-V022B')
+  await expect(popup.locator('body')).toContainText('Machine reference: SLS:WORKSHOP:1:' + requestId + ':REV-V022B')
+  await expect(popup.locator('tbody')).toContainText('Hardware')
+  await expect(popup.locator('tbody')).toContainText('Placement')
+})
