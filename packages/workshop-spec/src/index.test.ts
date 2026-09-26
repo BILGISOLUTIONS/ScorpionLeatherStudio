@@ -1,9 +1,9 @@
-import {
-  createWorkshopRevisionArchiveEntry,
-  evaluateWorkshopCompletion, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { StudioOrderRequest } from '@sls/order-engine'
 import {
   buildWorkshopSpecification,
+  createWorkshopRevisionArchiveEntry,
+  evaluateWorkshopCompletion,
   formatWorkshopSpecification,
   validateWorkshopResolutions,
 } from './index'
