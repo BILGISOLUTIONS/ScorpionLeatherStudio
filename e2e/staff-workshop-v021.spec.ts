@@ -280,7 +280,7 @@ test('V0.21 workshop tracks checklist progress final photo and final QC signoff'
   )
   await page.locator('#qcPhoto').setInputFiles({name:'final-qc.png',mimeType:'image/png',buffer:png})
   await page.getByRole('button', { name:'Store final photo' }).click()
-  await expect(page.getByText(/final photo stored/)).toBeVisible()
+  await expect(page.locator('#qcState')).toContainText('final photo stored')
 
   await page.getByRole('button', { name:'Complete final QC' }).click()
   await expect(page.getByText(/Final QC completed/)).toBeVisible()
@@ -359,5 +359,5 @@ test('V0.21 controlled revision archives the old revision and resets progress', 
 
   await expect(page.getByText(/REV-V021A → REV-V021B/)).toBeVisible()
   await expect(page.getByText(/manufacturing 0\/2/)).toBeVisible()
-  await expect(page.getByText('controlled revision created')).toBeVisible()
+  await expect(page.locator('#qcAudit').getByText('controlled revision created', { exact:true })).toBeVisible()
 })
