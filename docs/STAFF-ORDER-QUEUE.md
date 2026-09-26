@@ -43,3 +43,9 @@ The staff console remains dependency-free vanilla HTML/CSS/JavaScript, isolated 
 ## Migration
 
 Run/re-run `supabase/scorpion_custom_order_requests.sql`. See `WORKSHOP-SPEC.md` for V0.20 fields and release semantics.
+
+## V0.22 revision comparison
+
+Released controlled revisions now expose their archived packet history inside the staff order detail. Staff can compare an archived revision with the active revision and see only manufacturing-relevant changes.
+
+The latest comparison can be printed as a compact revision change sheet containing the work-order/revision identity, reason, changed values, and the active scanner payload. This supplements—not replaces—the active released workshop packet.
