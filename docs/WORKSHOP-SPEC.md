@@ -126,3 +126,50 @@ Each event includes timestamp, staff identity, and the relevant revision ID.
 ### Migration
 
 Re-run `supabase/scorpion_custom_order_requests.sql`. The V0.21 additions are idempotent and add workshop progress, revision history, audit log, final-QC identity/timestamps, final-photo provenance, and the private final-QC storage bucket.
+
+
+## V0.22 — revision comparison and print-first change control
+
+V0.22 makes controlled revisions easier to execute on the shop floor without changing the V0.21 persistence schema.
+
+### Revision history
+
+The staff console now renders archived released revisions returned by the existing workshop API. Each entry preserves:
+
+- archived revision ID;
+- archive timestamp and staff identity;
+- revision reason;
+- the immutable released packet snapshot.
+
+### Manufacturing diff
+
+The active packet can be compared against any archived revision. The comparison is deliberately limited to manufacturing-relevant fields:
+
+- leather finish and color;
+- stitching;
+- hardware;
+- edge/binding;
+- tooling;
+- text/text execution;
+- placement;
+- tooling/artwork/additional notes;
+- production notes;
+- staff notes.
+
+Unchanged fields are omitted so staff see only what must change physically.
+
+### Scan-first change sheet
+
+The latest archived revision can be printed as a compact **Revision Change Sheet** containing:
+
+- work-order ID;
+- prior -> active revision IDs;
+- revision reason and staff attribution;
+- previous and active value for each changed manufacturing field;
+- active scanner payload.
+
+The change sheet is supplementary. The active released workshop packet remains the manufacturing authority.
+
+### Runtime efficiency
+
+V0.22 remains a lazy staff-only module. The retired V0.21 browser module is removed from the deployed public assets so the internal upgrade does not accumulate dead JavaScript or affect the customer storefront.
