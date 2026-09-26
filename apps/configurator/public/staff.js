@@ -226,14 +226,14 @@
     }
   };
 
-  let workshopV021Instance = null;
-  let workshopV021Loading = null;
+  let workshopV022Instance = null;
+  let workshopV022Loading = null;
 
-  const workshopV021 = async () => {
-    if (workshopV021Instance) return workshopV021Instance;
-    if (!workshopV021Loading) {
-      workshopV021Loading = import('/staff-workshop-v021.js').then((module) =>
-        module.createWorkshopV021({
+  const workshopV022 = async () => {
+    if (workshopV022Instance) return workshopV022Instance;
+    if (!workshopV022Loading) {
+      workshopV022Loading = import('/staff-workshop-v022.js').then((module) =>
+        module.createWorkshopV022({
           api,
           el,
           state,
@@ -244,14 +244,14 @@
         })
       );
     }
-    workshopV021Instance = await workshopV021Loading;
-    return workshopV021Instance;
+    workshopV022Instance = await workshopV022Loading;
+    return workshopV022Instance;
   };
 
   const loadWorkshopOps = async (order) => {
     if (!order || !order.request_id || !order.workshop_released_at) return;
     try {
-      const controller = await workshopV021();
+      const controller = await workshopV022();
       await controller.load(order);
     } catch (error) {
       el('qcState').textContent = error.message || 'Workshop operations could not be loaded.';
