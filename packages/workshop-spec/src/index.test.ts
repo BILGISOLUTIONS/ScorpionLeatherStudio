@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import {
+  createWorkshopRevisionArchiveEntry,
+  evaluateWorkshopCompletion, describe, expect, it } from 'vitest'
 import type { StudioOrderRequest } from '@sls/order-engine'
 import {
   buildWorkshopSpecification,
@@ -165,5 +167,95 @@ describe('workshop specification', () => {
   it('bounds free-form workshop resolutions', () => {
     expect(validateWorkshopResolutions({ productionNotes: 'x'.repeat(2001) })[0]?.code)
       .toBe('resolution-productionNotes-too-long')
+  })
+})
+
+
+describe('workshop progress and completion', () => {
+  it('requires every required checklist item, final photo, and named QC signer', () => {
+    const packet = buildWorkshopSpecification(request, {
+      orderStatus: 'paid',
+      quoteTotalMinor: 45000,
+      paymentConfirmed: true,
+      resolutions: {
+        hardware: 'Antique brass',
+        placement: 'Rear panel center',
+      },
+      releaseRequested: true,
+      releasedBy: 'Ray',
+      releasedAt: '2026-09-24T13:00:00.000Z',
+    }, new Date('2026-09-24T13:00:00.000Z'))
+
+    const result = evaluateWorkshopCompletion(packet, {
+      manufacturingCompleted: packet.manufacturingChecklist.filter((item) => item.required).map((item) => item.id),
+      qualityCompleted: packet.qualityChecklist.filter((item) => item.required).map((item) => item.id),
+      updatedBy: 'Wilson',
+      updatedAt: '2026-09-24T15:00:00.000Z',
+    }, 'Wilson', {
+      name: 'final.jpg',
+      type: 'image/jpeg',
+      size: 120000,
+      storagePath: 'SC-REQ/final.jpg',
+      sha256: 'a'.repeat(64),
+    }, new Date('2026-09-24T15:15:00.000Z'))
+
+    expect(result).toMatchObject({
+      ready: true,
+      completedBy: 'Wilson',
+      completedAt: '2026-09-24T15:15:00.000Z',
+      revisionId: packet.revisionId,
+    })
+  })
+
+  it('blocks completion when QC or durable final-photo evidence is missing', () => {
+    const packet = buildWorkshopSpecification(request, {
+      orderStatus: 'paid',
+      quoteTotalMinor: 45000,
+      paymentConfirmed: true,
+      resolutions: {
+        hardware: 'Antique brass',
+        placement: 'Rear panel center',
+      },
+      releaseRequested: true,
+      releasedBy: 'Ray',
+    })
+
+    const result = evaluateWorkshopCompletion(packet, {
+      manufacturingCompleted: [],
+      qualityCompleted: [],
+    }, '', null)
+
+    expect(result.ready).toBe(false)
+    expect(result.issues.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining(['qc-signer-required', 'final-photo-required', 'manufacturing-verify-source', 'quality-identity']),
+    )
+  })
+
+  it('archives the released packet before a controlled revision', () => {
+    const packet = buildWorkshopSpecification(request, {
+      orderStatus: 'paid',
+      quoteTotalMinor: 45000,
+      paymentConfirmed: true,
+      resolutions: {
+        hardware: 'Antique brass',
+        placement: 'Rear panel center',
+      },
+      releaseRequested: true,
+      releasedBy: 'Ray',
+    })
+
+    const archive = createWorkshopRevisionArchiveEntry(
+      packet,
+      'Customer approved a revised placement before cutting.',
+      'Ray',
+      new Date('2026-09-24T16:00:00.000Z'),
+    )
+
+    expect(archive).toMatchObject({
+      revisionId: packet.revisionId,
+      archivedBy: 'Ray',
+      reason: 'Customer approved a revised placement before cutting.',
+      archivedAt: '2026-09-24T16:00:00.000Z',
+    })
   })
 })
