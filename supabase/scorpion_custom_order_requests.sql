@@ -144,3 +144,61 @@ set
   public = false,
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
+
+
+-- V0.21 — controlled workshop revisions, checklist progress, final QC evidence and audit attribution.
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_progress jsonb not null
+    default '{"manufacturingCompleted":[],"qualityCompleted":[]}'::jsonb;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_revision_history jsonb not null default '[]'::jsonb;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_audit_log jsonb not null default '[]'::jsonb;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_qc_completed_at timestamptz;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_qc_completed_by text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_final_photo_name text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_final_photo_type text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_final_photo_size integer;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_final_photo_storage_path text;
+
+alter table public.scorpion_custom_order_requests
+  add column if not exists workshop_final_photo_sha256 text;
+
+create index if not exists scorpion_custom_order_requests_qc_completed_idx
+  on public.scorpion_custom_order_requests (workshop_qc_completed_at)
+  where workshop_qc_completed_at is not null;
+
+-- Private final-QC evidence. Service-role API access only; no public policy.
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'scorpion-workshop-qc',
+  'scorpion-workshop-qc',
+  false,
+  4194304,
+  array['image/png','image/jpeg','image/webp']::text[]
+)
+on conflict (id) do update
+set
+  public = false,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
