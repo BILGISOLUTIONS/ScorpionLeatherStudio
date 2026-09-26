@@ -93,7 +93,9 @@ Implemented:
 
 V0.21 adds controlled post-release revisions, persisted manufacturing/QC progress, mandatory final-QC signoff, private final-photo evidence, and per-action staff audit attribution.
 
-Next workshop iterations should focus on printable/scan-first shop-floor ergonomics, revision comparison/diff views, optional QR rendering from the existing scanner payload, and production analytics without increasing the storefront runtime.
+V0.22 adds revision-history visibility, manufacturing-only diff views, and a compact printable scan-first revision change sheet while keeping the staff workshop code lazy and removing the superseded V0.21 browser module.
+
+Next workshop iterations should focus on optional QR rendering from the existing scanner payload, print-layout refinements based on real shop-floor use, and production analytics without increasing the storefront runtime.
 
 ## Stage 6 — Catalog expansion
 
