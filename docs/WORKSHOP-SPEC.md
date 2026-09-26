@@ -72,3 +72,57 @@ A later QR-rendering layer can encode the payload without changing this schema.
 ## Database migration
 
 Re-run `supabase/scorpion_custom_order_requests.sql`. V0.20 adds durable artwork fields, workshop resolution/release fields, a revision index, and the private artwork bucket. The migration remains re-runnable.
+
+## V0.21 — controlled revisions, digital progress, final QC
+
+V0.21 extends the released workshop packet into an auditable production record.
+
+### Controlled revisions
+
+A released manufacturing packet is still immutable. If a production decision must change after release:
+
+1. enter the revised manufacturing resolutions;
+2. provide a bounded revision reason;
+3. provide the staff member creating the revision;
+4. create a **controlled revision**.
+
+The prior released packet is archived in `workshop_revision_history` with its revision ID, reason, staff identity, and archive timestamp. The new packet receives a newly derived deterministic revision ID and becomes the active released packet.
+
+Creating a new revision resets manufacturing/QC checklist progress, final-QC signoff, and the linked final-QC photo. This prevents evidence from an older revision from being reused accidentally.
+
+### Digital production progress
+
+Required manufacturing and QC checklist items are now persisted in `workshop_progress` rather than existing only as boxes on a printed packet.
+
+Every save records the staff identity and timestamp and appends an audit event. Unknown checklist IDs are rejected against the active released packet.
+
+### Final QC evidence
+
+Completion requires all of the following:
+
+- every required manufacturing checklist item completed;
+- every required final-QC checklist item completed;
+- named staff/QC signer;
+- a durably stored final-QC photo linked to the active work order/revision.
+
+Final photos are stored privately in the `scorpion-workshop-qc` Supabase Storage bucket. Supported formats are PNG, JPEG, and WebP up to 2 MB. Staff access uses short-lived signed URLs; the bucket remains non-public.
+
+### Completion gate
+
+Directly changing a released order to `completed` through the ordinary order editor is no longer valid. Staff must use **Complete final QC**, which revalidates checklist progress, photo provenance, release state, and signer identity before the order status can become completed.
+
+### Audit attribution
+
+V0.21 stores a bounded workshop audit log. Current audited actions include:
+
+- release to production;
+- checklist progress save;
+- final-QC photo stored;
+- controlled revision created;
+- final QC completed.
+
+Each event includes timestamp, staff identity, and the relevant revision ID.
+
+### Migration
+
+Re-run `supabase/scorpion_custom_order_requests.sql`. The V0.21 additions are idempotent and add workshop progress, revision history, audit log, final-QC identity/timestamps, final-photo provenance, and the private final-QC storage bucket.
