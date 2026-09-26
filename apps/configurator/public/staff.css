@@ -83,3 +83,32 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;border:1px solid #2d292
   .shell{width:min(100% - 18px,1500px);padding-top:14px}.toolbar{grid-template-columns:1fr}
   .stats{grid-template-columns:1fr 1fr}.login-row{grid-template-columns:1fr}.meta-grid{grid-template-columns:1fr}
 }
+
+
+.workshop-qc-card{margin-top:18px;padding:13px;border:1px solid #46533f;background:#11150f}
+.workshop-qc-card>span{display:block;color:#b7cd9d;font-size:.6rem;font-weight:850;letter-spacing:.09em}
+.workshop-qc-card>p{margin:7px 0 10px;color:#b9b09f;font-size:.7rem;line-height:1.45}
+.revision-controls{display:grid;grid-template-columns:minmax(0,1fr) 180px auto;gap:8px;align-items:end;margin-top:12px;padding-top:12px;border-top:1px solid #3f3528}
+.revision-controls label{margin:0}
+.revision-controls textarea{min-height:62px}
+.qc-identity{max-width:360px;margin:8px 0 12px}
+.qc-identity label,.qc-photo label{display:grid;gap:6px;color:#cfc5b4;font-size:.7rem;font-weight:700}
+.qc-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.qc-columns>div{border:1px solid #2f352b;background:#0d100c;padding:10px}
+.qc-columns>div>strong{display:block;margin-bottom:8px;color:#d9d0bf;font-size:.7rem}
+.qc-checks{display:grid;gap:5px}
+.qc-check{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start;padding:7px;border:1px solid #2a2f27;background:#0b0d0a;color:#a9a194;font-size:.65rem;line-height:1.35}
+.qc-check:has(input:checked){border-color:#526649;background:#11180f;color:#c6d5b8}
+.qc-check input{margin:1px 0 0;accent-color:#9b8147}
+.qc-photo{display:grid;gap:5px;margin:12px 0;padding:10px;border:1px solid #31372d;background:#0d100c}
+.qc-photo small{color:#81796d;font-size:.61rem}
+.qc-photo a{color:#d8c08a;font-size:.66rem}
+.qc-audit{display:grid;gap:5px;margin-top:10px}
+.qc-audit>div{padding:7px 8px;border-left:2px solid #4c5a42;background:#0c0f0b}
+.qc-audit strong{display:block;color:#c2d1b4;font-size:.63rem;text-transform:capitalize}
+.qc-audit small{display:block;margin-top:2px;color:#817a6f;font-size:.58rem}
+.qc-audit p{margin:4px 0 0;color:#a79d90;font-size:.6rem}
+@media(max-width:850px){
+  .revision-controls{grid-template-columns:1fr}
+  .qc-columns{grid-template-columns:1fr}
+}
