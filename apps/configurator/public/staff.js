@@ -248,6 +248,24 @@
     return workshopV022Instance;
   };
 
+  let workshopScanV023Instance = null;
+  let workshopScanV023Loading = null;
+
+  const workshopScanV023 = async () => {
+    if (workshopScanV023Instance) return workshopScanV023Instance;
+    if (!workshopScanV023Loading) {
+      workshopScanV023Loading = import('/staff-scan-v023.js').then((module) =>
+        module.createWorkshopScanV023({
+          el,
+          state,
+          openOrder,
+        })
+      );
+    }
+    workshopScanV023Instance = await workshopScanV023Loading;
+    return workshopScanV023Instance;
+  };
+
   const loadWorkshopOps = async (order) => {
     if (!order || !order.request_id || !order.workshop_released_at) return;
     try {
@@ -339,6 +357,12 @@
       setWorkshopFields(order);
       renderWorkshop(order);
       await loadWorkshopOps(order);
+      if (state.workshopPacket && state.workshopPacket.scanPayload) {
+        const scanController = await workshopScanV023();
+        scanController.render(state.workshopPacket);
+      } else {
+        el('workshopQr').hidden = true;
+      }
       el('saveState').textContent = '';
 
       const createDraft = el('createDraft');
@@ -446,6 +470,21 @@
   el('search').addEventListener('input', render);
   el('statusFilter').addEventListener('change', render);
   el('closeDetail').addEventListener('click', () => detail.close());
+
+  el('scanOpen').addEventListener('click', async () => {
+    const controller = await workshopScanV023();
+    await controller.lookup(el('scanLookup').value);
+  });
+  el('scanLookup').addEventListener('keydown', async (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const controller = await workshopScanV023();
+    await controller.lookup(el('scanLookup').value);
+  });
+  el('scanCamera').addEventListener('click', async () => {
+    const controller = await workshopScanV023();
+    await controller.startCamera();
+  });
 
   el('saveOrder').addEventListener('click', async () => {
     if (!state.selected) return;
