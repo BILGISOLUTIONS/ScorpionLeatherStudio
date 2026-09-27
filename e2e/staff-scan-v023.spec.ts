@@ -128,7 +128,7 @@ test('V0.23 scan lookup opens the exact workshop revision and renders a local QR
   await page.getByLabel('Workshop scan payload').fill(scanPayload)
   await page.getByRole('button', { name:'Open scanned build' }).click()
 
-  await expect(page.getByRole('dialog').getByText(requestId)).toBeVisible()
+  await expect(page.locator('#detailTitle')).toHaveText(requestId)
   await expect(page.getByText(`Matched active workshop revision ${revisionId}.`)).toBeVisible()
   await expect(page.locator('#workshopQr')).toBeVisible()
   await expect(page.locator('#workshopQr svg')).toHaveAttribute('aria-label', 'Workshop QR code')
