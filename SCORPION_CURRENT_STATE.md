@@ -6,13 +6,19 @@ Last updated: 2026-09-27
 
 Repository: `BILGISOLUTIONS/ScorpionLeatherStudio`
 
-Stable production branch before the active V0.24 promotion: `main` at:
+Stable production branch before V0.24 promotion: `main` at:
 
 ```text
 1e6fb55d27ac6a12a1778149ac74ad4f094f51fd
 ```
 
-That exact V0.23 main head passed GitHub CI.
+V0.24 implementation/visual-QA head validated on:
+
+```text
+9e6b9a78c0633230408e4e1fde5f0c116ffcfeb6
+```
+
+The continuity-state commit follows that code head and contains documentation only. Promote the exact final branch head after its CI passes.
 
 Active development branch:
 
@@ -122,14 +128,21 @@ Implemented on `feature/v024-workshop-focus`:
 - Playwright coverage including lazy-load isolation and auto-save batching
 - documentation in `docs/WORKSHOP-FOCUS.md`
 
-A branch head before the visual-artifact-only test change passed the complete CI matrix. The final visual-QA head must pass before promotion to `main`.
+Final V0.24 visual QA passed on desktop and mobile. The focus layout was further simplified after inspection so released production resolutions/revision controls are hidden in Focus mode while the QR/packet actions and production/final-QC controls remain visible.
+
+Validated V0.24 characteristics:
+
+- customer Studio does not load V0.24 staff JS/CSS;
+- initial staff CSS remained within its existing budget because focus CSS is lazy;
+- focus JS and CSS have dedicated budgets;
+- optional auto-save is debounced and reuses the existing validated workshop-progress action;
+- released build/revision identity remains pinned;
+- desktop/mobile Playwright QA is green.
 
 ## Immediate recovery steps
 
-1. Check latest CI for `feature/v024-workshop-focus`.
-2. If green, download/inspect browser QA artifacts for desktop/mobile Workshop Focus.
-3. Fix any visual defects if found.
-4. Confirm branch is ahead of `main` and not behind.
-5. Fast-forward exact green head to `main`.
-6. Verify exact-main CI.
-7. Update this file with the final V0.24 main SHA.
+1. Check CI for the latest `feature/v024-workshop-focus` state/documentation head.
+2. Confirm branch is ahead of `main` and not behind.
+3. Fast-forward the exact green head to `main`.
+4. Verify exact-main CI.
+5. Mark V0.24 shipped in this file on the next material change.
