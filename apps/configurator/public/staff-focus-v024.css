@@ -155,7 +155,12 @@
 .detail.workshop-focus-mode .detail-main,
 .detail.workshop-focus-mode .detail-side>label,
 .detail.workshop-focus-mode .detail-side>.save-row,
-.detail.workshop-focus-mode .commerce-card{
+.detail.workshop-focus-mode .commerce-card,
+.detail.workshop-focus-mode .workshop-fields,
+.detail.workshop-focus-mode #revisionControls,
+.detail.workshop-focus-mode #revisionHistoryPanel,
+.detail.workshop-focus-mode #saveWorkshop,
+.detail.workshop-focus-mode #releaseWorkshop{
   display:none!important;
 }
 .detail.workshop-focus-mode .detail-side{
