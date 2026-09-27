@@ -189,9 +189,9 @@ test('V0.24 workshop focus is lazy, low-distraction, and batches optional auto-s
   await page.keyboard.press('Control+s')
   await expect.poll(() => saveCount, { timeout:2000 }).toBe(2)
 
-  await page.screenshot({
+  await page.locator('.detail-body').evaluate((node) => { node.scrollTop = 0 })
+  await page.locator('#detail').screenshot({
     path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'workshop-focus-v024-mobile.png' : 'workshop-focus-v024-desktop.png'}`,
-    fullPage:true,
   })
 
   await page.keyboard.press('Escape')
