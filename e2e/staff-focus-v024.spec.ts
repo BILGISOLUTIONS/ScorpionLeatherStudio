@@ -100,7 +100,7 @@ const order = {
   },
 }
 
-test('V0.24 workshop focus is lazy, low-distraction, and batches optional auto-save', async ({ page }) => {
+test('V0.24 workshop focus is lazy, low-distraction, and batches optional auto-save', async ({ page }, testInfo) => {
   const scripts: string[] = []
   let saveCount = 0
   let progress = { manufacturingCompleted: [] as string[], qualityCompleted: [] as string[] }
@@ -188,6 +188,11 @@ test('V0.24 workshop focus is lazy, low-distraction, and batches optional auto-s
   await quality.nth(1).check()
   await page.keyboard.press('Control+s')
   await expect.poll(() => saveCount, { timeout:2000 }).toBe(2)
+
+  await page.screenshot({
+    path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'workshop-focus-v024-mobile.png' : 'workshop-focus-v024-desktop.png'}`,
+    fullPage:true,
+  })
 
   await page.keyboard.press('Escape')
   await expect(page.getByRole('region', { name:'Workshop focus station' })).toBeHidden()
