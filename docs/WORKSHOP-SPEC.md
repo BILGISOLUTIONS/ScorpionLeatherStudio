@@ -173,3 +173,14 @@ The change sheet is supplementary. The active released workshop packet remains t
 ### Runtime efficiency
 
 V0.22 remains a lazy staff-only module. The retired V0.21 browser module is removed from the deployed public assets so the internal upgrade does not accumulate dead JavaScript or affect the customer storefront.
+
+
+## V0.24 — low-distraction workshop focus station
+
+V0.24 adds a staff-only focus mode for released production work.
+
+The mode is deliberately a presentation/controller layer over the existing V0.20–V0.23 workshop authority. It hides administrative/commerce controls, pins active work-order and revision identity, shows manufacturing/final-QC progress, surfaces the next required checklist item, remembers the active operator for the browser session, and supports optional debounced checklist auto-save through the existing validated progress endpoint.
+
+The module is lazy-loaded only when **Workshop focus** is explicitly opened. It adds no customer-storefront payload, serverless endpoint, polling loop, or database migration.
+
+See `docs/WORKSHOP-FOCUS.md` for operator behavior and resource/safety constraints.
