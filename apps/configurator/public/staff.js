@@ -211,6 +211,8 @@
 
     el('saveWorkshop').disabled = released;
     el('releaseWorkshop').disabled = released || !packet || blockers.length > 0;
+    el('focusWorkshop').disabled = !released || !packet || packet.release?.state !== 'released-for-production';
+    if (workshopFocusV024Instance) workshopFocusV024Instance.refresh();
     el('downloadWorkshop').disabled = !packet;
     el('printWorkshop').disabled = !packet;
     el('revisionControls').hidden = !released;
@@ -250,6 +252,23 @@
 
   let workshopScanV023Instance = null;
   let workshopScanV023Loading = null;
+
+  let workshopFocusV024Instance = null;
+  let workshopFocusV024Loading = null;
+
+  const workshopFocusV024 = async () => {
+    if (workshopFocusV024Instance) return workshopFocusV024Instance;
+    if (!workshopFocusV024Loading) {
+      workshopFocusV024Loading = import('/staff-focus-v024.js').then((module) =>
+        module.createWorkshopFocusV024({
+          el,
+          state,
+        })
+      );
+    }
+    workshopFocusV024Instance = await workshopFocusV024Loading;
+    return workshopFocusV024Instance;
+  };
 
   const workshopScanV023 = async () => {
     if (workshopScanV023Instance) return workshopScanV023Instance;
@@ -469,7 +488,17 @@
   el('logout').addEventListener('click', () => lock());
   el('search').addEventListener('input', render);
   el('statusFilter').addEventListener('change', render);
-  el('closeDetail').addEventListener('click', () => detail.close());
+  el('closeDetail').addEventListener('click', () => {
+    if (workshopFocusV024Instance) workshopFocusV024Instance.deactivate();
+    detail.close();
+  });
+  detail.addEventListener('close', () => {
+    if (workshopFocusV024Instance) workshopFocusV024Instance.deactivate();
+  });
+  el('focusWorkshop').addEventListener('click', async () => {
+    const controller = await workshopFocusV024();
+    controller.activate();
+  });
 
   el('scanOpen').addEventListener('click', async () => {
     const controller = await workshopScanV023();
