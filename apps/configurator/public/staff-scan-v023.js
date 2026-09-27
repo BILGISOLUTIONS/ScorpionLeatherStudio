@@ -103,10 +103,7 @@ export function createWorkshopScanV023({el,state,openOrder}){
     copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(packet.scanPayload);el('scanState').textContent='Workshop scan payload copied.';}catch{el('scanState').textContent='Clipboard unavailable. Select the payload text manually.';}});
     meta.append(strong,code,copy);root.append(wrap,meta);root.hidden=false;
   };
-  el('scanOpen').addEventListener('click',()=>lookup(el('scanLookup').value));
-  el('scanLookup').addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();lookup(el('scanLookup').value);}});
-  el('scanCamera').addEventListener('click',startCamera);
   el('scanCameraClose').addEventListener('click',stopCamera);
   el('scanCameraDialog').addEventListener('close',stopCamera);
-  return {lookup,render,qrSvg,stopCamera};
+  return {lookup,render,qrSvg,stopCamera,startCamera};
 }
