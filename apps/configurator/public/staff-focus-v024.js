@@ -94,8 +94,18 @@ export function createWorkshopFocusV024({el,state}){
     return wrap;
   };
 
+  const ensureStyle=()=>{
+    if(document.querySelector('link[data-workshop-focus-v024]'))return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href='/staff-focus-v024.css';
+    link.dataset.workshopFocusV024='1';
+    document.head.append(link);
+  };
+
   const ensureUi=()=>{
     if(root)return root;
+    ensureStyle();
     root=document.createElement('section');
     root.className='workshop-focus-bar';
     root.setAttribute('aria-label','Workshop focus station');
