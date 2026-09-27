@@ -134,6 +134,8 @@ const STAFF_WORKSHOP_V022_RAW_LIMIT = 24 * 1024
 const STAFF_WORKSHOP_V022_GZIP_LIMIT = 8 * 1024
 const STAFF_SCAN_V023_RAW_LIMIT = 20 * 1024
 const STAFF_SCAN_V023_GZIP_LIMIT = 7 * 1024
+const STAFF_FOCUS_V024_RAW_LIMIT = 18 * 1024
+const STAFF_FOCUS_V024_GZIP_LIMIT = 6 * 1024
 
 enforce('Studio initial JS graph (raw)', sumAssetSet(studioGraph.js, bytes), STUDIO_JS_RAW_LIMIT)
 enforce('Studio initial JS graph (gzip)', sumAssetSet(studioGraph.js, gzipBytes), STUDIO_JS_GZIP_LIMIT)
@@ -196,6 +198,7 @@ const staffCssPath = new URL('staff.css', dist).pathname
 const staffJsPath = new URL('staff.js', dist).pathname
 const staffWorkshopV022Path = new URL('staff-workshop-v022.js', dist).pathname
 const staffScanV023Path = new URL('staff-scan-v023.js', dist).pathname
+const staffFocusV024Path = new URL('staff-focus-v024.js', dist).pathname
 enforce('Staff console HTML (raw)', bytes(staffPath), STAFF_HTML_RAW_LIMIT)
 enforce('Staff console HTML (gzip)', gzipBytes(staffPath), STAFF_HTML_GZIP_LIMIT)
 
@@ -207,6 +210,8 @@ enforce('Staff workshop V0.22 lazy module (raw)', bytes(staffWorkshopV022Path), 
 enforce('Staff workshop V0.22 lazy module (gzip)', gzipBytes(staffWorkshopV022Path), STAFF_WORKSHOP_V022_GZIP_LIMIT)
 enforce('Staff scan V0.23 lazy module (raw)', bytes(staffScanV023Path), STAFF_SCAN_V023_RAW_LIMIT)
 enforce('Staff scan V0.23 lazy module (gzip)', gzipBytes(staffScanV023Path), STAFF_SCAN_V023_GZIP_LIMIT)
+enforce('Staff focus V0.24 lazy module (raw)', bytes(staffFocusV024Path), STAFF_FOCUS_V024_RAW_LIMIT)
+enforce('Staff focus V0.24 lazy module (gzip)', gzipBytes(staffFocusV024Path), STAFF_FOCUS_V024_GZIP_LIMIT)
 
 console.log(`Studio initial JS files: ${[...studioGraph.js].join(', ')}`)
 console.log(`Material Lab initial JS files: ${[...materialLabGraph.js].join(', ')}`)
