@@ -6,25 +6,15 @@ Last updated: 2026-09-27
 
 Repository: `BILGISOLUTIONS/ScorpionLeatherStudio`
 
-Stable production branch before V0.24 promotion: `main` at:
+V0.24 was promoted to `main` from the exact green head:
 
 ```text
-1e6fb55d27ac6a12a1778149ac74ad4f094f51fd
+9ec15838b4ca96395dc817dc9561eb880903cd21
 ```
 
-V0.24 implementation/visual-QA head validated on:
+This current-state update is documentation-only and follows that promoted release.
 
-```text
-9e6b9a78c0633230408e4e1fde5f0c116ffcfeb6
-```
-
-The continuity-state commit follows that code head and contains documentation only. Promote the exact final branch head after its CI passes.
-
-Active development branch:
-
-```text
-feature/v024-workshop-focus
-```
+Active development branch: none. Start the next material batch from current `main`.
 
 ## Current product scope
 
@@ -106,11 +96,13 @@ Staff can open exact workshop orders by scanner/paste/camera QR, verify scanned 
 
 Exact V0.23 main CI passed.
 
-### V0.24 — active branch
+### V0.24 — shipped
 
-Goal: low-distraction Workshop Focus Station over the existing released-production authority.
+Low-distraction Workshop Focus Station over the existing released-production authority.
 
-Implemented on `feature/v024-workshop-focus`:
+Shipped to `main` from exact green head `9ec15838b4ca96395dc817dc9561eb880903cd21`.
+
+Implemented:
 
 - `Workshop focus` entry point enabled only for released packets
 - lazy `staff-focus-v024.js`
@@ -141,8 +133,7 @@ Validated V0.24 characteristics:
 
 ## Immediate recovery steps
 
-1. Check CI for the latest `feature/v024-workshop-focus` state/documentation head.
-2. Confirm branch is ahead of `main` and not behind.
-3. Fast-forward the exact green head to `main`.
-4. Verify exact-main CI.
-5. Mark V0.24 shipped in this file on the next material change.
+1. Verify the latest exact-`main` CI is green after this documentation-only state update.
+2. Treat V0.24 as shipped.
+3. Start the next feature branch from current `main`.
+4. Continue preserving customer/runtime isolation and dedicated budgets for internal staff tooling.
