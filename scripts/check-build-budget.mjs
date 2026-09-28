@@ -138,6 +138,10 @@ const STAFF_FOCUS_V024_RAW_LIMIT = 18 * 1024
 const STAFF_FOCUS_V024_GZIP_LIMIT = 6 * 1024
 const STAFF_FOCUS_V024_CSS_RAW_LIMIT = 8 * 1024
 const STAFF_FOCUS_V024_CSS_GZIP_LIMIT = 3 * 1024
+const STAFF_IDENTITY_V025_RAW_LIMIT = 14 * 1024
+const STAFF_IDENTITY_V025_GZIP_LIMIT = 5 * 1024
+const STAFF_IDENTITY_V025_CSS_RAW_LIMIT = 8 * 1024
+const STAFF_IDENTITY_V025_CSS_GZIP_LIMIT = 3 * 1024
 
 enforce('Studio initial JS graph (raw)', sumAssetSet(studioGraph.js, bytes), STUDIO_JS_RAW_LIMIT)
 enforce('Studio initial JS graph (gzip)', sumAssetSet(studioGraph.js, gzipBytes), STUDIO_JS_GZIP_LIMIT)
@@ -202,6 +206,8 @@ const staffWorkshopV022Path = new URL('staff-workshop-v022.js', dist).pathname
 const staffScanV023Path = new URL('staff-scan-v023.js', dist).pathname
 const staffFocusV024Path = new URL('staff-focus-v024.js', dist).pathname
 const staffFocusV024CssPath = new URL('staff-focus-v024.css', dist).pathname
+const staffIdentityV025Path = new URL('staff-identity-v025.js', dist).pathname
+const staffIdentityV025CssPath = new URL('staff-identity-v025.css', dist).pathname
 enforce('Staff console HTML (raw)', bytes(staffPath), STAFF_HTML_RAW_LIMIT)
 enforce('Staff console HTML (gzip)', gzipBytes(staffPath), STAFF_HTML_GZIP_LIMIT)
 
@@ -217,6 +223,10 @@ enforce('Staff focus V0.24 lazy module (raw)', bytes(staffFocusV024Path), STAFF_
 enforce('Staff focus V0.24 lazy module (gzip)', gzipBytes(staffFocusV024Path), STAFF_FOCUS_V024_GZIP_LIMIT)
 enforce('Staff focus V0.24 lazy CSS (raw)', bytes(staffFocusV024CssPath), STAFF_FOCUS_V024_CSS_RAW_LIMIT)
 enforce('Staff focus V0.24 lazy CSS (gzip)', gzipBytes(staffFocusV024CssPath), STAFF_FOCUS_V024_CSS_GZIP_LIMIT)
+enforce('Staff identity V0.25 lazy module (raw)', bytes(staffIdentityV025Path), STAFF_IDENTITY_V025_RAW_LIMIT)
+enforce('Staff identity V0.25 lazy module (gzip)', gzipBytes(staffIdentityV025Path), STAFF_IDENTITY_V025_GZIP_LIMIT)
+enforce('Staff identity V0.25 lazy CSS (raw)', bytes(staffIdentityV025CssPath), STAFF_IDENTITY_V025_CSS_RAW_LIMIT)
+enforce('Staff identity V0.25 lazy CSS (gzip)', gzipBytes(staffIdentityV025CssPath), STAFF_IDENTITY_V025_CSS_GZIP_LIMIT)
 
 console.log(`Studio initial JS files: ${[...studioGraph.js].join(', ')}`)
 console.log(`Material Lab initial JS files: ${[...materialLabGraph.js].join(', ')}`)
