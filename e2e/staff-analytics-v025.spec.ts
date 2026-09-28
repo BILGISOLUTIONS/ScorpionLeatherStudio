@@ -99,7 +99,7 @@ test('V0.25 production overview stays lazy and renders compact workshop analytic
   await expect(dialog).toBeVisible()
   await expect(dialog.getByText('Active builds').locator('..')).toContainText('2')
   await expect(dialog.getByText('5 units')).toBeVisible()
-  await expect(dialog.getByText('31.5 hr')).toBeVisible()
+  await expect(dialog.getByText('1.3 d')).toBeVisible()
   await expect(dialog.getByText('SLS-WO-V025-A')).toBeVisible()
   await expect(dialog.getByText('Leather Welding Hood').first()).toBeVisible()
   await expect(dialog.getByText('3 / 6')).toBeVisible()
