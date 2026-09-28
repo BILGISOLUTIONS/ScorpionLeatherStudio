@@ -79,6 +79,8 @@ test('order validation and prepared packet manage focus without reload focus the
   const ready = page.getByRole('region', { name: 'Prepared order request', exact: true })
   await expect(ready).toBeFocused()
   await page.keyboard.press('Tab')
+  await expect(page.getByRole('region', { name: 'Order request summary', exact: true })).toBeFocused()
+  await page.keyboard.press('Tab')
   await expect(page.getByRole('checkbox', { name: /I understand/ })).toBeFocused()
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
   await page.screenshot({ path: `playwright-output/screenshots/v027-order-${testInfo.project.name}.png` })

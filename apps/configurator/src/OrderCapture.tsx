@@ -530,7 +530,7 @@ function OrderCaptureComponent({
             </div>
             <span>{request.commerce.sku}</span>
           </div>
-          <pre>{summary}</pre>
+          <pre tabIndex={0} role="region" aria-label="Order request summary">{summary}</pre>
           <label className="request-acknowledgement">
             <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
             <span>I understand this is a customization request. Scorpion must confirm design feasibility, availability, lead time, fit, and final price before production.</span>
