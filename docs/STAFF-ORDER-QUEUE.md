@@ -10,7 +10,9 @@ The page remains `/staff.html` and talks only to authenticated server endpoints.
 
 Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SCORPION_STAFF_TOKEN`. Shopify draft/invoice features also require the existing Shopify server configuration.
 
-The staff token is stored only in `sessionStorage`, never in the URL, and is cleared when the session closes or staff presses **Lock**.
+Staff access keys are stored only in `sessionStorage`, never in the URL, and are cleared when the session closes or staff presses **Lock**.
+
+V0.25 supports individual server-configured identities through `SCORPION_STAFF_IDENTITIES_JSON`. The legacy shared `SCORPION_STAFF_TOKEN` remains available temporarily as an admin rollback path. See `STAFF-IDENTITY.md`.
 
 ## Workflow
 
@@ -34,7 +36,7 @@ Customer artwork is privately stored in Supabase Storage instead of depending on
 
 The Supabase service-role key remains server-side; staff APIs require bearer authorization; responses use `Cache-Control: no-store`; the staff page is noindex; order-table RLS exposes no public policy; the artwork bucket is private; and manufacturing packets omit customer email/phone.
 
-The shared token remains a small-team mechanism. Individual staff identities and per-user audit trails are still a later hardening target.
+Individual staff keys now carry server-validated roles and bind workshop audit actions to authenticated identity. The browser may still display/accept legacy manual actor fields when the rollback shared token is used, but individual identities cannot spoof another actor name.
 
 ## Efficiency
 
