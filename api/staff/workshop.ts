@@ -19,6 +19,7 @@ import {
   authenticateStaff,
   isStaffAccessConfigured,
   publicStaffIdentity,
+  resolveStaffActor,
   staffHasRole,
   type StaffIdentity,
 } from '../../server/lib/staff-auth'
@@ -255,7 +256,7 @@ async function handlePatch(req: VercelRequest, res: VercelResponse, identity: St
   const requestId = typeof body.requestId === 'string' ? body.requestId.trim() : ''
   const action = typeof body.action === 'string' ? body.action.trim() : ''
   const requestedActor = typeof body.actor === 'string' ? body.actor.trim() : ''
-  const actor = identity.legacy ? requestedActor : identity.name
+  const actor = resolveStaffActor(identity, requestedActor)
 
   if (!/^SC-REQ-/u.test(requestId)) {
     res.status(422).json({ ok: false, code: 'INVALID_REQUEST_ID' })
