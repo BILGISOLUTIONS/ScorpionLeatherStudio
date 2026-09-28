@@ -2,7 +2,7 @@
   'use strict';
 
   const TOKEN_KEY = 'scorpion-staff-token';
-  const state = { token: sessionStorage.getItem(TOKEN_KEY) || '', orders: [], selected: null, workshopPacket: null, workshopOps: null };
+  const state = { token: sessionStorage.getItem(TOKEN_KEY) || '', identity: null, orders: [], selected: null, workshopPacket: null, workshopOps: null };
 
   const el = (id) => document.getElementById(id);
   const login = el('login'), app = el('app'), tokenInput = el('token');
@@ -36,7 +36,9 @@
   };
 
   const setConnected = (connected) => {
-    connection.textContent = connected ? 'Connected to order store' : 'Not connected';
+    connection.textContent = connected
+      ? (state.identity ? 'Connected · ' + (state.identity.name || state.identity.id || 'Staff') : 'Connected to order store')
+      : 'Not connected';
     connection.classList.toggle('is-live', connected);
     login.hidden = connected;
     app.hidden = !connected;
@@ -44,6 +46,7 @@
 
   const lock = (message = '') => {
     state.token = '';
+    state.identity = null;
     state.orders = [];
     state.selected = null;
     sessionStorage.removeItem(TOKEN_KEY);
@@ -160,6 +163,7 @@
     const values = order.workshop_resolutions || {};
     for (const [key,id] of Object.entries(workshopFieldIds)) el(id).value = values[key] || '';
     el('wsReleasedBy').value = order.workshop_released_by || '';
+    if (staffIdentityV025Instance) staffIdentityV025Instance.apply();
   };
 
   const renderWorkshopBlockers = (items = []) => {
@@ -226,6 +230,20 @@
       artwork.removeAttribute('href');
       artwork.hidden = true;
     }
+  };
+
+  let staffIdentityV025Instance = null;
+  let staffIdentityV025Loading = null;
+
+  const staffIdentityV025 = async () => {
+    if (staffIdentityV025Instance) return staffIdentityV025Instance;
+    if (!staffIdentityV025Loading) {
+      staffIdentityV025Loading = import('/staff-identity-v025.js').then((module) =>
+        module.createStaffIdentityV025({ el, state })
+      );
+    }
+    staffIdentityV025Instance = await staffIdentityV025Loading;
+    return staffIdentityV025Instance;
   };
 
   let workshopV022Instance = null;
@@ -448,6 +466,7 @@
         invoice.hidden = true;
       }
 
+      if (staffIdentityV025Instance) staffIdentityV025Instance.apply();
       detail.showModal();
     } catch (error) {
       el('saveState').textContent = error.message || 'Could not load request.';
@@ -458,9 +477,12 @@
     el('refresh').disabled = true;
     try {
       const payload = await api('/api/staff/orders?limit=100');
+      state.identity = payload.staffIdentity || null;
       state.orders = Array.isArray(payload.orders) ? payload.orders : [];
       setConnected(true);
       loginError.textContent = '';
+      const identityUi = await staffIdentityV025();
+      identityUi.apply();
       render();
     } catch (error) {
       if (state.token) loginError.textContent = error.message || 'Could not load order queue.';
@@ -472,7 +494,7 @@
   el('connect').addEventListener('click', async () => {
     const token = tokenInput.value.trim();
     if (!token) {
-      loginError.textContent = 'Enter the staff token.';
+      loginError.textContent = 'Enter your staff access key.';
       return;
     }
     state.token = token;
