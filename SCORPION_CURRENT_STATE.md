@@ -1,15 +1,15 @@
 # Scorpion Leather Studio — Current State
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
 
 ## Repository / production
 
 Repository: `BILGISOLUTIONS/ScorpionLeatherStudio`
 
-V0.25 was promoted to `main` from the exact green head:
+V0.26 was promoted to `main` from the exact green head:
 
 ```text
-d91c7f1a374be5709cf4ce3d8f444ffa62ca5346
+45b773b85cffbca543d8b0a3381f19a5a4330ec1
 ```
 
 This current-state update is documentation-only and follows that promoted release.
@@ -48,6 +48,7 @@ Key internal tools are separate/lazy entries or modules:
 - `/staff-scan-v023.js` — lazy scan/QR workflow
 - V0.24 adds `/staff-focus-v024.js` + `/staff-focus-v024.css`, both lazy
 - V0.25 adds `/staff-identity-v025.js` + `/staff-identity-v025.css`, both lazy after successful staff authentication
+- V0.26 recovery/diagnostics code lives only in the already-lazy order-capture path; no new API function or polling was added
 
 Vercel function count is enforced below the Hobby limit; current architecture uses 6 deployable API functions.
 
@@ -168,10 +169,44 @@ Validated V0.25 characteristics:
 - Vercel deployable function count remains within the existing Hobby constraint;
 - storefront runtime remains unchanged by staff identity hardening.
 
+
+
+### V0.26 — shipped
+
+Customer-safe order recovery, privacy-safe delivery diagnostics, and server correlation tracing.
+
+Shipped to `main` from exact green head `45b773b85cffbca543d8b0a3381f19a5a4330ec1`.
+
+Implemented:
+
+- fresh server correlation UUID on every `/api/order-requests` invocation
+- `X-Scorpion-Trace-ID` response header plus matching `traceId` in structured JSON responses
+- trace IDs included in server persistence/artwork/email failure logs
+- bounded local delivery receipts for prepared/accepted/failed/unavailable states
+- bounded session diagnostics containing operational metadata only, not customer contact fields or artwork
+- prepared-request recovery by exact deterministic build ID
+- accepted requests restore as sent to discourage duplicate submissions
+- failed/unavailable requests can be restored after reload and require acknowledgement again before retry
+- compact delivery-recovery panel with retry, private recovery-file download, support-reference copy, and existing email fallback
+- private recovery file can contain the complete request/artwork and carries an explicit privacy warning
+- recovery logic remains inside the lazy `OrderCapture` path
+- no third-party telemetry SDK, polling loop, new customer tracking ID, or new Vercel function
+- dedicated unit/API/browser coverage
+- documentation in `docs/ORDER-RECOVERY.md`
+
+Validated V0.26 characteristics:
+
+- exact feature head passed TypeScript, unit/API tests, production build, all bundle budgets, Vercel function budget, desktop Chromium and mobile Chromium;
+- server trace IDs are unique per request and match response headers/bodies;
+- failure/recovery UI visual QA passed on desktop and mobile;
+- customer diagnostics exclude customer name/email/phone/company and artwork bytes;
+- Vercel deployable function count remains within the existing Hobby constraint;
+- initial product-browsing path does not load V0.26 recovery code.
+
 ## Immediate recovery steps
 
 1. Verify the latest exact-`main` CI is green after this documentation-only state update.
-2. Treat V0.25 as shipped.
+2. Treat V0.25 and V0.26 as shipped.
 3. Start the next feature branch from current `main`.
-4. Continue preserving customer/runtime isolation, authenticated staff attribution, and dedicated budgets for internal tooling.
-5. Next high-value gap: structured telemetry/customer-safe recovery or production accessibility/theme compatibility without adding polling or storefront bloat.
+4. Continue preserving customer/runtime isolation, authenticated staff attribution, bounded diagnostics, and dedicated budgets.
+5. Next high-value gaps: accessibility/keyboard/focus/reduced-motion audit, production Shopify theme compatibility smoke coverage, and cross-device save/share continuity.
