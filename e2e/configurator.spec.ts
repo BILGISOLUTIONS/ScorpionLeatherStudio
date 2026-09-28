@@ -707,9 +707,11 @@ test('V0.26 failed order delivery remains recoverable across reload and keeps a 
   expect(recovery.privacyNotice).toContain('private recovery file')
 
   await page.reload()
-  const deferredAfterReload = page.getByTestId('order-capture-deferred')
-  if (await deferredAfterReload.count()) await deferredAfterReload.scrollIntoViewIfNeeded()
+  await page.evaluate(() => {
+    document.querySelector('[data-testid="order-capture-deferred"]')?.scrollIntoView({ block: 'center' })
+  })
   requestPanel = page.getByRole('region', { name: 'Custom order request' })
+  await expect(requestPanel.getByRole('textbox', { name: /^Name/ })).toBeVisible()
 
   const recoveryBanner = page.getByTestId('request-recovery-banner')
   await expect(recoveryBanner).toBeVisible()
