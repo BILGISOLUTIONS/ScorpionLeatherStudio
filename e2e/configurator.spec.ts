@@ -268,7 +268,7 @@ test('V0.29 saves locally and shared links restore the build without customer da
   await page.getByRole('button', { name: 'Western floral', exact: true }).click()
   await page.getByRole('checkbox', { name: /Add text \/ name \/ monogram/i }).check()
   await page.getByLabel('Personalization text').fill('CROSS DEVICE')
-  await page.getByLabel('Quantity').fill('3')
+  await page.getByRole('spinbutton', { name: 'Quantity' }).fill('3')
 
   const continuity = page.getByTestId('build-continuity')
   await expect(continuity).toHaveAttribute('data-save-state', 'saved')
@@ -277,7 +277,7 @@ test('V0.29 saves locally and shared links restore the build without customer da
   await page.reload()
   await expect(page.getByRole('button', { name: 'Western floral', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByLabel('Personalization text')).toHaveValue('CROSS DEVICE')
-  await expect(page.getByLabel('Quantity')).toHaveValue('3')
+  await expect(page.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue('3')
 
   const deferredOrder = page.getByTestId('order-capture-deferred')
   if (await deferredOrder.count()) await deferredOrder.scrollIntoViewIfNeeded()
@@ -302,7 +302,7 @@ test('V0.29 saves locally and shared links restore the build without customer da
 
   await expect(page.getByRole('button', { name: 'Western floral', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByLabel('Personalization text')).toHaveValue('CROSS DEVICE')
-  await expect(page.getByLabel('Quantity')).toHaveValue('3')
+  await expect(page.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue('3')
 
   const nextDeferred = page.getByTestId('order-capture-deferred')
   if (await nextDeferred.count()) await nextDeferred.scrollIntoViewIfNeeded()
