@@ -256,6 +256,26 @@
   let workshopFocusV024Instance = null;
   let workshopFocusV024Loading = null;
 
+  let workshopAnalyticsV025Instance = null;
+  let workshopAnalyticsV025Loading = null;
+
+  const workshopAnalyticsV025 = async () => {
+    if (workshopAnalyticsV025Instance) return workshopAnalyticsV025Instance;
+    if (!workshopAnalyticsV025Loading) {
+      workshopAnalyticsV025Loading = import('/staff-analytics-v025.js').then((module) =>
+        module.createWorkshopAnalyticsV025({
+          api,
+          el,
+          openOrder,
+          dateTime,
+        })
+      );
+    }
+    workshopAnalyticsV025Instance = await workshopAnalyticsV025Loading;
+    return workshopAnalyticsV025Instance;
+  };
+
+
   const workshopFocusV024 = async () => {
     if (workshopFocusV024Instance) return workshopFocusV024Instance;
     if (!workshopFocusV024Loading) {
@@ -484,6 +504,10 @@
     if (event.key === 'Enter') el('connect').click();
   });
 
+  el('productionOverview').addEventListener('click', async () => {
+    const controller = await workshopAnalyticsV025();
+    await controller.open();
+  });
   el('refresh').addEventListener('click', loadOrders);
   el('logout').addEventListener('click', () => lock());
   el('search').addEventListener('input', render);
