@@ -646,3 +646,107 @@ test('Material QA renders processed maps and exports an explicit approval packet
     fullPage: true,
   })
 })
+
+
+test('V0.26 failed order delivery remains recoverable across reload and keeps a server support trace', async ({ page }, testInfo) => {
+  await page.goto('/?product=cowhide-radio-harness-black&variant=SC-LRH-BLK-XL-002')
+
+  const deferredOrder = page.getByTestId('order-capture-deferred')
+  if (await deferredOrder.count()) await deferredOrder.scrollIntoViewIfNeeded()
+
+  let requestPanel = page.getByRole('region', { name: 'Custom order request' })
+  await expect(requestPanel.getByRole('textbox', { name: /^Name/ })).toBeVisible()
+  await requestPanel.getByRole('textbox', { name: /^Name/ }).fill('Recovery Test')
+  await requestPanel.getByRole('textbox', { name: 'Email', exact: true }).fill('recovery@example.com')
+  await requestPanel.getByRole('button', { name: 'Create Order Request' }).click()
+  await requestPanel.getByRole('checkbox', { name: /I understand this is a customization request/i }).check()
+
+  let requestId = ''
+  await page.route('**/api/order-requests', async (route) => {
+    const body = JSON.parse(route.request().postData() ?? '{}') as { request?: { requestId?: string } }
+    requestId = body.request?.requestId ?? ''
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        accepted: false,
+        code: 'ORDER_DELIVERY_UNAVAILABLE',
+        traceId: 'trace-v026-server-001',
+      }),
+    })
+  })
+
+  await requestPanel.getByRole('button', { name: 'Send to Scorpion' }).click()
+  await expect(page.getByTestId('delivery-recovery')).toBeVisible()
+  await expect(page.getByTestId('delivery-recovery')).toContainText('still saved in this browser')
+  await expect(page.getByRole('status')).toContainText('saved request is safe')
+  expect(requestId).toMatch(/^SC-REQ-/u)
+
+  const [recoveryDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download private recovery file' }).click(),
+  ])
+  const recoveryPath = await recoveryDownload.path()
+  expect(recoveryPath).not.toBeNull()
+  const recovery = JSON.parse(await fs.readFile(recoveryPath!, 'utf8')) as {
+    kind: string
+    request: { requestId: string; customer: { email: string } }
+    delivery: { state: string; traceId?: string }
+    diagnostics: Array<Record<string, unknown>>
+    privacyNotice: string
+  }
+  expect(recovery.kind).toBe('scorpion-order-recovery')
+  expect(recovery.request.requestId).toBe(requestId)
+  expect(recovery.request.customer.email).toBe('recovery@example.com')
+  expect(recovery.delivery).toMatchObject({
+    state: 'unavailable',
+    traceId: 'trace-v026-server-001',
+  })
+  expect(recovery.diagnostics.some((item) => item.traceId === 'trace-v026-server-001')).toBe(true)
+  expect(recovery.diagnostics.every((item) => !('customer' in item) && !('email' in item))).toBe(true)
+  expect(recovery.privacyNotice).toContain('private recovery file')
+
+  await page.reload()
+  const deferredAfterReload = page.getByTestId('order-capture-deferred')
+  if (await deferredAfterReload.count()) await deferredAfterReload.scrollIntoViewIfNeeded()
+  requestPanel = page.getByRole('region', { name: 'Custom order request' })
+
+  const recoveryBanner = page.getByTestId('request-recovery-banner')
+  await expect(recoveryBanner).toBeVisible()
+  await expect(recoveryBanner).toContainText(requestId)
+  await expect(recoveryBanner).toContainText('last state: unavailable')
+  await recoveryBanner.getByRole('button', { name: 'Restore saved request' }).click()
+
+  await expect(requestPanel.getByText('REQUEST READY')).toBeVisible()
+  await expect(requestPanel.locator('pre')).toContainText(requestId)
+  await expect(requestPanel.getByRole('textbox', { name: /^Name/ })).toHaveValue('Recovery Test')
+  await expect(requestPanel.getByRole('checkbox', { name: /I understand this is a customization request/i })).not.toBeChecked()
+
+  await page.unroute('**/api/order-requests')
+  await page.route('**/api/order-requests', async (route) => {
+    await route.fulfill({
+      status: 202,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        accepted: true,
+        requestId,
+        persisted: true,
+        emailSent: false,
+        deliveryStatus: 'stored',
+        traceId: 'trace-v026-server-002',
+      }),
+    })
+  })
+
+  await requestPanel.getByRole('checkbox', { name: /I understand this is a customization request/i }).check()
+  await requestPanel.getByRole('button', { name: 'Send to Scorpion' }).click()
+  await expect(requestPanel.getByRole('button', { name: 'Sent to Scorpion' })).toBeVisible()
+  await expect(requestPanel.getByText(/Support reference:/)).toContainText('trace-v026-server-002')
+
+  const screenshotName = testInfo.project.name.includes('mobile')
+    ? 'order-recovery-v026-mobile.png'
+    : 'order-recovery-v026-desktop.png'
+  await requestPanel.screenshot({
+    path: `playwright-output/screenshots/${screenshotName}`,
+  })
+})
