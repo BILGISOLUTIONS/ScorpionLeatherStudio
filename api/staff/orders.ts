@@ -6,7 +6,13 @@ import {
   type WorkshopResolutions,
 } from '@sls/workshop-spec'
 import { createArtworkSignedUrl } from '../../server/lib/order-store'
-import { authorizeStaff, isStaffAccessConfigured } from '../../server/lib/staff-auth'
+import {
+  authenticateStaff,
+  isStaffAccessConfigured,
+  publicStaffIdentity,
+  staffHasRole,
+  type StaffIdentity,
+} from '../../server/lib/staff-auth'
 import { getSupabaseConfiguration, supabaseHeaders } from '../../server/lib/supabase'
 
 const STAFF_STATUSES = new Set([
@@ -63,6 +69,10 @@ function queryValue(value: string | string[] | undefined): string {
 function unauthorized(res: VercelResponse) {
   res.setHeader('WWW-Authenticate', 'Bearer realm="Scorpion Staff"')
   res.status(401).json({ ok: false, code: 'UNAUTHORIZED' })
+}
+
+function forbidden(res: VercelResponse, message = 'This staff identity does not have permission for that action.') {
+  res.status(403).json({ ok: false, code: 'FORBIDDEN', message })
 }
 
 function parseBody(req: VercelRequest): Record<string, unknown> {
@@ -158,7 +168,7 @@ async function enrichDetail(order: StoredOrder) {
   }
 }
 
-async function listOrders(req: VercelRequest, res: VercelResponse) {
+async function listOrders(req: VercelRequest, res: VercelResponse, identity: StaffIdentity) {
   const config = getSupabaseConfiguration()
   if (!config) {
     res.status(503).json({ ok: false, code: 'ORDER_STORE_NOT_CONFIGURED' })
@@ -176,7 +186,11 @@ async function listOrders(req: VercelRequest, res: VercelResponse) {
 
   if (requestId) {
     const order = await readOrder(config, requestId)
-    res.status(200).json({ ok: true, orders: order ? [await enrichDetail(order)] : [] })
+    res.status(200).json({
+      ok: true,
+      staffIdentity: publicStaffIdentity(identity),
+      orders: order ? [await enrichDetail(order)] : [],
+    })
     return
   }
 
@@ -255,12 +269,13 @@ async function listOrders(req: VercelRequest, res: VercelResponse) {
   const rows = await response.json() as StoredOrder[]
   res.status(200).json({
     ok: true,
+    staffIdentity: publicStaffIdentity(identity),
     workshopSchemaReady: schemaReady,
     orders: rows.map((order) => ({ ...order, workshop_schema_ready: schemaReady })),
   })
 }
 
-async function updateOrder(req: VercelRequest, res: VercelResponse) {
+async function updateOrder(req: VercelRequest, res: VercelResponse, identity: StaffIdentity) {
   const config = getSupabaseConfiguration()
   if (!config) {
     res.status(503).json({ ok: false, code: 'ORDER_STORE_NOT_CONFIGURED' })
@@ -275,7 +290,8 @@ async function updateOrder(req: VercelRequest, res: VercelResponse) {
     ? null
     : Number(body.quoteTotalMinor)
   const releaseToProduction = body.releaseToProduction === true
-  const releasedBy = typeof body.releasedBy === 'string' ? body.releasedBy.trim() : ''
+  const requestedReleasedBy = typeof body.releasedBy === 'string' ? body.releasedBy.trim() : ''
+  const releasedBy = identity.legacy ? requestedReleasedBy : identity.name
   const resolutionObject = body.workshopResolutions === undefined
     ? undefined
     : objectValue(body.workshopResolutions) as WorkshopResolutions | null
@@ -330,6 +346,15 @@ async function updateOrder(req: VercelRequest, res: VercelResponse) {
     releaseToProduction ||
     status === 'in_production' ||
     status === 'completed'
+
+  if (workshopActionRequested && !staffHasRole(identity, 'workshop')) {
+    forbidden(res, 'Workshop manufacturing actions require the workshop role.')
+    return
+  }
+  if (!workshopActionRequested && !staffHasRole(identity, 'sales')) {
+    forbidden(res, 'Order status, quote, and staff-note changes require the sales role.')
+    return
+  }
 
   if (workshopActionRequested && !schemaReady) {
     res.status(503).json({
@@ -427,6 +452,8 @@ async function updateOrder(req: VercelRequest, res: VercelResponse) {
         {
           at: releasedPacket.release.releasedAt,
           actor: releasedPacket.release.releasedBy,
+          actorId: identity.id,
+          actorRoles: identity.roles,
           action: 'released-to-production',
           revisionId: releasedPacket.revisionId,
         },
@@ -457,6 +484,7 @@ async function updateOrder(req: VercelRequest, res: VercelResponse) {
 
   res.status(200).json({
     ok: true,
+    staffIdentity: publicStaffIdentity(identity),
     order: await enrichDetail(rows[0]),
     ...(releasedPacket ? { workshopPacket: releasedPacket } : {}),
   })
@@ -471,18 +499,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  if (!authorizeStaff(req.headers as Record<string, string | string[] | undefined>)) {
+  const identity = authenticateStaff(req.headers as Record<string, string | string[] | undefined>)
+  if (!identity) {
     unauthorized(res)
     return
   }
 
   try {
     if (req.method === 'GET') {
-      await listOrders(req, res)
+      await listOrders(req, res, identity)
       return
     }
     if (req.method === 'PATCH') {
-      await updateOrder(req, res)
+      await updateOrder(req, res, identity)
       return
     }
 
