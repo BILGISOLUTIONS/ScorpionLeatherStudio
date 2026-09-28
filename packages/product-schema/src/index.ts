@@ -1,4 +1,5 @@
 export type Money = number
+export type MaterialKind = 'leather' | 'metal' | 'glass' | 'generic'
 
 export type OptionControlType = 'swatch' | 'choice' | 'toggle' | 'select'
 
@@ -96,6 +97,27 @@ export interface ProductDefinition {
   sizeRecommendations: SizeRecommendationRule[]
 }
 
+export type AssetTangentPolicy = 'optional' | 'recommended' | 'required'
+
+export interface AssetMaterialSlotProfile {
+  kind: MaterialKind
+  mapping: 'uv0'
+  requiresUv0: boolean
+  requiresNormals: boolean
+  tangents: AssetTangentPolicy
+}
+
+export interface AssetPresentation {
+  groundY?: number
+  shadowScale?: number
+  orbit?: {
+    minDistance?: number
+    maxDistance?: number
+    minPolarAngle?: number
+    maxPolarAngle?: number
+  }
+}
+
 export interface AssetManifest {
   schemaVersion: 1
   assetId: string
@@ -105,6 +127,7 @@ export interface AssetManifest {
   frontAxis: '-Z' | 'Z'
   rootNode: string
   materialSlots: Record<string, string[]>
+  materialSlotProfiles?: Record<string, AssetMaterialSlotProfile>
   defaultMaterialVariants?: Record<string, string>
   components: Record<string, string[]>
   animations: Record<string, {
@@ -121,6 +144,7 @@ export interface AssetManifest {
     position: [number, number, number]
     fov: number
   }>
+  presentation?: AssetPresentation
 }
 
 export interface MaterialTextures {
@@ -134,7 +158,7 @@ export interface MaterialTextures {
 export interface MaterialVariant {
   id: string
   label: string
-  kind: 'leather' | 'metal' | 'glass' | 'generic'
+  kind: MaterialKind
   color: string
   roughness: number
   metalness: number
@@ -219,12 +243,38 @@ export function validateAssetManifest(
     issues.push({ path: 'rootNode', message: `Root node "${manifest.rootNode}" was not found in the loaded model.` })
   }
 
+  const slotByNode = new Map<string, string>()
   for (const [slot, nodeNames] of Object.entries(manifest.materialSlots)) {
     if (nodeNames.length === 0) issues.push({ path: `materialSlots.${slot}`, message: 'Material slot must reference at least one node.' })
     for (const nodeName of nodeNames) {
       if (nodes && !nodes.has(nodeName)) {
         issues.push({ path: `materialSlots.${slot}`, message: `Node "${nodeName}" was not found in the loaded model.` })
       }
+      const previous = slotByNode.get(nodeName)
+      if (previous && previous !== slot) {
+        issues.push({
+          path: `materialSlots.${slot}`,
+          message: `Node "${nodeName}" is assigned to both "${previous}" and "${slot}". Material ownership must be unambiguous.`,
+        })
+      } else {
+        slotByNode.set(nodeName, slot)
+      }
+    }
+  }
+
+  for (const [slot, profile] of Object.entries(manifest.materialSlotProfiles ?? {})) {
+    if (!manifest.materialSlots[slot]) {
+      issues.push({ path: `materialSlotProfiles.${slot}`, message: 'Material slot profile references an unknown material slot.' })
+      continue
+    }
+    if (!['leather', 'metal', 'glass', 'generic'].includes(profile.kind)) {
+      issues.push({ path: `materialSlotProfiles.${slot}.kind`, message: 'Material slot profile has an unsupported material kind.' })
+    }
+    if (profile.mapping !== 'uv0') {
+      issues.push({ path: `materialSlotProfiles.${slot}.mapping`, message: 'Only UV0 material mapping is currently supported.' })
+    }
+    if (!['optional', 'recommended', 'required'].includes(profile.tangents)) {
+      issues.push({ path: `materialSlotProfiles.${slot}.tangents`, message: 'Unsupported tangent policy.' })
     }
   }
 
@@ -263,6 +313,53 @@ export function validateAssetManifest(
     }
     if (![...preset.target, ...preset.position].every(Number.isFinite)) {
       issues.push({ path: `cameraPresets.${presetKey}`, message: 'Camera coordinates must be finite numbers.' })
+    }
+  }
+
+  const presentation = manifest.presentation
+  if (presentation?.groundY !== undefined && !Number.isFinite(presentation.groundY)) {
+    issues.push({ path: 'presentation.groundY', message: 'Ground position must be finite.' })
+  }
+  if (presentation?.shadowScale !== undefined && (!Number.isFinite(presentation.shadowScale) || presentation.shadowScale <= 0)) {
+    issues.push({ path: 'presentation.shadowScale', message: 'Shadow scale must be a positive finite value.' })
+  }
+  const orbit = presentation?.orbit
+  if (orbit?.minDistance !== undefined && (!Number.isFinite(orbit.minDistance) || orbit.minDistance <= 0)) {
+    issues.push({ path: 'presentation.orbit.minDistance', message: 'Orbit minimum distance must be positive.' })
+  }
+  if (orbit?.maxDistance !== undefined && (!Number.isFinite(orbit.maxDistance) || orbit.maxDistance <= 0)) {
+    issues.push({ path: 'presentation.orbit.maxDistance', message: 'Orbit maximum distance must be positive.' })
+  }
+  if (orbit?.minDistance !== undefined && orbit?.maxDistance !== undefined && orbit.minDistance >= orbit.maxDistance) {
+    issues.push({ path: 'presentation.orbit', message: 'Orbit minimum distance must be smaller than maximum distance.' })
+  }
+
+  return issues
+}
+
+export function validateMaterialSlotAssignments(
+  manifest: AssetManifest,
+  assignments: Readonly<Record<string, string>>,
+  materials: Readonly<Record<string, MaterialVariant>>,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+
+  for (const [slot, materialId] of Object.entries(assignments)) {
+    if (!manifest.materialSlots[slot]) {
+      issues.push({ path: `materialAssignments.${slot}`, message: 'Material assignment targets an unknown slot.' })
+      continue
+    }
+    const material = materials[materialId]
+    if (!material) {
+      issues.push({ path: `materialAssignments.${slot}`, message: `Material variant "${materialId}" is not available.` })
+      continue
+    }
+    const profile = manifest.materialSlotProfiles?.[slot]
+    if (profile && material.kind !== profile.kind) {
+      issues.push({
+        path: `materialAssignments.${slot}`,
+        message: `Material "${materialId}" is "${material.kind}" but slot "${slot}" requires "${profile.kind}".`,
+      })
     }
   }
 
