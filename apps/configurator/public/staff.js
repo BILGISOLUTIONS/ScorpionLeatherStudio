@@ -477,7 +477,12 @@
     el('refresh').disabled = true;
     try {
       const payload = await api('/api/staff/orders?limit=100');
-      state.identity = payload.staffIdentity || null;
+      state.identity = payload.staffIdentity || {
+        id:'legacy-shared',
+        name:'Legacy shared access',
+        roles:['admin'],
+        legacy:true,
+      };
       state.orders = Array.isArray(payload.orders) ? payload.orders : [];
       setConnected(true);
       loginError.textContent = '';
