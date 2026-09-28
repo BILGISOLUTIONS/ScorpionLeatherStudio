@@ -8,6 +8,10 @@ import {
 import { createArtworkSignedUrl } from '../../server/lib/order-store'
 import { authorizeStaff, isStaffAccessConfigured } from '../../server/lib/staff-auth'
 import { getSupabaseConfiguration, supabaseHeaders } from '../../server/lib/supabase'
+import {
+  summarizeWorkshopAnalytics,
+  type WorkshopAnalyticsRow,
+} from '../../server/lib/workshop-analytics'
 
 const STAFF_STATUSES = new Set([
   'received',
@@ -53,6 +57,12 @@ interface StoredOrder {
   workshop_released_at?: string | null
   workshop_released_by?: string | null
   workshop_audit_log?: unknown[] | null
+  workshop_progress?: {
+    manufacturingCompleted?: string[]
+    qualityCompleted?: string[]
+  } | null
+  workshop_qc_completed_at?: string | null
+  workshop_revision_history?: unknown[] | null
   [key: string]: unknown
 }
 
@@ -158,10 +168,68 @@ async function enrichDetail(order: StoredOrder) {
   }
 }
 
+async function workshopAnalytics(
+  config: { url: string; serviceKey: string },
+  res: VercelResponse,
+) {
+  const columns = [
+    'request_id',
+    'status',
+    'product_title',
+    'reference_title',
+    'quantity',
+    'workshop_released_at',
+    'workshop_revision_id',
+    'workshop_progress',
+    'workshop_qc_completed_at',
+    'workshop_release_packet',
+    'workshop_revision_history',
+  ]
+
+  const params = new URLSearchParams({
+    select: columns.join(','),
+    order: 'workshop_released_at.desc.nullslast',
+    limit: '100',
+  })
+
+  const response = await fetch(
+    `${config.url}/rest/v1/scorpion_custom_order_requests?${params.toString()}`,
+    { headers: supabaseHeaders(config.serviceKey) },
+  )
+
+  if (!response.ok) {
+    const detail = (await response.text()).slice(0, 500)
+    res.status(response.status === 400 ? 503 : 502).json({
+      ok: false,
+      code: response.status === 400
+        ? 'WORKSHOP_ANALYTICS_SCHEMA_NOT_MIGRATED'
+        : 'WORKSHOP_ANALYTICS_READ_FAILED',
+      detail,
+    })
+    return
+  }
+
+  const rows = await response.json() as WorkshopAnalyticsRow[]
+  res.status(200).json({
+    ok: true,
+    analytics: summarizeWorkshopAnalytics(rows),
+  })
+}
+
 async function listOrders(req: VercelRequest, res: VercelResponse) {
   const config = getSupabaseConfiguration()
   if (!config) {
     res.status(503).json({ ok: false, code: 'ORDER_STORE_NOT_CONFIGURED' })
+    return
+  }
+
+  const view = queryValue(req.query.view).trim()
+  if (view === 'workshop-analytics') {
+    await workshopAnalytics(config, res)
+    return
+  }
+  if (view && view !== 'orders') {
+    res.status(422).json({ ok: false, code: 'INVALID_STAFF_VIEW' })
     return
   }
 
