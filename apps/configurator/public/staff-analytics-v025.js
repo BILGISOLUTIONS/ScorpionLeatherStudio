@@ -1,5 +1,51 @@
 const STYLE_ID = 'staff-analytics-v025-css';
 
+function ensureDialog() {
+  let dialog = document.getElementById('analyticsDialog');
+  if (dialog) return dialog;
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `<dialog id="analyticsDialog" class="analytics-dialog" aria-label="Workshop production overview">
+    <div class="analytics-head">
+      <div>
+        <p class="eyebrow">WORKSHOP ANALYTICS</p>
+        <h2>Production overview</h2>
+        <p>Released-build throughput and checklist progress. No customer contact data is included.</p>
+      </div>
+      <div class="analytics-head__actions">
+        <button id="analyticsRefresh" class="secondary" type="button">Refresh</button>
+        <button id="analyticsClose" class="secondary" type="button" aria-label="Close production overview">Close</button>
+      </div>
+    </div>
+    <div class="analytics-body">
+      <p id="analyticsState" class="analytics-state" role="status"></p>
+      <section id="analyticsStats" class="analytics-stats" aria-label="Production metrics"></section>
+      <section id="analyticsProgress" class="analytics-progress" aria-label="Workshop checklist progress"></section>
+      <div class="analytics-grid">
+        <section class="analytics-section" aria-label="Active workshop queue">
+          <div class="analytics-section__head"><strong>Active released builds</strong><span>Oldest release first</span></div>
+          <div class="analytics-table-wrap">
+            <table class="analytics-table">
+              <thead><tr><th>Work order</th><th>Product</th><th>Qty</th><th>Age</th><th>Manufacturing</th><th>Final QC</th><th>Revisions</th></tr></thead>
+              <tbody id="analyticsQueue"></tbody>
+            </table>
+            <div id="analyticsQueueEmpty" class="analytics-empty" hidden>No active released builds.</div>
+          </div>
+        </section>
+        <section class="analytics-section" aria-label="Released product mix">
+          <div class="analytics-section__head"><strong>Released product mix</strong><span>Loaded history</span></div>
+          <div id="analyticsProducts" class="analytics-products"></div>
+        </section>
+      </div>
+      <p id="analyticsGenerated" class="analytics-generated"></p>
+    </div>
+  </dialog>`;
+
+  dialog = wrapper.firstElementChild;
+  document.body.append(dialog);
+  return dialog;
+}
+
 function ensureStyles() {
   if (document.getElementById(STYLE_ID)) return;
   const link = document.createElement('link');
@@ -77,8 +123,7 @@ function tableCell(text, sub = '') {
 
 export function createWorkshopAnalyticsV025({ api, el, openOrder, dateTime }) {
   ensureStyles();
-
-  const dialog = el('analyticsDialog');
+  const dialog = ensureDialog();
   const stateNode = el('analyticsState');
   const stats = el('analyticsStats');
   const progressNode = el('analyticsProgress');
