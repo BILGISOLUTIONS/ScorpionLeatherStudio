@@ -13,9 +13,18 @@ import { storefrontImage } from './studio-media'
 import type { ArtworkAttachment } from './studio-types'
 import { buildShareUrl } from './studio-url'
 import { useDebouncedLocalStorage } from './useDebouncedLocalStorage'
+import {
+  appendDeliveryDiagnostic,
+  createRecoveryBundle,
+  loadDeliveryDiagnostics,
+  loadRecoveryCandidate,
+  storeDeliveryReceipt,
+  storePreparedRequest,
+  supportReference,
+  type RecoveryCandidate,
+} from './order-recovery'
 
 const CUSTOMER_STORAGE_KEY = 'scorpion-leather-studio:v004-customer'
-const REQUEST_STORAGE_KEY = 'scorpion-leather-studio:v004-requests'
 
 function defaultCustomer(): CustomerDraft {
   return {
@@ -71,12 +80,26 @@ function OrderCaptureComponent({
   const [deliveryState, setDeliveryState] = useState<'idle' | 'sending' | 'sent' | 'unavailable' | 'failed'>('idle')
   const [website, setWebsite] = useState('')
   const [acknowledged, setAcknowledged] = useState(false)
+  const [recoveryCandidate, setRecoveryCandidate] = useState<RecoveryCandidate | null>(
+    () => loadRecoveryCandidate(createStudioBuildId(build)),
+  )
 
   const issues = useMemo(() => validateOrderDraft(build, customer), [build, customer])
   const issueMap = useMemo(() => Object.fromEntries(issues.map((issue) => [issue.path, issue.message])), [issues])
   useDebouncedLocalStorage(CUSTOMER_STORAGE_KEY, customer, 250)
 
   useEffect(() => {
+    const recovered = loadRecoveryCandidate(createStudioBuildId(build))
+    setRecoveryCandidate(recovered)
+
+    if (recovered?.receipt?.state === 'accepted') {
+      setRequest(recovered.request)
+      setCustomer(recovered.request.customer)
+      setDeliveryState('sent')
+      setAcknowledged(true)
+      return
+    }
+
     setRequest(null)
     setDeliveryState('idle')
     setAcknowledged(false)
@@ -108,12 +131,15 @@ function OrderCaptureComponent({
       setAcknowledged(false)
       setStatus(`Order request ${next.requestId} prepared.`)
 
-      try {
-        const saved = JSON.parse(window.localStorage.getItem(REQUEST_STORAGE_KEY) ?? '[]') as StudioOrderRequest[]
-        window.localStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify([next, ...saved].slice(0, 20)))
-      } catch {
-        // The request still exists in memory if local storage is unavailable.
-      }
+      storePreparedRequest(next)
+      appendDeliveryDiagnostic({
+        stage: 'prepare',
+        outcome: 'info',
+        requestId: next.requestId,
+        buildId: next.buildId,
+        online: navigator.onLine,
+      })
+      setRecoveryCandidate(loadRecoveryCandidate(next.buildId))
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Complete the required order details.')
     }
@@ -135,6 +161,13 @@ function OrderCaptureComponent({
     if (!request || deliveryState === 'sending') return
     setDeliveryState('sending')
     setStatus('Sending custom order request to Scorpion…')
+    appendDeliveryDiagnostic({
+      stage: 'submit',
+      outcome: 'info',
+      requestId: request.requestId,
+      buildId: request.buildId,
+      online: navigator.onLine,
+    })
 
     try {
       const response = await fetch('/api/order-requests', {
@@ -149,9 +182,35 @@ function OrderCaptureComponent({
         persisted?: boolean
         emailSent?: boolean
         deliveryStatus?: string
+        traceId?: string
+        requestId?: string
       }
 
       if (response.ok && payload.accepted) {
+        const receipt = {
+          requestId: request.requestId,
+          buildId: request.buildId,
+          state: 'accepted' as const,
+          at: new Date().toISOString(),
+          traceId: payload.traceId,
+          deliveryStatus: payload.deliveryStatus,
+          persisted: payload.persisted,
+          emailSent: payload.emailSent,
+        }
+        storeDeliveryReceipt(receipt)
+        appendDeliveryDiagnostic({
+          stage: 'response',
+          outcome: 'success',
+          requestId: request.requestId,
+          buildId: request.buildId,
+          traceId: payload.traceId,
+          code: payload.deliveryStatus,
+          httpStatus: response.status,
+          online: navigator.onLine,
+          persisted: payload.persisted,
+          emailSent: payload.emailSent,
+        })
+        setRecoveryCandidate({ request, receipt })
         setDeliveryState('sent')
         if (payload.emailSent === false && payload.persisted) {
           setStatus(`Request ${request.requestId} was saved securely for Scorpion. Email notification is pending.`)
@@ -167,16 +226,112 @@ function OrderCaptureComponent({
         response.status === 503 &&
         (payload.code === 'ORDER_TRANSPORT_NOT_CONFIGURED' || payload.code === 'ORDER_DELIVERY_UNAVAILABLE')
       ) {
+        const receipt = {
+          requestId: request.requestId,
+          buildId: request.buildId,
+          state: 'unavailable' as const,
+          at: new Date().toISOString(),
+          traceId: payload.traceId,
+          code: payload.code,
+        }
+        storeDeliveryReceipt(receipt)
+        appendDeliveryDiagnostic({
+          stage: 'response',
+          outcome: 'warning',
+          requestId: request.requestId,
+          buildId: request.buildId,
+          traceId: payload.traceId,
+          code: payload.code,
+          httpStatus: response.status,
+          online: navigator.onLine,
+        })
+        setRecoveryCandidate({ request, receipt })
         setDeliveryState('unavailable')
-        setStatus('Direct delivery is not configured on this deployment yet. Use the email fallback below.')
+        setStatus('Direct delivery is not configured on this deployment yet. Your saved request is safe; use retry or the fallback options below.')
         return
       }
 
+      const failedReceipt = {
+        requestId: request.requestId,
+        buildId: request.buildId,
+        state: 'failed' as const,
+        at: new Date().toISOString(),
+        traceId: payload.traceId,
+        code: payload.code ?? `HTTP_${response.status}`,
+      }
+      storeDeliveryReceipt(failedReceipt)
+      appendDeliveryDiagnostic({
+        stage: 'response',
+        outcome: 'error',
+        requestId: request.requestId,
+        buildId: request.buildId,
+        traceId: payload.traceId,
+        code: failedReceipt.code,
+        httpStatus: response.status,
+        online: navigator.onLine,
+      })
+      setRecoveryCandidate({ request, receipt: failedReceipt })
       setDeliveryState('failed')
-      setStatus('The server could not deliver this request. Your build sheet is still safe; use the email fallback.')
+      setStatus('The server could not deliver this request. Your saved request is still safe; use retry or the fallback options below.')
     } catch {
+      const failedReceipt = {
+        requestId: request.requestId,
+        buildId: request.buildId,
+        state: 'failed' as const,
+        at: new Date().toISOString(),
+        code: 'NETWORK_ERROR',
+      }
+      storeDeliveryReceipt(failedReceipt)
+      appendDeliveryDiagnostic({
+        stage: 'network',
+        outcome: 'error',
+        requestId: request.requestId,
+        buildId: request.buildId,
+        code: 'NETWORK_ERROR',
+        online: navigator.onLine,
+      })
+      setRecoveryCandidate({ request, receipt: failedReceipt })
       setDeliveryState('failed')
-      setStatus('Could not reach the order server. Your build sheet is still safe; use the email fallback.')
+      setStatus('Could not reach the order server. Your saved request is still safe; use retry or the fallback options below.')
+    }
+  }
+
+  const restoreSavedRequest = () => {
+    if (!recoveryCandidate) return
+    setRequest(recoveryCandidate.request)
+    setCustomer(recoveryCandidate.request.customer)
+    setAcknowledged(recoveryCandidate.receipt?.state === 'accepted')
+    setDeliveryState(recoveryCandidate.receipt?.state === 'accepted' ? 'sent' : 'idle')
+    appendDeliveryDiagnostic({
+      stage: 'recovery',
+      outcome: 'info',
+      requestId: recoveryCandidate.request.requestId,
+      buildId: recoveryCandidate.request.buildId,
+      traceId: recoveryCandidate.receipt?.traceId,
+      code: recoveryCandidate.receipt?.state,
+      online: navigator.onLine,
+    })
+    setStatus(`Restored saved request ${recoveryCandidate.request.requestId} from this browser.`)
+  }
+
+  const downloadRecoveryPacket = () => {
+    if (!request) return
+    const bundle = createRecoveryBundle(request, artwork, recoveryCandidate?.receipt ?? null)
+    downloadText(`${request.requestId}-recovery.json`, JSON.stringify(bundle, null, 2))
+    setStatus('Private recovery packet downloaded. Keep it private because it can contain contact information or artwork.')
+  }
+
+  const copySupportReference = async () => {
+    if (!request) return
+    const reference = supportReference(
+      recoveryCandidate?.receipt ?? null,
+      loadDeliveryDiagnostics(request.requestId),
+    )
+    try {
+      await navigator.clipboard.writeText(reference)
+      setStatus(`Support reference copied: ${reference}`)
+    } catch {
+      setStatus(`Support reference: ${reference}`)
     }
   }
 
@@ -256,6 +411,20 @@ function OrderCaptureComponent({
           onChange={(event) => setWebsite(event.target.value)}
         />
       </label>
+
+      {recoveryCandidate && !request ? (
+        <div className="request-recovery-banner" data-testid="request-recovery-banner">
+          <div>
+            <span>SAVED REQUEST FOUND</span>
+            <strong>{recoveryCandidate.request.requestId}</strong>
+            <p>
+              This browser has a saved packet for the current build
+              {recoveryCandidate.receipt?.state ? ` · last state: ${recoveryCandidate.receipt.state}` : ''}.
+            </p>
+          </div>
+          <button type="button" onClick={restoreSavedRequest}>Restore saved request</button>
+        </div>
+      ) : null}
 
       <div className="order-form-grid">
         <label>
@@ -340,6 +509,23 @@ function OrderCaptureComponent({
             <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
             <span>I understand this is a customization request. Scorpion must confirm design feasibility, availability, lead time, fit, and final price before production.</span>
           </label>
+          {(deliveryState === 'failed' || deliveryState === 'unavailable') ? (
+            <div className="delivery-recovery" data-testid="delivery-recovery">
+              <div>
+                <span>DELIVERY RECOVERY</span>
+                <strong>Your request is still saved in this browser.</strong>
+                <p>Retry direct delivery, keep a private recovery file, or copy the support reference if you contact Scorpion.</p>
+              </div>
+              <div className="delivery-recovery__actions">
+                <button type="button" onClick={sendRequest}>Retry direct delivery</button>
+                <button type="button" onClick={downloadRecoveryPacket}>Download private recovery file</button>
+                <button type="button" onClick={copySupportReference}>Copy support reference</button>
+              </div>
+            </div>
+          ) : null}
+          {deliveryState === 'sent' && recoveryCandidate?.receipt?.traceId ? (
+            <p className="delivery-reference">Support reference: <code>{recoveryCandidate.receipt.traceId}</code></p>
+          ) : null}
           <div className="request-actions">
             <button type="button" onClick={copySummary}>Copy summary</button>
             <button type="button" onClick={() => downloadText(`${request.requestId}.txt`, summary)}>Text build sheet</button>
