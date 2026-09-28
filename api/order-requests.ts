@@ -228,7 +228,11 @@ function renderCustomerHtml(request: StudioOrderRequest): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const traceId = randomUUID()
   res.setHeader('Cache-Control', 'no-store')
+  res.setHeader('X-Scorpion-Trace-ID', traceId)
+  const reply = (status: number, payload: Record<string, unknown>) =>
+    res.status(status).json({ ...payload, traceId })
 
   if (req.method === 'OPTIONS') {
     res.status(204).end()
@@ -237,17 +241,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST, OPTIONS')
-    res.status(405).json({ accepted: false, code: 'METHOD_NOT_ALLOWED' })
+    reply(405, { accepted: false, code: 'METHOD_NOT_ALLOWED' })
     return
   }
 
   if (!allowedOrigin(req)) {
-    res.status(403).json({ accepted: false, code: 'ORIGIN_NOT_ALLOWED' })
+    reply(403, { accepted: false, code: 'ORIGIN_NOT_ALLOWED' })
     return
   }
 
   if (declaredPayloadTooLarge(req)) {
-    res.status(413).json({ accepted: false, code: 'PAYLOAD_TOO_LARGE' })
+    reply(413, { accepted: false, code: 'PAYLOAD_TOO_LARGE' })
     return
   }
 
@@ -255,30 +259,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     envelope = parseBody(req)
   } catch {
-    res.status(400).json({ accepted: false, code: 'INVALID_JSON' })
+    reply(400, { accepted: false, code: 'INVALID_JSON' })
     return
   }
 
   if (stringValue(envelope.website).trim()) {
-    res.status(202).json({ accepted: true, requestId: envelope.request?.requestId ?? null })
+    reply(202, { accepted: true, requestId: envelope.request?.requestId ?? null })
     return
   }
 
   const request = envelope.request
   if (!request) {
-    res.status(400).json({ accepted: false, code: 'REQUEST_REQUIRED' })
+    reply(400, { accepted: false, code: 'REQUEST_REQUIRED' })
     return
   }
 
   const issues = [...validateRequest(request), ...validateArtwork(envelope.artwork)]
   if (issues.length) {
-    res.status(422).json({ accepted: false, code: 'VALIDATION_FAILED', issues })
+    reply(422, { accepted: false, code: 'VALIDATION_FAILED', issues })
     return
   }
 
   const artworkBuffer = decodeArtwork(envelope.artwork)
   if (envelope.artwork && !artworkBuffer) {
-    res.status(422).json({ accepted: false, code: 'INVALID_ARTWORK' })
+    reply(422, { accepted: false, code: 'INVALID_ARTWORK' })
     return
   }
 
@@ -294,6 +298,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (persistence.artworkError) {
     console.error('Scorpion order artwork persistence failed', {
+      traceId,
       requestId: request.requestId,
       error: persistence.artworkError,
     })
@@ -301,6 +306,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (persistence.error) {
     console.error('Scorpion order persistence failed', {
+      traceId,
       requestId: request.requestId,
       error: persistence.error,
     })
@@ -310,7 +316,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!smtp) {
     if (persistence.persisted) {
       await markOrderDelivery(request.requestId, 'stored')
-      res.status(202).json({
+      reply(202, {
         accepted: true,
         requestId: request.requestId,
         persisted: true,
@@ -322,7 +328,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    res.status(503).json({
+    reply(503, {
       accepted: false,
       code: persistence.configured ? 'ORDER_DELIVERY_UNAVAILABLE' : 'ORDER_TRANSPORT_NOT_CONFIGURED',
     })
@@ -387,7 +393,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     await markOrderDelivery(request.requestId, 'emailed')
-    res.status(202).json({
+    reply(202, {
       accepted: true,
       requestId: request.requestId,
       deliveryId,
@@ -400,12 +406,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     await markOrderDelivery(request.requestId, 'email_failed')
     console.error('Scorpion order delivery failed', {
+      traceId,
       requestId: request.requestId,
       error: error instanceof Error ? error.message : String(error),
     })
 
     if (persistence.persisted) {
-      res.status(202).json({
+      reply(202, {
         accepted: true,
         requestId: request.requestId,
         persisted: true,
@@ -415,7 +422,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         artworkStored: Boolean(persistence.artworkStored),
       })
     } else {
-      res.status(502).json({ accepted: false, code: 'DELIVERY_FAILED' })
+      reply(502, { accepted: false, code: 'DELIVERY_FAILED' })
     }
   } finally {
     transport.close()
