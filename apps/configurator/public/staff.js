@@ -36,9 +36,9 @@
   };
 
   const setConnected = (connected) => {
-    connection.textContent = connected
-      ? (state.identity ? 'Connected · ' + (state.identity.name || state.identity.id || 'Staff') : 'Connected to order store')
-      : 'Not connected';
+    connection.textContent = !connected ? 'Not connected' : state.identity
+      ? 'Connected · ' + (state.identity.name || state.identity.id || 'Staff')
+      : 'Connected to order store';
     connection.classList.toggle('is-live', connected);
     login.hidden = connected;
     app.hidden = !connected;
@@ -232,19 +232,11 @@
     }
   };
 
-  let staffIdentityV025Instance = null;
-  let staffIdentityV025Loading = null;
-
-  const staffIdentityV025 = async () => {
-    if (staffIdentityV025Instance) return staffIdentityV025Instance;
-    if (!staffIdentityV025Loading) {
-      staffIdentityV025Loading = import('/staff-identity-v025.js').then((module) =>
-        module.createStaffIdentityV025({ el, state })
-      );
-    }
-    staffIdentityV025Instance = await staffIdentityV025Loading;
-    return staffIdentityV025Instance;
-  };
+  let staffIdentityV025Instance, staffIdentityV025Loading;
+  const staffIdentityV025 = async () => staffIdentityV025Instance ||= await (
+    staffIdentityV025Loading ||= import('/staff-identity-v025.js')
+      .then((module) => module.createStaffIdentityV025({el,state}))
+  );
 
   let workshopV022Instance = null;
   let workshopV022Loading = null;
@@ -477,12 +469,7 @@
     el('refresh').disabled = true;
     try {
       const payload = await api('/api/staff/orders?limit=100');
-      state.identity = payload.staffIdentity || {
-        id:'legacy-shared',
-        name:'Legacy shared access',
-        roles:['admin'],
-        legacy:true,
-      };
+      state.identity = payload.staffIdentity || {id:'legacy-shared',name:'Legacy shared access',roles:['admin'],legacy:true};
       state.orders = Array.isArray(payload.orders) ? payload.orders : [];
       setConnected(true);
       loginError.textContent = '';
