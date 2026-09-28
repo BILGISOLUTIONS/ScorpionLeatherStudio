@@ -10,6 +10,7 @@ import {
   authenticateStaff,
   isStaffAccessConfigured,
   publicStaffIdentity,
+  resolveStaffActor,
   staffHasRole,
   type StaffIdentity,
 } from '../../server/lib/staff-auth'
@@ -291,7 +292,7 @@ async function updateOrder(req: VercelRequest, res: VercelResponse, identity: St
     : Number(body.quoteTotalMinor)
   const releaseToProduction = body.releaseToProduction === true
   const requestedReleasedBy = typeof body.releasedBy === 'string' ? body.releasedBy.trim() : ''
-  const releasedBy = identity.legacy ? requestedReleasedBy : identity.name
+  const releasedBy = resolveStaffActor(identity, requestedReleasedBy)
   const resolutionObject = body.workshopResolutions === undefined
     ? undefined
     : objectValue(body.workshopResolutions) as WorkshopResolutions | null
