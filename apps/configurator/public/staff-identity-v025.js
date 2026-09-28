@@ -16,6 +16,28 @@ export function createStaffIdentityV025({el,state}){
     document.head.append(link);
   };
 
+  const ensureUi=()=>{
+    let root=el('staffIdentity');
+    if(!root){
+      root=document.createElement('div');
+      root.id='staffIdentity';
+      root.className='staff-identity-v025';
+      root.innerHTML='<span class="staff-identity-v025__mark" aria-hidden="true">ID</span><span class="staff-identity-v025__copy"><strong data-staff-name>Staff</strong><small data-staff-roles></small></span>';
+      const refresh=el('refresh');
+      refresh?.parentNode?.insertBefore(root,refresh);
+    }
+    let legacy=el('staffIdentityLegacy');
+    if(!legacy){
+      legacy=document.createElement('p');
+      legacy.id='staffIdentityLegacy';
+      legacy.hidden=true;
+      legacy.textContent='Legacy shared access cannot provide individual audit identity. Use named staff access keys for production work.';
+      const scan=document.querySelector('.scan-bar');
+      scan?.parentNode?.insertBefore(legacy,scan);
+    }
+    return root;
+  };
+
   const can=(...roles)=>{
     const identity=state.identity;
     if(!identity)return false;
@@ -54,7 +76,7 @@ export function createStaffIdentityV025({el,state}){
   const apply=()=>{
     ensureStyle();
     const identity=state.identity;
-    const root=el('staffIdentity');
+    const root=ensureUi();
     if(root){
       if(!identity){
         root.hidden=true;
