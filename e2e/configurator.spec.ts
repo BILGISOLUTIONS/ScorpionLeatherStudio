@@ -195,6 +195,65 @@ test('Shopify embed deep link opens the requested real catalog product without l
 })
 
 
+test('Shopify host bridge keeps share URLs on the storefront and syncs parent history', async ({ page }, testInfo) => {
+  await page.goto('/')
+  const parentOrigin = new URL(page.url()).origin
+  const hostPage = `${parentOrigin}/pages/custom-leather-studio`
+  const frameSource = new URL('/', parentOrigin)
+  frameSource.searchParams.set('embed', '1')
+  frameSource.searchParams.set('product', 'cowhide-radio-harness-black')
+  frameSource.searchParams.set('variant', 'SC-LRH-BLK-XL-002')
+  frameSource.searchParams.set('parent_origin', parentOrigin)
+  frameSource.searchParams.set('host_page', hostPage)
+
+  await page.setContent(`
+    <main style="margin:0;background:#080808;color:#eee">
+      <iframe title="Shopify Studio fixture" src="${frameSource.toString()}" style="display:block;width:100%;height:1200px;border:0" allow="clipboard-write"></iframe>
+    </main>
+    <script>
+      window.__slsMessages = [];
+      window.addEventListener('message', (event) => {
+        const frame = document.querySelector('iframe');
+        if (!frame || event.source !== frame.contentWindow || event.origin !== location.origin) return;
+        if (!event.data || event.data.version !== 1) return;
+        window.__slsMessages.push(event.data);
+        if (event.data.type === 'scorpion-leather-studio:resize') {
+          const height = Math.max(600, Math.min(16000, Math.ceil(Number(event.data.height) || 0)));
+          frame.style.height = height + 'px';
+        }
+        if (event.data.type === 'scorpion-leather-studio:history') {
+          const next = new URL(location.href);
+          ['studio', 'product', 'family', 'reference', 'variant'].forEach((key) => next.searchParams.delete(key));
+          if (event.data.studio) next.searchParams.set('studio', event.data.studio);
+          history.replaceState(history.state, '', next.toString());
+        }
+      });
+    <\/script>
+  `)
+
+  const studio = page.frameLocator('iframe[title="Shopify Studio fixture"]')
+  await expect(studio.getByRole('heading', { name: 'Scorpion Leather Studio' })).toBeHidden()
+  await expect(studio.getByRole('heading', { name: 'Cowhide Radio Harness - Black' }).first()).toBeVisible()
+  await expect.poll(() => page.evaluate(() => (
+    (window as typeof window & { __slsMessages?: Array<{ type?: string }> }).__slsMessages ?? []
+  ).some((message) => message.type === 'scorpion-leather-studio:ready'))).toBe(true)
+  await expect.poll(() => page.locator('iframe').evaluate((node) => Number.parseInt(getComputedStyle(node).height, 10))).toBeGreaterThan(1000)
+
+  await studio.getByRole('button', { name: 'Share build' }).click()
+  await expect.poll(() => new URL(page.url()).searchParams.get('studio')).not.toBeNull()
+  const token = new URL(page.url()).searchParams.get('studio')
+  expect(token).toMatch(/^[A-Za-z0-9_-]+$/u)
+
+  const historyMessages = await page.evaluate(() => (
+    (window as typeof window & { __slsMessages?: Array<{ type?: string; studio?: string | null }> }).__slsMessages ?? []
+  ).filter((message) => message.type === 'scorpion-leather-studio:history'))
+  expect(historyMessages.at(-1)?.studio).toBe(token)
+
+  const screenshotName = testInfo.project.name.includes('mobile') ? 'v028-shopify-host-mobile.png' : 'v028-shopify-host-desktop.png'
+  await page.screenshot({ path: `playwright-output/screenshots/${screenshotName}`, fullPage: true })
+})
+
+
 test('staff console stays isolated and locked without credentials', async ({ page }) => {
   await page.goto('/staff.html')
   await expect(page.getByRole('heading', { name: 'Custom Order Queue' })).toBeVisible()

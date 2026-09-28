@@ -14,7 +14,7 @@ import {
 import { formatMoney } from '@sls/pricing-engine'
 import { storefrontImage } from './studio-media'
 import type { ArtworkAttachment } from './studio-types'
-import { buildShareUrl } from './studio-url'
+import { currentStudioEmbedContext, studioParentTargetOrigin } from './embed-bridge'\nimport { buildShareUrl, buildStudioStateUrl } from './studio-url'
 import { useDebouncedLocalStorage } from './useDebouncedLocalStorage'
 import { useLiveCatalogVariant } from './useLiveCatalogVariant'
 import {
@@ -226,11 +226,6 @@ function loadInitialBuild(): StudioBuildDraft {
   }
 
   return defaultBuild()
-}
-
-function embeddedMode(): boolean {
-  if (typeof window === 'undefined') return false
-  return new URL(window.location.href).searchParams.get('embed') === '1'
 }
 
 function resolveStudio(
@@ -761,7 +756,8 @@ function DeferredOrderCapture({
 }
 
 export function App() {
-  const [embedded] = useState(embeddedMode)
+  const [embedContext] = useState(currentStudioEmbedContext)
+  const embedded = embedContext.embedded
   const [build, setBuild] = useState<StudioBuildDraft>(loadInitialBuild)
   const [artwork, setArtwork] = useState<ArtworkAttachment | null>(loadSessionArtwork)
   const [status, setStatus] = useState('')
@@ -806,6 +802,7 @@ export function App() {
   useEffect(() => {
     if (!embedded || window.parent === window) return
 
+    const targetOrigin = studioParentTargetOrigin(embedContext)
     let frame = 0
     let lastHeight = 0
     const sendHeight = () => {
@@ -822,7 +819,7 @@ export function App() {
           type: 'scorpion-leather-studio:resize',
           version: 1,
           height,
-        }, '*')
+        }, targetOrigin)
       })
     }
 
@@ -835,14 +832,14 @@ export function App() {
     window.parent.postMessage({
       type: 'scorpion-leather-studio:ready',
       version: 1,
-    }, '*')
+    }, targetOrigin)
 
     return () => {
       observer.disconnect()
       window.removeEventListener('resize', sendHeight)
       cancelAnimationFrame(frame)
     }
-  }, [embedded])
+  }, [embedded, embedContext])
 
 
   useEffect(() => {
@@ -891,14 +888,29 @@ export function App() {
     setBuild((current) => ({ ...current, personalization }))
   }, [])
 
+  const syncParentHistory = useCallback((studioToken: string | null) => {
+    if (!embedded || window.parent === window) return
+    window.parent.postMessage({
+      type: 'scorpion-leather-studio:history',
+      version: 1,
+      studio: studioToken,
+    }, studioParentTargetOrigin(embedContext))
+  }, [embedded, embedContext])
+
   const shareBuild = async () => {
-    const url = buildShareUrl(build)
-    window.history.replaceState({}, '', url)
+    const internalUrl = buildStudioStateUrl(build)
+    const shareUrl = buildShareUrl(build)
+    const studioToken = new URL(internalUrl).searchParams.get('studio')
+    window.history.replaceState({}, '', internalUrl)
+    syncParentHistory(studioToken)
+
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(shareUrl)
       setStatus('Shareable build link copied.')
     } catch {
-      setStatus('Shareable build is in the address bar. Copy the current URL.')
+      setStatus(embedded
+        ? 'Shareable build is reflected in the storefront address bar. Copy the page URL.'
+        : 'Shareable build is in the address bar. Copy the current URL.')
     }
   }
 
@@ -907,9 +919,9 @@ export function App() {
     setBuild(next)
     setArtwork(null)
     const url = new URL(window.location.href)
-    url.searchParams.delete('studio')
-    url.searchParams.delete('build')
+    ;['studio', 'build', 'product', 'family', 'reference', 'variant'].forEach((key) => url.searchParams.delete(key))
     window.history.replaceState({}, '', url)
+    syncParentHistory(null)
     setStatus('Studio reset.')
   }
 

@@ -22,6 +22,7 @@ jobs:
       - run: npm run build
       - run: npm run budget
       - run: npm run budget:functions
+      - run: npm run smoke:shopify
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - name: Upload browser QA screenshots

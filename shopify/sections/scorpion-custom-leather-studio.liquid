@@ -1,7 +1,8 @@
 {% comment %}
   Scorpion Western Wear — Scorpion Leather Studio embed section
-  The configurator remains deployed as a dedicated web app while this section
-  makes it behave like a native Shopify page.
+  The Studio stays independently deployable while this section provides a
+  storefront-native host bridge, bounded resize behavior, recovery UI, and
+  share/deep-link continuity.
 {% endcomment %}
 
 {% assign section_dom_id = 'ScorpionLeatherStudio-' | append: section.id %}
@@ -15,10 +16,11 @@
     --sls-background: {{ section.settings.background }};
   "
 >
-  <div class="scorpion-leather-studio-section__inner">
+  <div class="scorpion-leather-studio-section__inner" data-sls-inner aria-busy="true">
     {% if section.settings.studio_url != blank %}
-      <div class="scorpion-leather-studio-section__loading" data-sls-loading>
-        Loading Scorpion Leather Studio…
+      <div class="scorpion-leather-studio-section__loading" data-sls-loading role="status" aria-live="polite">
+        <strong data-sls-loading-text>Loading Scorpion Leather Studio…</strong>
+        <button type="button" data-sls-retry hidden>Retry Studio</button>
       </div>
       <iframe
         data-sls-frame
@@ -26,8 +28,15 @@
         title="{{ section.settings.iframe_title | escape }}"
         loading="lazy"
         allow="clipboard-write"
+        referrerpolicy="strict-origin-when-cross-origin"
         sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
       ></iframe>
+      <noscript>
+        <p class="scorpion-leather-studio-section__noscript">
+          JavaScript is required for the embedded Studio.
+          <a href="{{ section.settings.studio_url | escape }}">Open Scorpion Leather Studio</a>.
+        </p>
+      </noscript>
     {% else %}
       <div class="scorpion-leather-studio-section__setup">
         <strong>Scorpion Leather Studio URL required</strong>
@@ -38,49 +47,19 @@
 </section>
 
 <style>
-  #{{ section_dom_id }} {
-    width: 100%;
-    background: var(--sls-background);
-  }
-
-  #{{ section_dom_id }} .scorpion-leather-studio-section__inner {
-    width: min(100%, var(--sls-max-width));
-    margin: 0 auto;
-    position: relative;
-  }
-
-  #{{ section_dom_id }} iframe {
-    display: block;
-    width: 100%;
-    min-height: var(--sls-min-height);
-    height: var(--sls-min-height);
-    border: 0;
-    background: #080808;
-    transition: height 180ms ease;
-  }
-
-  #{{ section_dom_id }} .scorpion-leather-studio-section__loading,
-  #{{ section_dom_id }} .scorpion-leather-studio-section__setup {
-    min-height: 160px;
-    display: grid;
-    place-items: center;
-    align-content: center;
-    gap: 6px;
-    padding: 24px;
-    text-align: center;
-    color: #d8d0bf;
-    background: #0d0d0c;
-    border: 1px solid #2e2a23;
-  }
-
-  #{{ section_dom_id }} .scorpion-leather-studio-section__setup p {
-    margin: 0;
-    opacity: .72;
-  }
-
-  #{{ section_dom_id }}.is-ready .scorpion-leather-studio-section__loading {
-    display: none;
-  }
+  #{{ section_dom_id }} { width: 100%; background: var(--sls-background); }
+  #{{ section_dom_id }} .scorpion-leather-studio-section__inner { width: min(100%, var(--sls-max-width)); margin: 0 auto; position: relative; }
+  #{{ section_dom_id }} iframe { display: block; width: 100%; min-height: var(--sls-min-height); height: var(--sls-min-height); border: 0; background: #080808; transition: height 180ms ease; }
+  #{{ section_dom_id }} .scorpion-leather-studio-section__loading { position: absolute; inset: 0; z-index: 2; min-height: min(var(--sls-min-height), 520px); display: grid; place-items: center; align-content: center; gap: 12px; padding: 24px; text-align: center; color: #d8d0bf; background: #0d0d0c; border: 1px solid #2e2a23; }
+  #{{ section_dom_id }} .scorpion-leather-studio-section__loading button { min-height: 44px; padding: 0 16px; border: 1px solid #b8924c; background: #18140e; color: #eadcbc; cursor: pointer; font: inherit; }
+  #{{ section_dom_id }} .scorpion-leather-studio-section__loading button:focus-visible { outline: 2px solid #d3ad61; outline-offset: 3px; }
+  #{{ section_dom_id }} .scorpion-leather-studio-section__setup { min-height: 160px; display: grid; place-items: center; align-content: center; gap: 6px; padding: 24px; text-align: center; color: #d8d0bf; background: #0d0d0c; border: 1px solid #2e2a23; }
+  #{{ section_dom_id }} .scorpion-leather-studio-section__setup p,
+  #{{ section_dom_id }} .scorpion-leather-studio-section__noscript { margin: 0; opacity: .78; }
+  #{{ section_dom_id }} .scorpion-leather-studio-section__noscript { padding: 12px 16px; color: #c8beac; background: #100f0c; }
+  #{{ section_dom_id }} .scorpion-leather-studio-section__noscript a { color: #e0bd77; }
+  #{{ section_dom_id }}.is-ready .scorpion-leather-studio-section__loading { display: none; }
+  @media (prefers-reduced-motion: reduce) { #{{ section_dom_id }} iframe { transition: none; } }
 </style>
 
 <script>
@@ -89,8 +68,11 @@
     if (!section || section.dataset.slsMounted === '1') return;
     section.dataset.slsMounted = '1';
 
+    const inner = section.querySelector('[data-sls-inner]');
     const frame = section.querySelector('[data-sls-frame]');
-    if (!frame) return;
+    const loadingText = section.querySelector('[data-sls-loading-text]');
+    const retry = section.querySelector('[data-sls-retry]');
+    if (!frame) { inner?.removeAttribute('aria-busy'); return; }
 
     const source = frame.dataset.src;
     if (!source) return;
@@ -99,10 +81,14 @@
     try {
       studioUrl = new URL(source, window.location.origin);
     } catch {
+      if (loadingText) loadingText.textContent = 'Scorpion Leather Studio URL is invalid.';
+      if (retry) retry.hidden = true;
       return;
     }
 
     studioUrl.searchParams.set('embed', '1');
+    studioUrl.searchParams.set('parent_origin', window.location.origin);
+    studioUrl.searchParams.set('host_page', new URL(window.location.pathname, window.location.origin).toString());
 
     const pageParams = new URLSearchParams(window.location.search);
     ['studio', 'product', 'family', 'reference', 'variant'].forEach((key) => {
@@ -110,29 +96,96 @@
       if (value) studioUrl.searchParams.set(key, value);
     });
 
-    frame.src = studioUrl.toString();
     const studioOrigin = studioUrl.origin;
+    const minimumHeight = {{ section.settings.min_height | json }};
+    let readyTimer = 0;
+    let resizeFrame = 0;
+    let pendingHeight = minimumHeight;
+    let destroyed = false;
+
+    const setWaitingState = (message, canRetry) => {
+      section.classList.remove('is-ready');
+      inner?.setAttribute('aria-busy', 'true');
+      if (loadingText) loadingText.textContent = message;
+      if (retry) retry.hidden = !canRetry;
+    };
+
+    const armReadyTimeout = () => {
+      window.clearTimeout(readyTimer);
+      readyTimer = window.setTimeout(() => {
+        if (destroyed || section.classList.contains('is-ready')) return;
+        setWaitingState('Scorpion Leather Studio is taking longer than expected to load.', true);
+      }, 12000);
+    };
+
+    const loadFrame = (isRetry) => {
+      setWaitingState(isRetry ? 'Retrying Scorpion Leather Studio…' : 'Loading Scorpion Leather Studio…', false);
+      const next = new URL(studioUrl.toString());
+      if (isRetry) next.searchParams.set('_sls_retry', String(Date.now()));
+      frame.src = next.toString();
+      armReadyTimeout();
+    };
+
+    const applyHeight = () => {
+      resizeFrame = 0;
+      const nextHeight = Math.max(minimumHeight, Math.min(16000, Math.ceil(pendingHeight)));
+      frame.style.height = nextHeight + 'px';
+    };
 
     const onMessage = (event) => {
       if (event.source !== frame.contentWindow) return;
       if (event.origin !== studioOrigin) return;
       if (!event.data || typeof event.data !== 'object') return;
+      if (event.data.version !== 1) return;
 
       if (event.data.type === 'scorpion-leather-studio:ready') {
+        window.clearTimeout(readyTimer);
         section.classList.add('is-ready');
+        inner?.setAttribute('aria-busy', 'false');
+        if (retry) retry.hidden = true;
+        return;
       }
 
       if (event.data.type === 'scorpion-leather-studio:resize') {
         const requested = Number(event.data.height);
         if (!Number.isFinite(requested)) return;
+        pendingHeight = requested;
+        if (!resizeFrame) resizeFrame = window.requestAnimationFrame(applyHeight);
+        return;
+      }
 
-        const min = {{ section.settings.min_height | json }};
-        const nextHeight = Math.max(min, Math.min(16000, Math.ceil(requested)));
-        frame.style.height = nextHeight + 'px';
+      if (event.data.type === 'scorpion-leather-studio:history') {
+        const token = event.data.studio;
+        if (token !== null && (typeof token !== 'string' || token.length > 6000 || !/^[A-Za-z0-9_-]+$/.test(token))) return;
+        const next = new URL(window.location.href);
+        ['studio', 'product', 'family', 'reference', 'variant'].forEach((key) => next.searchParams.delete(key));
+        if (token) next.searchParams.set('studio', token);
+        window.history.replaceState(window.history.state, '', next.toString());
       }
     };
 
+    const onFrameError = () => { window.clearTimeout(readyTimer); setWaitingState('Scorpion Leather Studio could not be loaded.', true); };
+    const onRetry = () => loadFrame(true);
+    const cleanup = () => {
+      if (destroyed) return;
+      destroyed = true;
+      window.clearTimeout(readyTimer);
+      if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+      window.removeEventListener('message', onMessage);
+      frame.removeEventListener('error', onFrameError);
+      retry?.removeEventListener('click', onRetry);
+      document.removeEventListener('shopify:section:unload', onSectionUnload);
+      delete section.dataset.slsMounted;
+    };
+    const onSectionUnload = (event) => {
+      if (event.target === section || (event.target instanceof Node && section.contains(event.target))) cleanup();
+    };
+
     window.addEventListener('message', onMessage);
+    frame.addEventListener('error', onFrameError);
+    retry?.addEventListener('click', onRetry);
+    document.addEventListener('shopify:section:unload', onSectionUnload);
+    loadFrame(false);
   })();
 </script>
 
@@ -142,49 +195,12 @@
   "tag": "section",
   "class": "section-custom-leather-studio",
   "settings": [
-    {
-      "type": "text",
-      "id": "studio_url",
-      "label": "Studio URL",
-      "info": "Use the stable production URL, ideally a Scorpion subdomain such as https://studio.scorpionwesternwear.com"
-    },
-    {
-      "type": "text",
-      "id": "iframe_title",
-      "label": "Accessibility title",
-      "default": "Scorpion Western Wear — Scorpion Leather Studio"
-    },
-    {
-      "type": "range",
-      "id": "max_width",
-      "label": "Maximum width",
-      "min": 900,
-      "max": 1800,
-      "step": 50,
-      "unit": "px",
-      "default": 1500
-    },
-    {
-      "type": "range",
-      "id": "min_height",
-      "label": "Initial height",
-      "min": 600,
-      "max": 1800,
-      "step": 100,
-      "unit": "px",
-      "default": 1200
-    },
-    {
-      "type": "color",
-      "id": "background",
-      "label": "Background",
-      "default": "#080808"
-    }
+    { "type": "text", "id": "studio_url", "label": "Studio URL", "info": "Use the stable production URL, ideally a Scorpion subdomain such as https://studio.scorpionwesternwear.com" },
+    { "type": "text", "id": "iframe_title", "label": "Accessibility title", "default": "Scorpion Western Wear — Scorpion Leather Studio" },
+    { "type": "range", "id": "max_width", "label": "Maximum width", "min": 900, "max": 1800, "step": 50, "unit": "px", "default": 1500 },
+    { "type": "range", "id": "min_height", "label": "Initial height", "min": 600, "max": 1800, "step": 100, "unit": "px", "default": 1200 },
+    { "type": "color", "id": "background", "label": "Background", "default": "#080808" }
   ],
-  "presets": [
-    {
-      "name": "Scorpion Leather Studio"
-    }
-  ]
+  "presets": [{ "name": "Scorpion Leather Studio" }]
 }
 {% endschema %}

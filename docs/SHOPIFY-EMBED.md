@@ -1,173 +1,33 @@
-# Shopify Integration — Scorpion Custom Leather Studio
+# Shopify Embed Contract
 
-## Architecture
+Scorpion Leather Studio remains independently deployable, but its customer-facing production experience is designed to live inside the Scorpion Western Wear Shopify storefront.
 
-The production storefront does **not** need to move the full Three.js configurator into the Shopify theme bundle.
+## Host -> Studio query contract
 
-Recommended architecture:
+The Shopify section loads the Studio iframe with `embed=1`, an exact `parent_origin`, a stable `host_page`, and optional `studio`, `product`, `family`, `reference`, or `variant` deep-link state.
 
-```text
-scorpionwesternwear.com
-        ↓
-Shopify page /pages/custom-leather-studio
-        ↓
-Custom Leather Studio section
-        ↓
-responsive iframe
-        ↓
-Studio web app / 3D / order engine / API
-```
+The Studio only trusts `host_page` when its origin exactly matches the resolved parent origin. A cross-origin override falls back to a standalone Studio share URL.
 
-This keeps the Shopify theme small while allowing the Studio to use React, Three.js, file intake, server-side order delivery, and future 3D assets.
+## Studio -> Host messages
 
-## 1. Stable Studio URL
+Protocol messages use `version: 1`. The Shopify host validates both `event.source` and `event.origin`.
 
-Use a stable production URL for the deployed app. A Scorpion-owned subdomain is preferable:
+- `scorpion-leather-studio:ready` removes the loading/recovery overlay.
+- `scorpion-leather-studio:resize` updates iframe height through requestAnimationFrame and bounded height limits.
+- `scorpion-leather-studio:history` synchronizes the compact build token into the storefront URL without navigation.
 
-```text
-https://studio.scorpionwesternwear.com
-```
+The Studio targets the exact parent origin when available; wildcard postMessage is retained only as backward-compatible fallback.
 
-The Shopify section automatically adds:
+## Share continuity
 
-```text
-?embed=1
-```
+Standalone sessions share a Studio URL. Embedded sessions share the stable Shopify host page with the compact `studio` token. The iframe keeps separate same-origin history so order preparation never attempts cross-origin history replacement.
 
-Embedded mode removes the duplicate outer Studio heading and reports its document height to the Shopify parent page.
+Share tokens contain configuration state, not customer contact fields or uploaded artwork bytes.
 
-## 2. Add the Shopify section
+## Failure / Theme Editor behavior
 
-Copy:
+The Shopify host has an accessible loading status, 12-second delayed-load recovery state, explicit retry, no-JavaScript fallback, reduced-motion handling, and cleanup on `shopify:section:unload`.
 
-```text
-shopify/sections/scorpion-custom-leather-studio.liquid
-```
+## Verification
 
-into the active Shopify theme's `sections/` directory.
-
-Create a page/template for the Custom Leather Studio and add the **Custom Leather Studio** section through the theme editor.
-
-Set **Studio URL** to the stable production Studio URL.
-
-## 3. Product-page "Customize this" button
-
-Copy:
-
-```text
-shopify/snippets/scorpion-customize-button.liquid
-```
-
-into the theme's `snippets/` directory.
-
-Render it from a product template/block where appropriate:
-
-```liquid
-{% render 'scorpion-customize-button', product: product %}
-```
-
-The button links to:
-
-```text
-/pages/custom-leather-studio?product={{ product.handle }}
-```
-
-The Shopify Studio section forwards that product handle into the embedded app.
-
-The app searches its real Scorpion catalog references and opens the correct family/reference automatically.
-
-## 4. Supported deep links
-
-The Studio supports:
-
-```text
-?product=cowhide-radio-harness-black
-?family=radio-harness
-?family=radio-harness&reference=radio-black
-?family=radio-harness&reference=radio-black&variant=SC-LRH-BLK-XL-002
-```
-
-A serialized customer build still uses:
-
-```text
-?studio=<build-token>
-```
-
-and takes precedence over catalog-target parameters.
-
-## 5. Responsive iframe protocol
-
-The embedded Studio posts only layout messages to its parent:
-
-```js
-{
-  type: 'scorpion-leather-studio:resize',
-  version: 1,
-  height: 2480
-}
-```
-
-and:
-
-```js
-{
-  type: 'scorpion-leather-studio:ready',
-  version: 1
-}
-```
-
-No customer name, email, phone, artwork, or order content is transmitted to the Shopify parent page through `postMessage`.
-
-The Shopify section validates both the iframe window and expected Studio origin before honoring messages.
-
-## 6. Order API
-
-Order submission continues to happen directly from the Studio app to:
-
-```text
-POST /api/order-requests
-```
-
-This avoids exposing SMTP credentials or future Shopify Admin credentials to the theme/browser.
-
-## 7. Theme sandbox permissions
-
-The section iframe permits the minimum features currently needed by the Studio:
-
-- scripts
-- same-origin app behavior
-- forms
-- build-sheet downloads
-- print packet popups
-- user-initiated email fallback navigation
-- clipboard writes
-
-Review the sandbox list again before broad public launch if new browser capabilities are added.
-
-## 8. Recommended production URL sequence
-
-Development:
-
-```text
-Vercel production deployment
-```
-
-Then:
-
-```text
-studio.scorpionwesternwear.com
-```
-
-Then Shopify:
-
-```text
-scorpionwesternwear.com/pages/custom-leather-studio
-```
-
-Customers remain visually inside the Scorpion storefront while the specialized application runs independently underneath.
-
-## 9. Product eligibility
-
-The Studio currently includes the Scorpion leather families already assembled in the application catalog. Product-page buttons should only be added to items that Scorpion wants to accept customization inquiries for.
-
-The Studio treats tooling, lettering, artwork, construction changes, and non-stock modifications as **requests**, not guaranteed production options. Scorpion remains the authority on feasibility and final pricing.
+Run `npm run smoke:shopify` for static Liquid/schema/protocol checks. Playwright also exercises the host bridge on desktop and mobile.

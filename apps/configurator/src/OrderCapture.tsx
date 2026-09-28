@@ -11,7 +11,7 @@ import {
 import type { StudioProductFamily, StudioReference, StudioVariant } from './studio-catalog'
 import { storefrontImage } from './studio-media'
 import type { ArtworkAttachment } from './studio-types'
-import { buildShareUrl } from './studio-url'
+import { buildShareUrl, buildStudioStateUrl } from './studio-url'
 import { useDebouncedLocalStorage } from './useDebouncedLocalStorage'
 import {
   appendDeliveryDiagnostic,
@@ -125,7 +125,7 @@ function OrderCaptureComponent({
     }
     try {
       const sourceUrl = buildShareUrl(build)
-      window.history.replaceState({}, '', sourceUrl)
+      window.history.replaceState({}, '', buildStudioStateUrl(build))
       const next = createOrderRequest({
         build,
         customer,

@@ -6,7 +6,7 @@ Last updated: 2026-09-28
 
 Repository: `BILGISOLUTIONS/ScorpionLeatherStudio`
 
-V0.26 was promoted to `main` from the exact green head:
+V0.27 is the current shipped release on `main` at exact SHA `30f30c644d02026ec7038e39fb9d829f23aab754`. Exact-main CI `36389541282` passed and GitHub Vercel status reported success.\n\nV0.26 was promoted to `main` from the exact green head:
 
 ```text
 45b773b85cffbca543d8b0a3381f19a5a4330ec1
@@ -14,7 +14,7 @@ V0.26 was promoted to `main` from the exact green head:
 
 This current-state update is documentation-only and follows that promoted release.
 
-Active development branch: `feature/v027-accessibility`, based on verified main `232a21190dfdcfd6718a9d7a2b4ffb1a257efb7f`. V0.27 is pending exact-head CI and desktop/mobile QA; do not treat it as shipped yet.
+Active development branch: `feature/v028-shopify-bridge`, based on verified V0.27 main `30f30c644d02026ec7038e39fb9d829f23aab754`. V0.28 hardens the Shopify iframe host contract and storefront-native share continuity; it is not shipped until exact-head CI/browser QA pass and the green candidate is promoted.
 
 ## Current product scope
 
@@ -221,3 +221,13 @@ Validated V0.26 characteristics:
 - Correction to earlier function notes: the actual guard currently reports **8 API candidates**, including `api/order-requests.test.ts`, representing 7 endpoint source files plus that test. This remains below 12; the old six-function count is stale. No functions added by V0.27.
 - Baseline exact-main CI run `36379000075` verified successful. GitHub Vercel status verifies V0.26 deployment completed; later documentation-only main skipped via ignore step. Direct Vercel connector currently cannot inspect SLS (only EyeFlix listed).
 - Local browser installation failed (browser archive download invalid), agent-browser could not start, and cloud Browser blocks localhost. Browser execution/visual QA must use CI artifacts before promotion.
+
+
+## V0.28 — Shopify host bridge candidate
+
+- Branch: `feature/v028-shopify-bridge`, based on shipped V0.27 main `30f30c644d02026ec7038e39fb9d829f23aab754`.
+- Adds exact-origin, versioned host/iframe ready, resize, and history synchronization.
+- Embedded share links resolve to the Scorpion Western Wear storefront host page; iframe history remains same-origin.
+- Shopify host adds bounded rAF resize, delayed-load retry, no-JavaScript fallback, reduced-motion handling, and Theme Editor unload cleanup.
+- Adds `smoke:shopify`, unit trust/URL coverage, and desktop/mobile Playwright host-bridge coverage.
+- No dependency, API function, polling loop, or internal-tool payload added.
