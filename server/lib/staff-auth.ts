@@ -142,6 +142,10 @@ export function staffHasRole(identity: StaffIdentity, ...roles: StaffRole[]): bo
   return roles.some((role) => identity.roles.includes(role))
 }
 
+export function resolveStaffActor(identity: StaffIdentity, requestedActor = ''): string {
+  return identity.legacy ? requestedActor.trim() : identity.name
+}
+
 export function publicStaffIdentity(identity: StaffIdentity): PublicStaffIdentity {
   return {
     id: identity.id,
