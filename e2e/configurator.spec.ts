@@ -682,6 +682,10 @@ test('V0.26 failed order delivery remains recoverable across reload and keeps a 
   await expect(page.getByRole('status')).toContainText('saved request is safe')
   expect(requestId).toMatch(/^SC-REQ-/u)
 
+  await page.getByTestId('delivery-recovery').screenshot({
+    path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'order-recovery-v026-failure-mobile.png' : 'order-recovery-v026-failure-desktop.png'}`,
+  })
+
   const [recoveryDownload] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: 'Download private recovery file' }).click(),
