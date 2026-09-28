@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createOrderRequest,
   createStudioBuildId,
@@ -61,6 +61,7 @@ function downloadText(filename: string, content: string) {
 }
 
 function OrderCaptureComponent({
+  sectionRef,
   build,
   family,
   reference,
@@ -68,6 +69,7 @@ function OrderCaptureComponent({
   artwork,
   setStatus,
 }: {
+  sectionRef?: (node: HTMLElement | null) => void
   build: StudioBuildDraft
   family: StudioProductFamily
   reference: StudioReference
@@ -75,6 +77,9 @@ function OrderCaptureComponent({
   artwork: ArtworkAttachment | null
   setStatus: (message: string) => void
 }) {
+  const formRef = useRef<HTMLDivElement>(null)
+  const readyRef = useRef<HTMLDivElement>(null)
+  const pendingReadyFocus = useRef(false)
   const [customer, setCustomer] = useState<CustomerDraft>(loadCustomer)
   const [request, setRequest] = useState<StudioOrderRequest | null>(null)
   const [deliveryState, setDeliveryState] = useState<'idle' | 'sending' | 'sent' | 'unavailable' | 'failed'>('idle')
@@ -105,7 +110,19 @@ function OrderCaptureComponent({
     setAcknowledged(false)
   }, [build])
 
+  useEffect(() => {
+    if (request && pendingReadyFocus.current) {
+      readyRef.current?.focus()
+      pendingReadyFocus.current = false
+    }
+  }, [request])
+
   const prepareRequest = () => {
+    if (issues.length) {
+      formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+      setStatus(issues.map((issue) => issue.message).join(' '))
+      return
+    }
     try {
       const sourceUrl = buildShareUrl(build)
       window.history.replaceState({}, '', sourceUrl)
@@ -126,6 +143,7 @@ function OrderCaptureComponent({
           priceStatus: reference.priceStatus,
         },
       })
+      pendingReadyFocus.current = true
       setRequest(next)
       setDeliveryState('idle')
       setAcknowledged(false)
@@ -298,6 +316,7 @@ function OrderCaptureComponent({
 
   const restoreSavedRequest = () => {
     if (!recoveryCandidate) return
+    pendingReadyFocus.current = true
     setRequest(recoveryCandidate.request)
     setCustomer(recoveryCandidate.request.customer)
     setAcknowledged(recoveryCandidate.receipt?.state === 'accepted')
@@ -393,7 +412,7 @@ function OrderCaptureComponent({
   }
 
   return (
-    <section className="order-capture" aria-label="Custom order request">
+    <section ref={sectionRef} tabIndex={-1} className="order-capture" aria-label="Custom order request">
       <div className="order-capture-heading">
         <div>
           <p className="eyebrow">ORDER CAPTURE</p>
@@ -426,15 +445,18 @@ function OrderCaptureComponent({
         </div>
       ) : null}
 
-      <div className="order-form-grid">
+      <div ref={formRef} className="order-form-grid">
         <label>
           Name *
           <input
+            aria-required="true"
+            aria-invalid={Boolean(issueMap['customer.name'])}
+            aria-describedby={issueMap['customer.name'] ? 'order-name-error' : undefined}
             value={customer.name}
             onChange={(event) => setCustomer({ ...customer, name: event.target.value })}
             autoComplete="name"
           />
-          {issueMap['customer.name'] ? <small className="field-error">{issueMap['customer.name']}</small> : null}
+          {issueMap['customer.name'] ? <small id="order-name-error" className="field-error">{issueMap['customer.name']}</small> : null}
         </label>
         <label>
           Company
@@ -447,16 +469,20 @@ function OrderCaptureComponent({
         <label>
           Email
           <input
+            aria-invalid={Boolean(issueMap['customer.email'] || issueMap['customer.contact'])}
+            aria-describedby={issueMap['customer.email'] ? 'order-email-error' : issueMap['customer.contact'] ? 'order-contact-error' : undefined}
             type="email"
             value={customer.email}
             onChange={(event) => setCustomer({ ...customer, email: event.target.value })}
             autoComplete="email"
           />
-          {issueMap['customer.email'] ? <small className="field-error">{issueMap['customer.email']}</small> : null}
+          {issueMap['customer.email'] ? <small id="order-email-error" className="field-error">{issueMap['customer.email']}</small> : null}
         </label>
         <label>
           Phone
           <input
+            aria-invalid={Boolean(issueMap['customer.contact'])}
+            aria-describedby={issueMap['customer.contact'] ? 'order-contact-error' : undefined}
             type="tel"
             value={customer.phone}
             onChange={(event) => setCustomer({ ...customer, phone: event.target.value })}
@@ -484,7 +510,7 @@ function OrderCaptureComponent({
         </label>
       </div>
 
-      {issueMap['customer.contact'] ? <p className="field-error contact-error">{issueMap['customer.contact']}</p> : null}
+      {issueMap['customer.contact'] ? <p id="order-contact-error" className="field-error contact-error">{issueMap['customer.contact']}</p> : null}
 
       <div className="order-action-row">
         <button className="primary-action" type="button" onClick={prepareRequest}>
@@ -496,7 +522,7 @@ function OrderCaptureComponent({
       </div>
 
       {request ? (
-        <div className="request-ready">
+        <div ref={readyRef} tabIndex={-1} role="region" aria-label="Prepared order request" className="request-ready">
           <div className="request-ready-head">
             <div>
               <span>REQUEST READY</span>

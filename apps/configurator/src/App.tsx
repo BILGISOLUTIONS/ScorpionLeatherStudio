@@ -335,6 +335,7 @@ const ProductFamilyRail = memo(function ProductFamilyRail({
           type="button"
           key={family.id}
           className={selectedId === family.id ? 'is-selected' : ''}
+          aria-pressed={selectedId === family.id}
           onClick={() => onSelect(family)}
         >
           <img src={storefrontImage(family.references[0].image, 160)} alt="" loading="lazy" decoding="async" />
@@ -359,10 +360,7 @@ const ReferencePicker = memo(function ReferencePicker({
 }) {
   return (
     <fieldset className="studio-section">
-      <div className="section-title-row">
-        <legend>1. Starting build</legend>
-        <span>{family.references.length} Scorpion catalog reference{family.references.length === 1 ? '' : 's'}</span>
-      </div>
+      <legend className="section-title-row"><strong>1. Starting build</strong><span>{family.references.length} Scorpion catalog reference{family.references.length === 1 ? '' : 's'}</span></legend>
       <div className="reference-grid">
         {family.references.map((reference) => (
           <button
@@ -401,10 +399,7 @@ const VariantPicker = memo(function VariantPicker({
 
   return (
     <fieldset className="studio-section">
-      <div className="section-title-row">
-        <legend>2. Size / variant</legend>
-        <span>Live catalog identity</span>
-      </div>
+      <legend className="section-title-row"><strong>2. Size / variant</strong><span>Live catalog identity</span></legend>
       <div className="variant-grid">
         {reference.variants.map((variant) => (
           <button
@@ -451,10 +446,7 @@ function PersonalizationEditor({
 
   return (
     <fieldset className="studio-section personalization-section">
-      <div className="section-title-row">
-        <legend>3. Construction & personalization</legend>
-        <span>Preferences are reviewed before production</span>
-      </div>
+      <legend className="section-title-row"><strong>3. Construction & personalization</strong><span>Preferences are reviewed before production</span></legend>
 
       <div className="personalization-block construction-block">
         <div className="field-heading">
@@ -555,6 +547,7 @@ function PersonalizationEditor({
           </div>
           {p.toolingStyle !== 'none' ? (
             <textarea
+              aria-label="Tooling notes"
               value={p.toolingNotes}
               onChange={(event) => update({ toolingNotes: event.target.value })}
               placeholder={p.toolingStyle === 'custom-concept' ? 'Describe the custom tooling concept…' : 'Optional tooling details, border ideas, motifs, depth, etc…'}
@@ -701,6 +694,13 @@ function DeferredOrderCapture({
 }) {
   const anchorRef = useRef<HTMLElement | null>(null)
   const [active, setActive] = useState(false)
+  const focusRequested = useRef(false)
+  const focusOrder = useCallback((node: HTMLElement | null) => {
+    if (node && focusRequested.current) {
+      node.focus({ preventScroll: true })
+      focusRequested.current = false
+    }
+  }, [])
 
   useEffect(() => {
     if (active) return
@@ -736,6 +736,10 @@ function DeferredOrderCapture({
           <p className="eyebrow">ORDER CAPTURE</p>
           <h2>Ready when you are</h2>
           <p>Order tools load as you approach this section.</p>
+          <button type="button" onClick={() => {
+            focusRequested.current = true
+            setActive(true)
+          }}>Open order request</button>
         </div>
       </section>
     )
@@ -744,6 +748,7 @@ function DeferredOrderCapture({
   return (
     <Suspense fallback={<section className="order-capture order-capture-loading" aria-label="Custom order request">Loading order tools…</section>}>
       <OrderCapture
+        sectionRef={focusOrder}
         build={build}
         family={family}
         reference={reference}
@@ -910,6 +915,9 @@ export function App() {
 
   return (
     <main className={`studio-shell multi-studio ${embedded ? 'is-embedded' : ''}`}>
+      <a className="studio-skip-link" href="#studio-customization" onClick={() => {
+        document.getElementById('studio-customization')?.focus({ preventScroll: true })
+      }}>Skip to customization</a>
       <header className="studio-header">
         <div>
           <p className="eyebrow">SCORPION WESTERN WEAR</p>
@@ -935,10 +943,22 @@ export function App() {
       <section className="studio-grid">
         <div className={`viewer-column ${family.supports3D ? 'has-3d' : 'is-static-preview'}`}>
           {family.supports3D ? (
-            <div className="preview-mode-switch" role="tablist" aria-label="Product preview mode">
+            <div className="preview-mode-switch" role="tablist" aria-label="Product preview mode" onKeyDown={(event) => {
+              const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'))
+              const index = tabs.indexOf(event.target as HTMLButtonElement)
+              const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+                : event.key === 'ArrowRight' ? (index + 1) % tabs.length
+                : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : -1
+              if (next < 0) return
+              event.preventDefault()
+              tabs[next].focus()
+            }}>
               <button
                 type="button"
                 role="tab"
+                id="preview-tab-photo"
+                aria-controls="studio-preview-panel"
+                tabIndex={viewerMode === 'photo' ? 0 : -1}
                 aria-selected={viewerMode === 'photo'}
                 className={viewerMode === 'photo' ? 'is-active' : ''}
                 onClick={() => setViewerMode('photo')}
@@ -948,6 +968,9 @@ export function App() {
               <button
                 type="button"
                 role="tab"
+                id="preview-tab-3d"
+                aria-controls="studio-preview-panel"
+                tabIndex={viewerMode === '3d' ? 0 : -1}
                 aria-selected={viewerMode === '3d'}
                 className={viewerMode === '3d' ? 'is-active' : ''}
                 onClick={() => setViewerMode('3d')}
@@ -957,6 +980,8 @@ export function App() {
             </div>
           ) : null}
 
+          <div id="studio-preview-panel" role={family.supports3D ? 'tabpanel' : undefined}
+            aria-labelledby={family.supports3D ? `preview-tab-${viewerMode}` : undefined} tabIndex={0}>
           {family.supports3D && viewerMode === '3d' ? (
             <Suspense fallback={<div className="viewer-panel viewer-loading">Loading interactive 3D…</div>}>
               <WeldingHoodViewer referenceId={reference.id} />
@@ -964,6 +989,8 @@ export function App() {
           ) : (
             <ReferenceStage family={family} reference={reference} />
           )}
+
+          </div>
 
           <ConceptSummary build={build} artwork={artwork} />
 
@@ -985,7 +1012,7 @@ export function App() {
           </section>
         </div>
 
-        <aside className="controls-panel multi-controls">
+        <aside id="studio-customization" className="controls-panel multi-controls" tabIndex={-1} aria-label="Customize your build">
           <div className="product-heading">
             <div className="product-kicker">
               <p className="eyebrow">CUSTOMIZE</p>
@@ -1015,10 +1042,7 @@ export function App() {
           />
 
           <fieldset className="studio-section quantity-section">
-            <div className="section-title-row">
-              <legend>4. Quantity</legend>
-              <span>1–99 pieces</span>
-            </div>
+            <legend className="section-title-row"><strong>4. Quantity</strong><span>1–99 pieces</span></legend>
             <div className="quantity-control">
               <button
                 type="button"

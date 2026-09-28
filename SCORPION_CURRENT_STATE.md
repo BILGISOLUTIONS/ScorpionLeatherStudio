@@ -14,7 +14,7 @@ V0.26 was promoted to `main` from the exact green head:
 
 This current-state update is documentation-only and follows that promoted release.
 
-Active development branch: none. Start the next material batch from current `main`.
+Active development branch: `feature/v027-accessibility`, based on verified main `232a21190dfdcfd6718a9d7a2b4ffb1a257efb7f`. V0.27 is pending exact-head CI and desktop/mobile QA; do not treat it as shipped yet.
 
 ## Current product scope
 
@@ -210,3 +210,14 @@ Validated V0.26 characteristics:
 3. Start the next feature branch from current `main`.
 4. Continue preserving customer/runtime isolation, authenticated staff attribution, bounded diagnostics, and dedicated budgets.
 5. Next high-value gaps: accessibility/keyboard/focus/reduced-motion audit, production Shopify theme compatibility smoke coverage, and cross-device save/share continuity.
+
+## V0.27 — accessibility release candidate
+
+- Adds a keyboard skip link, manually activated preview tabs with Arrow/Home/End navigation, selected-product state, semantic fieldset legends, labeled tooling notes and visible select/textarea/artwork focus.
+- Adds an explicit keyboard path into lazy order capture when intersection observation does not activate it.
+- Connects order errors to fields, focuses the first invalid customer field and moves focus to explicitly prepared/restored packets without stealing focus on passive recovery.
+- New desktop/mobile browser regression coverage checks keyboard flow, lazy isolation, validation, reduced-motion CSS and overflow.
+- Local TypeScript, 79 unit/API tests, production build and raw/gzip budgets pass. Studio initial JS: 238.1 KB raw / 72.9 KB gzip versus 237.0 / 72.5 KB baseline. No dependencies added.
+- Correction to earlier function notes: the actual guard currently reports **8 API candidates**, including `api/order-requests.test.ts`, representing 7 endpoint source files plus that test. This remains below 12; the old six-function count is stale. No functions added by V0.27.
+- Baseline exact-main CI run `36379000075` verified successful. GitHub Vercel status verifies V0.26 deployment completed; later documentation-only main skipped via ignore step. Direct Vercel connector currently cannot inspect SLS (only EyeFlix listed).
+- Local browser installation failed (browser archive download invalid), agent-browser could not start, and cloud Browser blocks localhost. Browser execution/visual QA must use CI artifacts before promotion.

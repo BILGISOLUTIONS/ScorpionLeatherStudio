@@ -71,6 +71,7 @@ function WeldingHoodViewerComponent({ referenceId }: { referenceId: string }) {
             type="button"
             key={key}
             className={cameraPreset === key ? 'is-active' : ''}
+            aria-pressed={cameraPreset === key}
             onClick={() => {
               setCameraPreset(key)
               setAutoRotate(false)
@@ -85,11 +86,12 @@ function WeldingHoodViewerComponent({ referenceId }: { referenceId: string }) {
         <button
           type="button"
           className={autoRotate ? 'is-active' : ''}
+          aria-pressed={autoRotate}
           onClick={() => setAutoRotate((value) => !value)}
         >
           {autoRotate ? 'Stop spin' : 'Auto spin'}
         </button>
-        <button type="button" onClick={() => setVisorOpen((open) => !open)}>
+        <button type="button" aria-pressed={visorOpen} onClick={() => setVisorOpen((open) => !open)}>
           {visorOpen ? 'Close visor' : 'Open visor'}
         </button>
       </div>
