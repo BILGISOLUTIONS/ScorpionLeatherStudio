@@ -2393,3 +2393,31 @@ a:focus-visible,
 legend.section-title-row { width: 100%; }
 .artwork-upload:focus-within span { outline: 2px solid var(--gold-strong); outline-offset: 3px; }
 #studio-customization { scroll-margin-top: 16px; }
+
+
+/* V0.28 — portable build continuity */
+.build-portability-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.build-portability-actions button {
+  width: 100%;
+}
+
+.build-portability-actions .reset-studio-action {
+  border-style: dashed;
+  color: #b9afa1;
+}
+
+.build-portability-note {
+  margin: 9px 0 0;
+  color: #81796d;
+  font-size: .65rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 420px) {
+  .build-portability-actions {
+    grid-template-columns: 1fr;
+  }
+}

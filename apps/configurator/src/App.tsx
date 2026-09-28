@@ -1,7 +1,9 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createDefaultPersonalization,
+  createStudioBuildExport,
   createStudioBuildId,
+  restoreStudioBuildExport,
   restoreStudioShareToken,
   type EdgePreference,
   type HardwarePreference,
@@ -14,7 +16,7 @@ import {
 import { formatMoney } from '@sls/pricing-engine'
 import { storefrontImage } from './studio-media'
 import type { ArtworkAttachment } from './studio-types'
-import { buildShareUrl } from './studio-url'
+import { buildShareUrl, clearBuildContextUrl } from './studio-url'
 import { useDebouncedLocalStorage } from './useDebouncedLocalStorage'
 import { useLiveCatalogVariant } from './useLiveCatalogVariant'
 import {
@@ -34,6 +36,7 @@ const OrderCapture = lazy(() => import('./OrderCapture'))
 
 const BUILD_STORAGE_KEY = 'scorpion-leather-studio:v004-build'
 const ARTWORK_SESSION_KEY = 'scorpion-leather-studio:v006-artwork'
+const BUILD_FILE_MAX_BYTES = 256 * 1024
 
 const toolingLabels: Record<ToolingStyle, string> = {
   none: 'No tooling',
@@ -91,6 +94,18 @@ const edgeLabels: Record<EdgePreference, string> = {
 
 const ARTWORK_MAX_BYTES = 2 * 1024 * 1024
 const ARTWORK_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf'])
+
+function downloadTextFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'application/json;charset=utf-8' })
+  const href = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = href
+  anchor.download = filename
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(href)
+}
 
 function loadSessionArtwork(): ArtworkAttachment | null {
   if (typeof window === 'undefined') return null
@@ -766,6 +781,7 @@ export function App() {
   const [artwork, setArtwork] = useState<ArtworkAttachment | null>(loadSessionArtwork)
   const [status, setStatus] = useState('')
   const [viewerMode, setViewerMode] = useState<'photo' | '3d'>('photo')
+  const buildFileInputRef = useRef<HTMLInputElement>(null)
 
   const { family, reference, variant } = useMemo(() => resolveStudio(build), [build])
   const liveCatalog = useLiveCatalogVariant(
@@ -802,6 +818,22 @@ export function App() {
     Boolean(build.personalization.additionalNotes.trim())
 
   useDebouncedLocalStorage(BUILD_STORAGE_KEY, build)
+
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const token = url.searchParams.get('studio')
+    if (!token) return
+
+    try {
+      const linkedBuild = normalizeBuild(restoreStudioShareToken(token))
+      if (createStudioBuildId(linkedBuild) === createStudioBuildId(build)) return
+    } catch {
+      // Invalid/stale URL state is removed below.
+    }
+
+    url.searchParams.delete('studio')
+    window.history.replaceState({}, '', url)
+  }, [build])
 
   useEffect(() => {
     if (!embedded || window.parent === window) return
@@ -893,12 +925,60 @@ export function App() {
 
   const shareBuild = async () => {
     const url = buildShareUrl(build)
-    window.history.replaceState({}, '', url)
+    if (!embedded) window.history.replaceState({}, '', url)
+
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: 'Scorpion Leather Studio',
+          text: `${reference.title} · ${createStudioBuildId(build)}`,
+          url,
+        })
+        setStatus('Build shared.')
+        return
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          setStatus('Share canceled.')
+          return
+        }
+      }
+    }
+
     try {
       await navigator.clipboard.writeText(url)
-      setStatus('Shareable build link copied.')
+      setStatus('Portable build link copied.')
     } catch {
-      setStatus('Shareable build is in the address bar. Copy the current URL.')
+      setStatus(embedded
+        ? 'Copy the build link from a browser that allows clipboard access.'
+        : 'Portable build link is in the address bar. Copy the current URL.')
+    }
+  }
+
+  const saveBuildFile = () => {
+    const exported = createStudioBuildExport(build)
+    downloadTextFile(
+      `${createStudioBuildId(build)}.sls-build.json`,
+      JSON.stringify(exported, null, 2),
+    )
+    setStatus('Build file saved. It contains selections and notes, but not uploaded artwork or customer contact details.')
+  }
+
+  const loadBuildFile = async (file: File | undefined) => {
+    if (!file) return
+    if (file.size > BUILD_FILE_MAX_BYTES) {
+      setStatus('Build file is too large. Choose an SLS build file smaller than 256 KB.')
+      return
+    }
+
+    try {
+      const next = normalizeBuild(restoreStudioBuildExport(await file.text()))
+      setBuild(next)
+      setArtwork(null)
+      setViewerMode('photo')
+      window.history.replaceState({}, '', clearBuildContextUrl())
+      setStatus(`Loaded ${createStudioBuildId(next)}. Uploaded artwork is not carried in build files; reattach it if needed.`)
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'This Scorpion build file could not be opened.')
     }
   }
 
@@ -906,10 +986,8 @@ export function App() {
     const next = defaultBuild()
     setBuild(next)
     setArtwork(null)
-    const url = new URL(window.location.href)
-    url.searchParams.delete('studio')
-    url.searchParams.delete('build')
-    window.history.replaceState({}, '', url)
+    setViewerMode('photo')
+    window.history.replaceState({}, '', clearBuildContextUrl())
     setStatus('Studio reset.')
   }
 
@@ -1108,10 +1186,27 @@ export function App() {
               <div><span>Text</span><strong>{build.personalization.textEnabled ? build.personalization.text || 'Pending' : 'None'}</strong></div>
               <div><span>Placement</span><strong>{build.personalization.placement}</strong></div>
             </div>
-            <div className="secondary-actions">
+            <div className="secondary-actions build-portability-actions">
               <button type="button" onClick={shareBuild}>Share build</button>
-              <button type="button" onClick={resetBuild}>Reset studio</button>
+              <button type="button" onClick={saveBuildFile}>Save build file</button>
+              <button type="button" onClick={() => buildFileInputRef.current?.click()}>Open build file</button>
+              <button className="reset-studio-action" type="button" onClick={resetBuild}>Reset studio</button>
+              <input
+                ref={buildFileInputRef}
+                data-testid="build-file-input"
+                hidden
+                type="file"
+                accept=".json,.sls-build.json,application/json"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0]
+                  event.currentTarget.value = ''
+                  void loadBuildFile(file)
+                }}
+              />
             </div>
+            <p className="build-portability-note">
+              Share links and build files carry product selections and customization notes. Uploaded artwork and customer contact details are not included.
+            </p>
             <p className="status" role="status" aria-live="polite">
               {status || 'Build changes save automatically on this device.'}
             </p>

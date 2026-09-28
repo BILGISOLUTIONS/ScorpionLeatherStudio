@@ -72,6 +72,14 @@ export interface StudioBuildDraft {
   hoodConfiguration?: unknown
 }
 
+export interface StudioBuildExportFile {
+  kind: 'scorpion-leather-studio-build'
+  version: 1
+  buildId: string
+  exportedAt: string
+  build: StudioBuildDraft
+}
+
 export interface CustomerDraft {
   name: string
   email: string
@@ -320,6 +328,42 @@ export function restoreStudioShareToken(token: string): StudioBuildDraft {
     return validateSharedBuild(expandShareBuild(JSON.parse(decodeBase64Url(token))))
   } catch {
     throw new Error('This shared Scorpion build is invalid or incompatible.')
+  }
+}
+
+export function createStudioBuildExport(
+  build: StudioBuildDraft,
+  now = new Date(),
+): StudioBuildExportFile {
+  const validated = validateSharedBuild(build)
+  return {
+    kind: 'scorpion-leather-studio-build',
+    version: 1,
+    buildId: createStudioBuildId(validated),
+    exportedAt: now.toISOString(),
+    build: validated,
+  }
+}
+
+export function restoreStudioBuildExport(value: string | unknown): StudioBuildDraft {
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid')
+    const record = parsed as Record<string, unknown>
+    if (
+      record.kind !== 'scorpion-leather-studio-build' ||
+      record.version !== 1 ||
+      typeof record.buildId !== 'string' ||
+      typeof record.exportedAt !== 'string' ||
+      Number.isNaN(Date.parse(record.exportedAt))
+    ) {
+      throw new Error('invalid')
+    }
+    const build = validateSharedBuild(record.build as StudioBuildDraft)
+    if (record.buildId !== createStudioBuildId(build)) throw new Error('invalid')
+    return build
+  } catch {
+    throw new Error('This Scorpion build file is invalid or incompatible.')
   }
 }
 

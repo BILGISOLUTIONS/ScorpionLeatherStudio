@@ -14,7 +14,9 @@ V0.26 was promoted to `main` from the exact green head:
 
 This current-state update is documentation-only and follows that promoted release.
 
-Active development branch: `feature/v027-accessibility`, based on verified main `232a21190dfdcfd6718a9d7a2b4ffb1a257efb7f`. V0.27 is pending exact-head CI and desktop/mobile QA; do not treat it as shipped yet.
+V0.27 is shipped from exact green main `30f30c644d02026ec7038e39fb9d829f23aab754` (exact-main CI `36389541282`: PASS).
+
+Active development branch: `feature/v028-build-portability`, based on V0.27 main `30f30c644d02026ec7038e39fb9d829f23aab754`. V0.28 is pending branch CI and desktop/mobile QA; do not treat it as shipped yet.
 
 ## Current product scope
 
@@ -221,3 +223,15 @@ Validated V0.26 characteristics:
 - Correction to earlier function notes: the actual guard currently reports **8 API candidates**, including `api/order-requests.test.ts`, representing 7 endpoint source files plus that test. This remains below 12; the old six-function count is stale. No functions added by V0.27.
 - Baseline exact-main CI run `36379000075` verified successful. GitHub Vercel status verifies V0.26 deployment completed; later documentation-only main skipped via ignore step. Direct Vercel connector currently cannot inspect SLS (only EyeFlix listed).
 - Local browser installation failed (browser archive download invalid), agent-browser could not start, and cloud Browser blocks localhost. Browser execution/visual QA must use CI artifacts before promotion.
+
+
+## V0.28 — portable build continuity candidate
+
+- Adds canonical share URLs that strip embed/catalog-target query state and fragment anchors before carrying the compact SLS build token.
+- Embedded Studio sharing no longer mutates the iframe URL; standalone sharing keeps the exact shared build in the address bar.
+- If a customer edits a standalone build after sharing/loading it, the now-stale `studio` token is removed automatically so copying the address bar cannot silently share an older configuration.
+- Uses the native Web Share API when available with clipboard fallback.
+- Adds privacy-bounded `.sls-build.json` export/import for device-to-device handoff. Portable build files contain product/configuration selections and notes only; uploaded artwork bytes and customer contact details are not included.
+- Imports are size-bounded to 256 KB, build-ID checked, catalog-normalized, and reset viewer/artwork state deliberately.
+- Reset/open-file flows clear stale product/family/reference/variant/share URL targeting while preserving Shopify embed mode.
+- No dependency, API function, polling loop, or server persistence was added. Dedicated desktop/mobile browser coverage validates canonical sharing, stale-token invalidation, file round-trip, privacy boundary, and horizontal overflow.

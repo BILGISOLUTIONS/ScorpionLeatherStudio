@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   createDefaultPersonalization,
   createOrderRequest,
+  createStudioBuildExport,
   createStudioBuildId,
   createStudioShareToken,
   formatOrderSummary,
+  restoreStudioBuildExport,
   restoreStudioShareToken,
   validateOrderDraft,
   type CustomerDraft,
@@ -47,6 +49,26 @@ describe('order engine', () => {
       .replaceAll('/', '_')
       .replace(/=+$/u, '')
     expect(restoreStudioShareToken(legacy)).toEqual(build)
+  })
+
+  it('exports and restores a portable privacy-bounded build file', () => {
+    const exported = createStudioBuildExport(build, new Date('2026-09-28T07:20:00Z'))
+    expect(exported).toEqual({
+      kind: 'scorpion-leather-studio-build',
+      version: 1,
+      buildId: createStudioBuildId(build),
+      exportedAt: '2026-09-28T07:20:00.000Z',
+      build,
+    })
+    expect(restoreStudioBuildExport(JSON.stringify(exported))).toEqual(build)
+    expect(JSON.stringify(exported)).not.toContain('test@example.com')
+  })
+
+  it('rejects tampered or incompatible portable build files', () => {
+    const exported = createStudioBuildExport(build, new Date('2026-09-28T07:20:00Z'))
+    expect(() => restoreStudioBuildExport(JSON.stringify({ ...exported, buildId: 'SLS-TAMPERED' })))
+      .toThrow('invalid or incompatible')
+    expect(() => restoreStudioBuildExport('{"kind":"wrong"}')).toThrow('invalid or incompatible')
   })
 
   it('requires customer contact information', () => {
