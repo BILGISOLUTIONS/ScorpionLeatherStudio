@@ -156,6 +156,10 @@ test('V0.25 individual workshop identity is lazy, visible, and server-role mirro
   await expect(page.locator('#connection')).toContainText('Connected · Ray')
   expect(scripts.some((url) => url.includes('staff-identity-v025.js'))).toBe(true)
 
+  await page.locator('#staffIdentity').screenshot({
+    path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'staff-identity-v025-chip-mobile.png' : 'staff-identity-v025-chip-desktop.png'}`,
+  })
+
   await page.getByText(requestId).first().click()
 
   await expect(page.locator('#wsReleasedBy')).toHaveValue('Ray')
