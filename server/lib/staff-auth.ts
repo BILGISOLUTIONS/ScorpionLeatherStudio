@@ -98,7 +98,7 @@ function configuredIdentities(): ConfiguredStaffIdentity[] {
   cachedLegacy = legacy
   cachedIdentities = parseConfiguredIdentities(raw)
 
-  if (legacy) {
+  if (legacy && !cachedIdentities.some((identity) => safeEqual(identity.token, legacy))) {
     cachedIdentities.push({
       id: 'legacy-shared',
       name: 'Legacy shared access',
