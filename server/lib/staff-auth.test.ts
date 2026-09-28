@@ -4,6 +4,7 @@ import {
   authorizeStaff,
   isStaffAccessConfigured,
   publicStaffIdentity,
+  resolveStaffActor,
   staffHasRole,
 } from './staff-auth'
 
@@ -33,6 +34,7 @@ describe('staff authentication', () => {
     })
     expect(authorizeStaff({ authorization: 'Bearer wrong-token' })).toBe(false)
     expect(authorizeStaff({ authorization: 'Basic abc123' })).toBe(false)
+    expect(resolveStaffActor(identity!, 'Manual Legacy Name')).toBe('Manual Legacy Name')
   })
 
   it('authenticates individual staff tokens without exposing the token', () => {
@@ -63,6 +65,7 @@ describe('staff authentication', () => {
     expect(publicStaffIdentity(ray!)).not.toHaveProperty('token')
     expect(staffHasRole(ray!, 'sales')).toBe(true)
     expect(staffHasRole(ray!, 'qc')).toBe(false)
+    expect(resolveStaffActor(ray!, 'Spoofed Name')).toBe('Ray')
 
     const wilson = authenticateStaff({
       authorization: 'Bearer wilson-individual-secret-token-123',
