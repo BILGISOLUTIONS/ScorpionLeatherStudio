@@ -20,7 +20,7 @@
 
     <section id="login" class="login">
       <h2>Staff access</h2>
-      <p>Enter the staff access token configured on the Studio server. The token is kept only for this browser tab/session and is never added to the URL.</p>
+      <p>Enter your individual staff access key. The key stays only in this browser tab/session and is never added to the URL. Legacy shared access remains available temporarily for rollback.</p>
       <div class="login-row">
         <input id="token" type="password" autocomplete="current-password" placeholder="Staff access token" aria-label="Staff access token" />
         <button id="connect" class="primary" type="button">Open order queue</button>
@@ -42,10 +42,18 @@
           <option value="completed">Completed</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        <div id="staffIdentity" class="staff-identity-v025" hidden>
+          <span class="staff-identity-v025__mark" aria-hidden="true">ID</span>
+          <span class="staff-identity-v025__copy">
+            <strong data-staff-name>Staff</strong>
+            <small data-staff-roles></small>
+          </span>
+        </div>
         <button id="refresh" class="secondary" type="button">Refresh</button>
         <button id="logout" class="secondary danger" type="button">Lock</button>
       </div>
 
+      <p id="staffIdentityLegacy" hidden>Legacy shared access cannot provide individual audit identity. Use named staff access keys for production work.</p>
       <section class="scan-bar" aria-label="Workshop scan lookup">
         <div class="scan-bar__copy">
           <strong>Scan-first workshop lookup</strong>
