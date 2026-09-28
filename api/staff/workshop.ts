@@ -267,14 +267,18 @@ async function handlePatch(req: VercelRequest, res: VercelResponse, identity: St
     return
   }
 
+  const validActions = new Set(['save-progress', 'upload-final-photo', 'complete', 'create-revision'])
+  if (!validActions.has(action)) {
+    res.status(422).json({ ok: false, code: 'INVALID_WORKSHOP_ACTION' })
+    return
+  }
+
   const allowed =
     action === 'complete'
       ? staffHasRole(identity, 'qc')
       : action === 'create-revision'
         ? staffHasRole(identity, 'workshop')
-        : action === 'save-progress' || action === 'upload-final-photo'
-          ? staffHasRole(identity, 'workshop', 'qc')
-          : false
+        : staffHasRole(identity, 'workshop', 'qc')
 
   if (!allowed) {
     res.status(403).json({
