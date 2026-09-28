@@ -254,6 +254,70 @@ test('Shopify host bridge keeps share URLs on the storefront and syncs parent hi
 })
 
 
+test('V0.29 saves locally and shared links restore the build without customer data', async ({ page }, testInfo) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: async (data: ShareData) => {
+        ;(window as typeof window & { __slsShared?: ShareData }).__slsShared = data
+      },
+    })
+  })
+
+  await page.goto('/?product=cowhide-radio-harness-black')
+  await page.getByRole('button', { name: 'Western floral', exact: true }).click()
+  await page.getByRole('checkbox', { name: /Add text \/ name \/ monogram/i }).check()
+  await page.getByLabel('Custom text').fill('CROSS DEVICE')
+  await page.getByLabel('Quantity').fill('3')
+
+  const continuity = page.getByTestId('build-continuity')
+  await expect(continuity).toHaveAttribute('data-save-state', 'saved')
+  await expect(continuity).toContainText('Saved on this device')
+
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Western floral', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByLabel('Custom text')).toHaveValue('CROSS DEVICE')
+  await expect(page.getByLabel('Quantity')).toHaveValue('3')
+
+  const deferredOrder = page.getByTestId('order-capture-deferred')
+  if (await deferredOrder.count()) await deferredOrder.scrollIntoViewIfNeeded()
+  const requestPanel = page.getByRole('region', { name: 'Custom order request' })
+  await expect(requestPanel.getByRole('textbox', { name: /^Name/ })).toBeVisible()
+  await requestPanel.getByRole('textbox', { name: /^Name/ }).fill('Private Customer')
+  await requestPanel.getByRole('textbox', { name: 'Email', exact: true }).fill('private@example.com')
+
+  await page.getByRole('button', { name: 'Share build', exact: true }).click()
+  const sharedUrl = await page.evaluate(() => (
+    (window as typeof window & { __slsShared?: ShareData }).__slsShared?.url
+  ))
+  expect(sharedUrl).toBeTruthy()
+  expect(String(sharedUrl)).not.toContain('private@example.com')
+  expect(String(sharedUrl)).not.toContain('Private Customer')
+
+  await page.evaluate(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+  await page.goto(String(sharedUrl))
+
+  await expect(page.getByRole('button', { name: 'Western floral', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByLabel('Custom text')).toHaveValue('CROSS DEVICE')
+  await expect(page.getByLabel('Quantity')).toHaveValue('3')
+
+  const nextDeferred = page.getByTestId('order-capture-deferred')
+  if (await nextDeferred.count()) await nextDeferred.scrollIntoViewIfNeeded()
+  const restoredRequest = page.getByRole('region', { name: 'Custom order request' })
+  await expect(restoredRequest.getByRole('textbox', { name: /^Name/ })).toHaveValue('')
+  await expect(restoredRequest.getByRole('textbox', { name: 'Email', exact: true })).toHaveValue('')
+
+  await fs.mkdir('playwright-output/screenshots', { recursive: true })
+  await page.screenshot({
+    path: `playwright-output/screenshots/v029-continuity-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
+})
+
+
 test('staff console stays isolated and locked without credentials', async ({ page }) => {
   await page.goto('/staff.html')
   await expect(page.getByRole('heading', { name: 'Custom Order Queue' })).toBeVisible()

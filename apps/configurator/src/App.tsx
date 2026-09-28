@@ -16,7 +16,8 @@ import { storefrontImage } from './studio-media'
 import type { ArtworkAttachment } from './studio-types'
 import { currentStudioEmbedContext, studioParentTargetOrigin } from './embed-bridge'
 import { buildShareUrl, buildStudioStateUrl } from './studio-url'
-import { useDebouncedLocalStorage } from './useDebouncedLocalStorage'
+import { copyStudioBuildLink, distributeStudioBuildLink } from './build-continuity'
+import { useBuildLocalSave } from './useBuildLocalSave'
 import { useLiveCatalogVariant } from './useLiveCatalogVariant'
 import {
   findFamily,
@@ -216,17 +217,26 @@ function loadInitialBuild(): StudioBuildDraft {
     }
   }
 
-  const targetedBuild = buildFromCatalogTarget(url)
-  if (targetedBuild) return targetedBuild
-
+  let savedBuild: StudioBuildDraft | null = null
   try {
     const saved = window.localStorage.getItem(BUILD_STORAGE_KEY)
-    if (saved) return normalizeBuild(JSON.parse(saved) as StudioBuildDraft)
+    if (saved) savedBuild = normalizeBuild(JSON.parse(saved) as StudioBuildDraft)
   } catch {
     // Local persistence is optional.
   }
 
-  return defaultBuild()
+  const targetedBuild = buildFromCatalogTarget(url)
+  if (targetedBuild) {
+    const hasExplicitVariant = Boolean(url.searchParams.get('variant')?.trim())
+    const sameCatalogProduct =
+      savedBuild?.familyId === targetedBuild.familyId &&
+      savedBuild.referenceId === targetedBuild.referenceId
+    const compatibleVariant = !hasExplicitVariant || savedBuild?.variantId === targetedBuild.variantId
+    if (savedBuild && sameCatalogProduct && compatibleVariant) return savedBuild
+    return targetedBuild
+  }
+
+  return savedBuild ?? defaultBuild()
 }
 
 function resolveStudio(
@@ -798,7 +808,7 @@ export function App() {
     Boolean(build.personalization.artworkNotes.trim()) ||
     Boolean(build.personalization.additionalNotes.trim())
 
-  useDebouncedLocalStorage(BUILD_STORAGE_KEY, build)
+  const buildSaveState = useBuildLocalSave(BUILD_STORAGE_KEY, build)
 
   useEffect(() => {
     if (!embedded || window.parent === window) return
@@ -898,21 +908,39 @@ export function App() {
     }, studioParentTargetOrigin(embedContext))
   }, [embedded, embedContext])
 
-  const shareBuild = async () => {
+  const prepareShareLink = useCallback(() => {
     const internalUrl = buildStudioStateUrl(build)
     const shareUrl = buildShareUrl(build)
     const studioToken = new URL(internalUrl).searchParams.get('studio')
     window.history.replaceState({}, '', internalUrl)
     syncParentHistory(studioToken)
+    return shareUrl
+  }, [build, syncParentHistory])
 
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      setStatus('Shareable build link copied.')
-    } catch {
+  const shareBuild = async () => {
+    const shareUrl = prepareShareLink()
+    const outcome = await distributeStudioBuildLink(shareUrl)
+    if (outcome === 'shared') {
+      setStatus('Build share sheet opened.')
+    } else if (outcome === 'copied') {
+      setStatus('Build link copied. Send it to continue this build on another device.')
+    } else if (outcome === 'cancelled') {
+      setStatus('Sharing canceled. Your build remains saved on this device.')
+    } else {
       setStatus(embedded
-        ? 'Shareable build is reflected in the storefront address bar. Copy the page URL.'
-        : 'Shareable build is in the address bar. Copy the current URL.')
+        ? 'Sharing was unavailable. The build is reflected in the storefront address bar.'
+        : 'Sharing was unavailable. The build link is in the address bar.')
     }
+  }
+
+  const copyBuildLink = async () => {
+    const shareUrl = prepareShareLink()
+    const copied = await copyStudioBuildLink(shareUrl)
+    setStatus(copied
+      ? 'Build link copied. Open it on another device to continue.'
+      : embedded
+        ? 'Clipboard access was unavailable. Copy the storefront page URL instead.'
+        : 'Clipboard access was unavailable. Copy the current page URL instead.')
   }
 
   const resetBuild = () => {
@@ -1121,12 +1149,37 @@ export function App() {
               <div><span>Text</span><strong>{build.personalization.textEnabled ? build.personalization.text || 'Pending' : 'None'}</strong></div>
               <div><span>Placement</span><strong>{build.personalization.placement}</strong></div>
             </div>
+            <div
+              className="build-continuity"
+              data-testid="build-continuity"
+              data-save-state={buildSaveState}
+              aria-label="Build save and continuity"
+            >
+              <div className="build-continuity__state">
+                <span className="build-continuity__dot" aria-hidden="true" />
+                <div>
+                  <strong>
+                    {buildSaveState === 'saved'
+                      ? 'Saved on this device'
+                      : buildSaveState === 'saving'
+                        ? 'Saving build…'
+                        : 'Device save unavailable'}
+                  </strong>
+                  <small>
+                    A build link carries product choices, customization selections, and notes. Contact details and uploaded artwork are not included.
+                  </small>
+                </div>
+              </div>
+            </div>
             <div className="secondary-actions">
               <button type="button" onClick={shareBuild}>Share build</button>
+              <button type="button" onClick={copyBuildLink}>Copy build link</button>
               <button type="button" onClick={resetBuild}>Reset studio</button>
             </div>
             <p className="status" role="status" aria-live="polite">
-              {status || 'Build changes save automatically on this device.'}
+              {status || (buildSaveState === 'unavailable'
+                ? 'Use Share build or Copy build link to keep this configuration.'
+                : 'Build changes save automatically on this device.')}
             </p>
           </section>
         </aside>

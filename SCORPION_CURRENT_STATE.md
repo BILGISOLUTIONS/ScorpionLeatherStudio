@@ -6,7 +6,7 @@ Last updated: 2026-09-28
 
 Repository: `BILGISOLUTIONS/ScorpionLeatherStudio`
 
-V0.27 is the current shipped release on `main` at exact SHA `30f30c644d02026ec7038e39fb9d829f23aab754`. Exact-main CI `36389541282` passed and GitHub Vercel status reported success.\n\nV0.26 was promoted to `main` from the exact green head:
+V0.28 is the current shipped release on `main` at exact SHA `00b65d6f0ab4910a5af289dde7cc7a722ced6519`. Exact-main CI `36393027691` passed and GitHub Vercel status reported success.\n\nV0.26 was promoted to `main` from the exact green head:
 
 ```text
 45b773b85cffbca543d8b0a3381f19a5a4330ec1
@@ -14,7 +14,7 @@ V0.27 is the current shipped release on `main` at exact SHA `30f30c644d02026ec70
 
 This current-state update is documentation-only and follows that promoted release.
 
-Active development branch: `feature/v028-shopify-bridge`, based on verified V0.27 main `30f30c644d02026ec7038e39fb9d829f23aab754`. V0.28 hardens the Shopify iframe host contract and storefront-native share continuity; it is not shipped until exact-head CI/browser QA pass and the green candidate is promoted.
+Active development branch: `feature/v029-build-continuity`, based on shipped V0.28 main `00b65d6f0ab4910a5af289dde7cc7a722ced6519`. V0.29 improves local resume and cross-device share continuity without adding a backend dependency or Vercel function.
 
 ## Current product scope
 
@@ -223,7 +223,7 @@ Validated V0.26 characteristics:
 - Local browser installation failed (browser archive download invalid), agent-browser could not start, and cloud Browser blocks localhost. Browser execution/visual QA must use CI artifacts before promotion.
 
 
-## V0.28 — Shopify host bridge candidate
+## V0.28 — Shopify host bridge — shipped
 
 - Branch: `feature/v028-shopify-bridge`, based on shipped V0.27 main `30f30c644d02026ec7038e39fb9d829f23aab754`.
 - Adds exact-origin, versioned host/iframe ready, resize, and history synchronization.
@@ -231,3 +231,14 @@ Validated V0.26 characteristics:
 - Shopify host adds bounded rAF resize, delayed-load retry, no-JavaScript fallback, reduced-motion handling, and Theme Editor unload cleanup.
 - Adds `smoke:shopify`, unit trust/URL coverage, and desktop/mobile Playwright host-bridge coverage.
 - No dependency, API function, polling loop, or internal-tool payload added.
+
+
+## V0.29 — customer build continuity candidate
+
+- Branch: `feature/v029-build-continuity`, based on shipped V0.28 main `00b65d6f0ab4910a5af289dde7cc7a722ced6519`.
+- Adds explicit customer-facing device-save state plus a compact continuity/privacy explanation in the build summary.
+- Adds native Web Share support with clipboard fallback and a separate Copy build link action. Shopify iframe permission policy now allows `web-share` in addition to clipboard write.
+- Same-product Shopify deep links can resume the locally saved configuration instead of resetting it on reload; explicit incompatible variant targets remain authoritative.
+- Share links continue to carry configuration only. Contact details and uploaded artwork are intentionally not serialized into the build token.
+- Adds pure unit coverage for share/copy outcomes and desktop/mobile Playwright coverage that saves, reloads, shares, clears browser storage, opens the shared URL, and verifies configuration restoration with customer fields absent.
+- No new dependency, API function, polling loop, cloud persistence, or global internal-tool payload.
