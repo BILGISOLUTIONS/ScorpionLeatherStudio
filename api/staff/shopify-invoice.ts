@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { authorizeStaff, isStaffAccessConfigured } from '../../server/lib/staff-auth'
+import { authenticateStaff, isStaffAccessConfigured, staffHasRole } from '../../server/lib/staff-auth'
 import { isShopifyDraftOrderConfigured, sendShopifyDraftInvoice } from '../../server/lib/shopify-draft'
 import { getSupabaseConfiguration, supabaseHeaders } from '../../server/lib/supabase'
 
@@ -43,9 +43,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(503).json({ ok: false, code: 'STAFF_ACCESS_NOT_CONFIGURED' })
     return
   }
-  if (!authorizeStaff(req.headers as Record<string, string | string[] | undefined>)) {
+  const identity = authenticateStaff(req.headers as Record<string, string | string[] | undefined>)
+  if (!identity) {
     res.setHeader('WWW-Authenticate', 'Bearer realm="Scorpion Staff"')
     res.status(401).json({ ok: false, code: 'UNAUTHORIZED' })
+    return
+  }
+  if (!staffHasRole(identity, 'sales')) {
+    res.status(403).json({
+      ok: false,
+      code: 'FORBIDDEN',
+      message: 'Shopify quote and payment actions require the sales role.',
+    })
     return
   }
   if (!isShopifyDraftOrderConfigured()) {
