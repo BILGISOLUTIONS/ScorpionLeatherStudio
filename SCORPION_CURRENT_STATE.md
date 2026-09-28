@@ -6,10 +6,10 @@ Last updated: 2026-09-27
 
 Repository: `BILGISOLUTIONS/ScorpionLeatherStudio`
 
-V0.24 was promoted to `main` from the exact green head:
+V0.25 was promoted to `main` from the exact green head:
 
 ```text
-9ec15838b4ca96395dc817dc9561eb880903cd21
+d91c7f1a374be5709cf4ce3d8f444ffa62ca5346
 ```
 
 This current-state update is documentation-only and follows that promoted release.
@@ -47,6 +47,7 @@ Key internal tools are separate/lazy entries or modules:
 - `/staff-workshop-v022.js` — lazy workshop revision/QC operations
 - `/staff-scan-v023.js` — lazy scan/QR workflow
 - V0.24 adds `/staff-focus-v024.js` + `/staff-focus-v024.css`, both lazy
+- V0.25 adds `/staff-identity-v025.js` + `/staff-identity-v025.css`, both lazy after successful staff authentication
 
 Vercel function count is enforced below the Hobby limit; current architecture uses 6 deployable API functions.
 
@@ -131,9 +132,46 @@ Validated V0.24 characteristics:
 - released build/revision identity remains pinned;
 - desktop/mobile Playwright QA is green.
 
+
+
+### V0.25 — shipped
+
+Individual staff identity, role enforcement, and authenticated audit attribution.
+
+Shipped to `main` from exact green head `d91c7f1a374be5709cf4ce3d8f444ffa62ca5346`.
+
+Implemented:
+
+- preferred server configuration via `SCORPION_STAFF_IDENTITIES_JSON`
+- stable individual staff ID, display name, unique access key, and explicit roles
+- roles: `viewer`, `sales`, `workshop`, `qc`, `admin`
+- temporary `SCORPION_STAFF_TOKEN` legacy admin fallback for rollback
+- server-side role enforcement for order, Shopify, workshop, revision, progress, photo and final-QC actions
+- authenticated actor resolution so individual staff cannot spoof another operator name
+- workshop audit entries now include actor ID and authenticated roles
+- existing human-readable released/QC identity fields remain compatible
+- staff API responses expose only public identity metadata, never access keys
+- compact authenticated identity chip in the staff console
+- individual actor fields are prefilled/read-only
+- controls outside the authenticated role are disabled in the browser while server authorization remains authoritative
+- V0.25 UI/CSS is lazy and staff-only
+- customer Studio never loads V0.25 assets
+- initial staff HTML and initial staff JS/CSS stayed inside their pre-existing budgets; no budget increases were used
+- desktop/mobile Playwright coverage and dedicated visual QA for the identity chip
+- documentation in `docs/STAFF-IDENTITY.md`
+
+Validated V0.25 characteristics:
+
+- exact feature head passed TypeScript, unit/API tests, production build, bundle budgets, Vercel function budget, desktop Chromium and mobile Chromium;
+- final desktop/mobile identity chip visual QA passed;
+- legacy access remains available for safe rollout but is explicitly identified as non-individual audit access;
+- Vercel deployable function count remains within the existing Hobby constraint;
+- storefront runtime remains unchanged by staff identity hardening.
+
 ## Immediate recovery steps
 
 1. Verify the latest exact-`main` CI is green after this documentation-only state update.
-2. Treat V0.24 as shipped.
+2. Treat V0.25 as shipped.
 3. Start the next feature branch from current `main`.
-4. Continue preserving customer/runtime isolation and dedicated budgets for internal staff tooling.
+4. Continue preserving customer/runtime isolation, authenticated staff attribution, and dedicated budgets for internal tooling.
+5. Next high-value gap: structured telemetry/customer-safe recovery or production accessibility/theme compatibility without adding polling or storefront bloat.
