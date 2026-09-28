@@ -15,7 +15,13 @@ import {
   createWorkshopFinalPhotoSignedUrl,
   persistWorkshopFinalPhoto,
 } from '../../server/lib/order-store'
-import { authorizeStaff, isStaffAccessConfigured } from '../../server/lib/staff-auth'
+import {
+  authenticateStaff,
+  isStaffAccessConfigured,
+  publicStaffIdentity,
+  staffHasRole,
+  type StaffIdentity,
+} from '../../server/lib/staff-auth'
 import { getSupabaseConfiguration, supabaseHeaders } from '../../server/lib/supabase'
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024
@@ -107,6 +113,7 @@ function paymentConfirmed(order: StoredOrder): boolean {
 }
 
 function auditEntry(
+  identity: StaffIdentity,
   actor: string,
   action: string,
   revisionId: string | null | undefined,
@@ -115,6 +122,8 @@ function auditEntry(
   return {
     at: new Date().toISOString(),
     actor: actor.trim(),
+    actorId: identity.id,
+    actorRoles: identity.roles,
     action,
     revisionId: revisionId ?? null,
     ...(detail ? { detail: detail.slice(0, 800) } : {}),
@@ -211,7 +220,7 @@ async function responseState(order: StoredOrder) {
   }
 }
 
-async function handleGet(req: VercelRequest, res: VercelResponse) {
+async function handleGet(req: VercelRequest, res: VercelResponse, identity: StaffIdentity) {
   const config = getSupabaseConfiguration()
   if (!config) {
     res.status(503).json({ ok: false, code: 'ORDER_STORE_NOT_CONFIGURED' })
@@ -228,10 +237,14 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     res.status(404).json({ ok: false, code: 'ORDER_NOT_FOUND' })
     return
   }
-  res.status(200).json({ ok: true, ...(await responseState(order)) })
+  res.status(200).json({
+    ok: true,
+    staffIdentity: publicStaffIdentity(identity),
+    ...(await responseState(order)),
+  })
 }
 
-async function handlePatch(req: VercelRequest, res: VercelResponse) {
+async function handlePatch(req: VercelRequest, res: VercelResponse, identity: StaffIdentity) {
   const config = getSupabaseConfiguration()
   if (!config) {
     res.status(503).json({ ok: false, code: 'ORDER_STORE_NOT_CONFIGURED' })
@@ -241,7 +254,8 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
   const body = parseBody(req)
   const requestId = typeof body.requestId === 'string' ? body.requestId.trim() : ''
   const action = typeof body.action === 'string' ? body.action.trim() : ''
-  const actor = typeof body.actor === 'string' ? body.actor.trim() : ''
+  const requestedActor = typeof body.actor === 'string' ? body.actor.trim() : ''
+  const actor = identity.legacy ? requestedActor : identity.name
 
   if (!/^SC-REQ-/u.test(requestId)) {
     res.status(422).json({ ok: false, code: 'INVALID_REQUEST_ID' })
@@ -249,6 +263,24 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
   }
   if (!actor || actor.length > 120) {
     res.status(422).json({ ok: false, code: 'WORKSHOP_ACTOR_REQUIRED' })
+    return
+  }
+
+  const allowed =
+    action === 'complete'
+      ? staffHasRole(identity, 'qc')
+      : action === 'create-revision'
+        ? staffHasRole(identity, 'workshop')
+        : action === 'save-progress' || action === 'upload-final-photo'
+          ? staffHasRole(identity, 'workshop', 'qc')
+          : false
+
+  if (!allowed) {
+    res.status(403).json({
+      ok: false,
+      code: 'FORBIDDEN',
+      message: 'This staff identity does not have permission for the requested workshop action.',
+    })
     return
   }
 
@@ -291,7 +323,7 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
 
     const next = await patchOrder(config, requestId, {
       workshop_progress: progress,
-      workshop_audit_log: appendAudit(order, auditEntry(actor, 'progress-saved', packet.revisionId)),
+      workshop_audit_log: appendAudit(order, auditEntry(identity, actor, 'progress-saved', packet.revisionId)),
     })
     res.status(200).json({ ok: true, ...(await responseState(next)) })
     return
@@ -325,7 +357,7 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
       workshop_final_photo_size: photo.size,
       workshop_final_photo_storage_path: stored.path,
       workshop_final_photo_sha256: stored.sha256,
-      workshop_audit_log: appendAudit(order, auditEntry(actor, 'final-photo-stored', packet.revisionId, photo.name)),
+      workshop_audit_log: appendAudit(order, auditEntry(identity, actor, 'final-photo-stored', packet.revisionId, photo.name)),
     })
     res.status(200).json({ ok: true, ...(await responseState(next)) })
     return
@@ -348,7 +380,7 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
       status: 'completed',
       workshop_qc_completed_at: result.completedAt,
       workshop_qc_completed_by: result.completedBy,
-      workshop_audit_log: appendAudit(order, auditEntry(actor, 'final-qc-completed', packet.revisionId)),
+      workshop_audit_log: appendAudit(order, auditEntry(identity, actor, 'final-qc-completed', packet.revisionId)),
     })
     res.status(200).json({ ok: true, completed: result, ...(await responseState(next)) })
     return
@@ -429,7 +461,7 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
       workshop_final_photo_sha256: null,
       workshop_audit_log: appendAudit(
         order,
-        auditEntry(actor, 'controlled-revision-created', nextPacket.revisionId, `${packet.revisionId} -> ${nextPacket.revisionId}: ${reason}`),
+        auditEntry(identity, actor, 'controlled-revision-created', nextPacket.revisionId, `${packet.revisionId} -> ${nextPacket.revisionId}: ${reason}`),
       ),
     })
     res.status(200).json({
@@ -452,18 +484,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(503).json({ ok: false, code: 'STAFF_ACCESS_NOT_CONFIGURED' })
     return
   }
-  if (!authorizeStaff(req.headers as Record<string, string | string[] | undefined>)) {
+  const identity = authenticateStaff(req.headers as Record<string, string | string[] | undefined>)
+  if (!identity) {
     unauthorized(res)
     return
   }
 
   try {
     if (req.method === 'GET') {
-      await handleGet(req, res)
+      await handleGet(req, res, identity)
       return
     }
     if (req.method === 'PATCH') {
-      await handlePatch(req, res)
+      await handlePatch(req, res, identity)
       return
     }
     res.setHeader('Allow', 'GET, PATCH')
