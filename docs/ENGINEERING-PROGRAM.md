@@ -25,8 +25,6 @@ Scorpion Leather Studio is being treated as a product platform rather than a sin
 - preserve photo-first customer UX while 3D fidelity matures
 
 ### Next
-- individual authenticated staff accounts and immutable audit events
-- digital workshop QC completion, controlled production revisions and final-photo evidence
 - structured telemetry and customer-safe recovery states
 - accessibility + keyboard/focus + reduced-motion audit
 - production Shopify theme compatibility/smoke suite
@@ -47,3 +45,8 @@ The welding hood must prove:
 - production monitoring
 
 Only then should the engine be scaled across the rest of the customizable catalog.
+
+
+## V0.25 staff identity hardening
+
+V0.25 moves the staff console from shared-token-only operation to individual staff access keys with server-enforced roles and authenticated workshop audit attribution. The legacy shared token remains temporarily available for rollback. Staff identity UI remains lazy and customer storefront payload is unchanged.
