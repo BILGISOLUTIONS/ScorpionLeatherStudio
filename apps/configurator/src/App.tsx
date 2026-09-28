@@ -14,7 +14,8 @@ import {
 import { formatMoney } from '@sls/pricing-engine'
 import { storefrontImage } from './studio-media'
 import type { ArtworkAttachment } from './studio-types'
-import { currentStudioEmbedContext, studioParentTargetOrigin } from './embed-bridge'\nimport { buildShareUrl, buildStudioStateUrl } from './studio-url'
+import { currentStudioEmbedContext, studioParentTargetOrigin } from './embed-bridge'
+import { buildShareUrl, buildStudioStateUrl } from './studio-url'
 import { useDebouncedLocalStorage } from './useDebouncedLocalStorage'
 import { useLiveCatalogVariant } from './useLiveCatalogVariant'
 import {
