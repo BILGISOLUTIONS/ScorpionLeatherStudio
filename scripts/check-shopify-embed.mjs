@@ -10,9 +10,10 @@ function requireMarker(source, marker, label) {
   console.log(`✓ ${label}`)
 }
 
-const schemaMatch = section.match(/{% schema %}\s*([\s\S]*?)\s*{% endschema %}/u)
-if (!schemaMatch) throw new Error('Shopify embed smoke check failed: section schema block missing.')
-const schema = JSON.parse(schemaMatch[1])
+const schemaStart = section.indexOf('{% schema %}')
+const schemaEnd = section.indexOf('{% endschema %}', schemaStart + 1)
+if (schemaStart < 0 || schemaEnd < 0) throw new Error('Shopify embed smoke check failed: section schema block missing.')
+const schema = JSON.parse(section.slice(schemaStart + '{% schema %}'.length, schemaEnd).trim())
 if (schema.name !== 'Scorpion Leather Studio') throw new Error('Shopify embed smoke check failed: unexpected section schema name.')
 console.log('✓ Section schema parses')
 
