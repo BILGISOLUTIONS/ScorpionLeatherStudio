@@ -8,9 +8,9 @@ Scorpion Leather Studio is being treated as a product platform rather than a sin
 2. **Digital-twin pipeline** — physical capture, reconstruction contracts, asset QA, controlled promotion, LOD/compression, visual regression and fidelity review.
 3. **Material pipeline** — calibrated field capture, processing, QA, promotion, texture-tier governance and renderer parity.
 4. **Commerce integrity** — live Shopify reconciliation, trusted pricing, inventory/SKU mapping, draft-order delivery, idempotency and order reconstruction.
-5. **Workshop operations** — V0.20 now provides release-gated manufacturing specifications, build sheets, revision identity, durable artwork provenance and QC checklists; digital signoff/revision history remains next.
-6. **Staff operations** — authenticated order queue, asset/material administration, failure recovery and auditability.
-7. **Reliability/observability** — structured client/API errors, release health, performance telemetry, order-delivery telemetry and alert thresholds.
+5. **Workshop operations** — release-gated manufacturing specifications, controlled revisions, persisted progress/final QC, final-photo evidence, QR scan flow and low-distraction Focus Station.
+6. **Staff operations** — individual role-aware authentication, quote/Shopify/workshop controls, asset/material administration and authenticated audit attribution.
+7. **Reliability/observability** — V0.26 adds bounded local delivery diagnostics, server correlation traces and recoverable customer failure states; release health and aggregate privacy-safe monitoring remain future work.
 8. **Security/privacy** — staff authorization, secret isolation, bounded uploads, input validation, rate limiting, data retention and least-privilege service access.
 9. **Quality engineering** — unit/contract/browser tests, accessibility automation plus manual review, visual regression, device matrix and production smoke tests.
 10. **Platform/release engineering** — bundle/function budgets, feature-branch CI without Vercel waste, exact-SHA promotion, rollback and environment parity.
@@ -25,10 +25,10 @@ Scorpion Leather Studio is being treated as a product platform rather than a sin
 - preserve photo-first customer UX while 3D fidelity matures
 
 ### Next
-- structured telemetry and customer-safe recovery states
 - accessibility + keyboard/focus + reduced-motion audit
 - production Shopify theme compatibility/smoke suite
 - customer save/share continuity beyond a single browser device
+- privacy-safe aggregate release health/alerting only where it provides operational value
 
 ### Before broad catalog expansion
 The welding hood must prove:
@@ -50,3 +50,8 @@ Only then should the engine be scaled across the rest of the customizable catalo
 ## V0.25 staff identity hardening
 
 V0.25 moves the staff console from shared-token-only operation to individual staff access keys with server-enforced roles and authenticated workshop audit attribution. The legacy shared token remains temporarily available for rollback. Staff identity UI remains lazy and customer storefront payload is unchanged.
+
+
+## V0.26 customer-safe recovery and tracing
+
+V0.26 adds request-scoped server trace IDs, bounded local delivery receipts, session-only privacy-safe diagnostic events, exact-build request restoration, retry/recovery UI, and private recovery packet export. It adds no polling, third-party telemetry SDK, new Vercel function, or initial storefront payload. Recovery remains inside the already-lazy order-capture workflow.
