@@ -28,7 +28,7 @@ textarea{min-height:110px;resize:vertical;line-height:1.45}
 .danger{border-color:#74483e;color:#e0a18f}
 .error{color:var(--danger);font-size:.72rem;min-height:1em;margin-top:10px}
 .app[hidden],.login[hidden]{display:none!important}
-.toolbar{display:grid;grid-template-columns:minmax(200px,1fr) minmax(160px,220px) auto auto;gap:8px;align-items:center;margin:18px 0}
+.toolbar{display:grid;grid-template-columns:minmax(200px,1fr) minmax(160px,220px) auto auto auto;gap:8px;align-items:center;margin:18px 0}
 .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 0 14px}
 .stat{border:1px solid var(--border);background:var(--panel);padding:12px}
 .stat span{display:block;color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.08em}
