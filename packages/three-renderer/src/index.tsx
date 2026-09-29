@@ -226,41 +226,41 @@ export function validateCustomizationLayers(
   const ids = new Set<string>()
 
   for (const layer of layers) {
-    const prefix = \`customizationLayers.\${layer.id || '(unnamed)'}\`
+    const prefix = `customizationLayers.${layer.id || '(unnamed)'}`
     if (!layer.id.trim()) {
       issues.push({ path: prefix, message: 'Customization preview layer requires a stable id.' })
     } else if (ids.has(layer.id)) {
-      issues.push({ path: prefix, message: \`Customization preview layer id "\${layer.id}" is duplicated.\` })
+      issues.push({ path: prefix, message: `Customization preview layer id "${layer.id}" is duplicated.` })
     } else {
       ids.add(layer.id)
     }
 
     const zone = manifest.customizationZones?.[layer.zoneId]
     if (!zone) {
-      issues.push({ path: \`\${prefix}.zoneId\`, message: \`Customization zone "\${layer.zoneId}" does not exist.\` })
+      issues.push({ path: `${prefix}.zoneId`, message: `Customization zone "${layer.zoneId}" does not exist.` })
       continue
     }
     if (!zone.purposes.includes(layer.purpose)) {
       issues.push({
-        path: \`\${prefix}.purpose\`,
-        message: \`Customization zone "\${layer.zoneId}" does not allow "\${layer.purpose}" previews.\`,
+        path: `${prefix}.purpose`,
+        message: `Customization zone "${layer.zoneId}" does not allow "${layer.purpose}" previews.`,
       })
     }
 
     if (layer.purpose === 'text' && !layer.content?.trim()) {
-      issues.push({ path: \`\${prefix}.content\`, message: 'Text preview layer requires non-empty content.' })
+      issues.push({ path: `${prefix}.content`, message: 'Text preview layer requires non-empty content.' })
     }
     if (layer.purpose === 'tooling' && !layer.style?.trim()) {
-      issues.push({ path: \`\${prefix}.style\`, message: 'Tooling preview layer requires a style id.' })
+      issues.push({ path: `${prefix}.style`, message: 'Tooling preview layer requires a style id.' })
     }
     if ((layer.purpose === 'artwork' || layer.purpose === 'logo') && !layer.imageUrl?.startsWith('data:image/')) {
       issues.push({
-        path: \`\${prefix}.imageUrl\`,
+        path: `${prefix}.imageUrl`,
         message: 'Artwork/logo preview layers currently require an in-memory image data URL.',
       })
     }
     if (layer.opacity !== undefined && (!Number.isFinite(layer.opacity) || layer.opacity < 0 || layer.opacity > 1)) {
-      issues.push({ path: \`\${prefix}.opacity\`, message: 'Customization preview opacity must be between 0 and 1.' })
+      issues.push({ path: `${prefix}.opacity`, message: 'Customization preview opacity must be between 0 and 1.' })
     }
   }
 
@@ -347,10 +347,10 @@ function drawToolingPattern(
 }
 
 function textFont(style: string | undefined, pixels: number): string {
-  if (style === 'script') return \`italic 700 \${pixels}px cursive\`
-  if (style === 'western') return \`700 \${pixels}px Georgia, serif\`
-  if (style === 'monogram') return \`800 \${pixels}px Georgia, serif\`
-  return \`800 \${pixels}px Arial, sans-serif\`
+  if (style === 'script') return `italic 700 ${pixels}px cursive`
+  if (style === 'western') return `700 ${pixels}px Georgia, serif`
+  if (style === 'monogram') return `800 ${pixels}px Georgia, serif`
+  return `800 ${pixels}px Arial, sans-serif`
 }
 
 function drawPreviewText(
@@ -511,7 +511,7 @@ function CustomizationOverlays({
         const basis = new THREE.Matrix4().makeBasis(right, correctedUp, normal)
 
         const overlay = new THREE.Mesh(geometry, material)
-        overlay.name = \`SLS_CustomizationPreview_\${zoneId}\`
+        overlay.name = `SLS_CustomizationPreview_${zoneId}`
         overlay.position.set(...zone.origin).addScaledVector(normal, 0.0025)
         overlay.quaternion.setFromRotationMatrix(basis)
         overlay.renderOrder = 20
