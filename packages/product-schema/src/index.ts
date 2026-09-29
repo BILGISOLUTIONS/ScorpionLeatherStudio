@@ -105,6 +105,21 @@ export interface AssetMaterialSlotProfile {
   requiresUv0: boolean
   requiresNormals: boolean
   tangents: AssetTangentPolicy
+  metersPerUvUnit?: number
+  uvScaleToleranceRatio?: number
+}
+
+export type AssetCustomizationPurpose = 'tooling' | 'text' | 'logo' | 'artwork'
+
+export interface AssetCustomizationZone {
+  label: string
+  node: string
+  purposes: AssetCustomizationPurpose[]
+  origin: [number, number, number]
+  normal: [number, number, number]
+  up: [number, number, number]
+  sizeMeters: [number, number]
+  safeInsetMeters?: number
 }
 
 export interface AssetPresentation {
@@ -129,6 +144,7 @@ export interface AssetManifest {
   materialSlots: Record<string, string[]>
   materialSlotProfiles?: Record<string, AssetMaterialSlotProfile>
   defaultMaterialVariants?: Record<string, string>
+  customizationZones?: Record<string, AssetCustomizationZone>
   components: Record<string, string[]>
   animations: Record<string, {
     target: string
@@ -275,6 +291,53 @@ export function validateAssetManifest(
     }
     if (!['optional', 'recommended', 'required'].includes(profile.tangents)) {
       issues.push({ path: `materialSlotProfiles.${slot}.tangents`, message: 'Unsupported tangent policy.' })
+    }
+    if (profile.metersPerUvUnit !== undefined && (!Number.isFinite(profile.metersPerUvUnit) || profile.metersPerUvUnit <= 0)) {
+      issues.push({ path: `materialSlotProfiles.${slot}.metersPerUvUnit`, message: 'Physical UV scale must be a positive meter value.' })
+    }
+    if (
+      profile.uvScaleToleranceRatio !== undefined &&
+      (!Number.isFinite(profile.uvScaleToleranceRatio) || profile.uvScaleToleranceRatio <= 0 || profile.uvScaleToleranceRatio > 1)
+    ) {
+      issues.push({ path: `materialSlotProfiles.${slot}.uvScaleToleranceRatio`, message: 'UV scale tolerance must be greater than 0 and no more than 1.' })
+    }
+  }
+
+  const vectorLength = (value: [number, number, number]) => Math.hypot(value[0], value[1], value[2])
+  for (const [zoneId, zone] of Object.entries(manifest.customizationZones ?? {})) {
+    const prefix = `customizationZones.${zoneId}`
+    if (!zoneId.trim()) issues.push({ path: prefix, message: 'Customization zone id is required.' })
+    if (!zone.label.trim()) issues.push({ path: `${prefix}.label`, message: 'Customization zone label is required.' })
+    if (!zone.node.trim()) issues.push({ path: `${prefix}.node`, message: 'Customization zone node is required.' })
+    if (nodes && !nodes.has(zone.node)) {
+      issues.push({ path: `${prefix}.node`, message: `Customization zone node "${zone.node}" was not found in the loaded model.` })
+    }
+    if (!zone.purposes.length || zone.purposes.some((purpose) => !['tooling', 'text', 'logo', 'artwork'].includes(purpose))) {
+      issues.push({ path: `${prefix}.purposes`, message: 'Customization zone must declare at least one supported purpose.' })
+    }
+    if (![...zone.origin, ...zone.normal, ...zone.up, ...zone.sizeMeters].every(Number.isFinite)) {
+      issues.push({ path: prefix, message: 'Customization zone coordinates and size must be finite.' })
+      continue
+    }
+    const normalLength = vectorLength(zone.normal)
+    const upLength = vectorLength(zone.up)
+    if (normalLength <= 0.0001 || upLength <= 0.0001) {
+      issues.push({ path: prefix, message: 'Customization zone normal and up vectors must be non-zero.' })
+    } else {
+      const dot = Math.abs(
+        (zone.normal[0] * zone.up[0] + zone.normal[1] * zone.up[1] + zone.normal[2] * zone.up[2]) /
+        (normalLength * upLength),
+      )
+      if (dot > 0.98) issues.push({ path: prefix, message: 'Customization zone normal and up vectors must not be parallel.' })
+    }
+    if (zone.sizeMeters.some((value) => value <= 0)) {
+      issues.push({ path: `${prefix}.sizeMeters`, message: 'Customization zone width and height must be positive.' })
+    }
+    if (
+      zone.safeInsetMeters !== undefined &&
+      (!Number.isFinite(zone.safeInsetMeters) || zone.safeInsetMeters < 0 || zone.safeInsetMeters * 2 >= Math.min(...zone.sizeMeters))
+    ) {
+      issues.push({ path: `${prefix}.safeInsetMeters`, message: 'Customization zone safe inset must fit inside the zone.' })
     }
   }
 
