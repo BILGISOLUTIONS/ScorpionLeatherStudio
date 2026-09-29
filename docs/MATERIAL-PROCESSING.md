@@ -122,3 +122,26 @@ captured-master / draft-pbr-review-required
 until physical comparison and Material Lab QA are complete.
 
 No browser action in the processor may automatically change a material lifecycle to `production-approved`.
+
+
+## Physical-scale handoff
+
+Processing must preserve the same crop represented by the material capture's measured physical tile.
+
+The production chain is:
+
+```text
+measured physical crop
+        ↓
+processed seamless tile
+        ↓
+Material QA records physical tile width/height
+        ↓
+production material metadata: physical.textureTileSizeMm
+        ↓
+runtime derives repeat against 1 UV unit = 1 meter product UVs
+```
+
+The Material QA **Preview repeat** control is deliberately non-authoritative. It is useful for examining seams and grain at different repetitions, but its value must not become the production scale.
+
+Do not rescale the output crop between 1K and 2K tiers. Both tiers represent the same physical area; only pixel density changes.

@@ -242,3 +242,37 @@ Development examples such as brass/nickel hardware previews remain visual refere
 The long-term product path is therefore:
 
 **physical product → evidence-backed capture packet → material-slot contract → authored GLB → automated/human Digital Twin QA → controlled production promotion → customer configuration**
+
+
+## Physical UV scale
+
+Scorpion Leather Studio material-ready meshes use a real-world UV convention:
+
+**1 UV coordinate unit = 1 meter of physical surface distance.**
+
+This is intentionally different from the common practice of scaling every island to fill the 0–1 square. Repeatable leather UVs may extend outside 0–1.
+
+The asset manifest can declare:
+
+- `metersPerUvUnit`;
+- `uvScaleToleranceRatio`.
+
+Digital Twin QA estimates physical meters per UV unit from the exported model and blocks material surfaces that fall outside the declared tolerance. It also reports uneven UV scale so stretched leather grain is visible before promotion.
+
+The physical material record separately stores the millimeter dimensions represented by one texture tile. Those two contracts combine to keep one leather's grain at the same real-world size across a hood, harness, belt, pouch, strap, or other product.
+
+## Customization placement zones
+
+Repeatable material UVs are not the coordinate system for tooling, names, logos, or uploaded artwork.
+
+Customization is authored through manifest placement zones that declare:
+
+- target semantic mesh;
+- local origin;
+- local surface normal;
+- local up direction;
+- physical width/height;
+- safe inset;
+- allowed purposes: tooling, text, logo, artwork.
+
+This keeps material scale independent from personalization placement and lets Digital Twin QA visualize the intended usable area directly on the candidate model.

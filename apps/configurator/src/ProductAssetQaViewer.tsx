@@ -441,6 +441,7 @@ export default function ProductAssetQaViewer({
 
         if (runtime.model) {
           restoreOriginalMaterials(runtime)
+          clearZoneOverlays(runtime)
           runtime.scene.remove(runtime.model)
           disposeObject(runtime.model)
           runtime.originalMaterials.clear()

@@ -244,7 +244,7 @@ Validated V0.26 characteristics:
 - No new dependency, API function, polling loop, cloud persistence, or global internal-tool payload.
 
 
-## SLS V0.30 material-ready digital twin framework — CANDIDATE
+## SLS V0.30 material-ready digital twin framework — SHIPPED 2026-09-29
 
 - Active branch: `feature/v030-digital-twin-framework`, based on shipped V0.29 main `5db2951b40249627ab48160068eac33884d0bcf2`.
 - Goal: make Scorpion product assets materially swappable and reconstruction-ready without turning the 3D layer into a second source of product truth.
@@ -256,6 +256,24 @@ Validated V0.26 characteristics:
 - Customer welding-hood preview now routes supported construction hardware preferences through explicit `HardwarePrimary` material-slot overrides, demonstrating that customer configuration can change the 3D material state without guessed mesh traversal.
 - Welding-hood development manifest advanced to v4 with material-slot profiles and manifest-owned presentation settings. The geometry remains a development scaffold and is not represented as a production-fidelity model.
 - `docs/3D-ASSET-STANDARD.md` now documents the material-ready surface contract, capture-to-authoring scaffold, diagnostic QA, and runtime configuration binding.
-- CI run `36517712614` caught an ambiguous Playwright label introduced by the new Visor Lens material-slot control; the test selector was corrected to exact checkbox matching. Subsequent candidate `e567ee7283084ce6b48ba6f732aca33b09501cc0` passed CI, and later candidate commits also passed until the latest documentation/manifest changes. Current head CI must be green before promotion.
+- Final production SHA: `f33be2a01332f07cd75ae664ebe07cb5c15f60e0`.
+- Final branch CI `36519258405`: PASS — TypeScript, 94/94 unit/API tests, build, budgets, Shopify smoke, function guard 8/12, browser suite 60/60.
+- Exact-main CI `36519509818`: PASS; Vercel status on the same SHA: success.
+- Browser QA artifact `11011878865` reviewed on desktop/mobile.
 - No new Vercel function, database dependency, polling loop, third-party 3D service, or Shopify theme publication.
-- Do not promote V0.30 until the exact latest branch head passes the full suite and browser QA is reviewed.
+
+
+## SLS V0.31 asset-authoring framework — CANDIDATE
+
+- Active branch: `feature/v031-asset-authoring`, based on shipped V0.30 main `f33be2a01332f07cd75ae664ebe07cb5c15f60e0`.
+- Adds a real-world UV convention for material-ready product surfaces: default `1 UV unit = 1 meter`, with per-slot `metersPerUvUnit` and `uvScaleToleranceRatio` in the asset manifest.
+- Material definitions can now carry `physical.textureTileSizeMm`; production leather with maps requires this physical scale. Runtime repeat is derived from measured tile size instead of being manually tuned per product.
+- Material QA now requires measured physical texture-tile width/height in millimeters before approval. Its repeat slider is explicitly preview-only. Material Promotion preserves calibrated tile dimensions and removes product-specific production repeat overrides.
+- Asset manifests now support explicit customization placement zones for tooling, text, logos and artwork, with semantic target mesh, local origin/normal/up, physical size and safe inset.
+- Product Capture exports the physical UV and placement-zone contract in the 3D manifest scaffold and displays the authoring rules in the operator UI.
+- Digital Twin QA estimates meters-per-UV-unit from candidate geometry, detects uneven scale, enforces manifest tolerances, and adds a Placement zones diagnostic overlay.
+- Reusable product-type authoring templates now define semantic starting conventions for welding hoods, radio harnesses, belts, pouches and straps without inventing product-specific construction.
+- Added `docs/BLENDER-ASSET-AUTHORING.md`, `docs/PRODUCT-TYPE-AUTHORING-TEMPLATES.md`, and `scripts/blender/sls_asset_preflight.py` for repeatable Blender preflight/export workflow.
+- Welding-hood development manifest advanced to v5. Placeholder geometry remains development-only and is expected to expose QA blockers until real reconstruction meets the new physical-UV/fidelity contract.
+- No new API function, backend/database dependency, polling loop, analytics SDK, or third-party 3D service. Shopify development theme remains unpublished.
+- Promotion requires exact-head CI plus desktop/mobile QA review.

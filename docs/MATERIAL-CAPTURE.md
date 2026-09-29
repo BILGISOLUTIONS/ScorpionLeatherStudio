@@ -166,3 +166,27 @@ The application selects texture tier conservatively:
 - reference-only materials without maps: scalar/color approximation
 
 A material definition is shared across products. Do not copy the same leather maps into separate hood, harness, belt, or pouch folders.
+
+
+## Physical texture scale
+
+Every captured material that will produce repeatable production maps must record the real physical area represented by one finished texture tile.
+
+Record:
+
+- tile width in millimeters;
+- tile height in millimeters;
+- the exact crop/orientation used by the processed maps;
+- the scale-reference frame that supports the measurement.
+
+Example:
+
+```text
+Physical texture tile: 400 × 400 mm
+Scale source: 00-identification.dng
+Crop orientation: grain direction up
+```
+
+Do not tune leather grain independently on each 3D product. Scorpion Leather Studio uses a physical UV convention where **1 UV unit = 1 meter** on material-ready surfaces. Runtime repeat is derived from the captured material tile dimensions.
+
+A repeat slider in Material QA is for visual review only. Production scale authority comes from the measured physical tile dimensions.
