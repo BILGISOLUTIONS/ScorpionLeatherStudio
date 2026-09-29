@@ -204,12 +204,16 @@ test('V0.32 renders mapped welding-hood customization in the explicit 3D zone', 
   await focusButton.click()
   await expect(page.getByRole('button', { name: 'Front', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
+  await page.locator('.viewer-panel').screenshot({
+    path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'zone-preview-v032-mapped-mobile.png' : 'zone-preview-v032-mapped-desktop.png'}`,
+  })
+
   await page.getByLabel('Requested placement').selectOption({ label: 'Left side panel' })
   await expect(previewStatus).toContainText('not mapped to a verified 3D placement zone')
   await expect(page.getByRole('button', { name: 'Focus custom' })).toHaveCount(0)
 
   await page.locator('.viewer-panel').screenshot({
-    path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'zone-preview-v032-mobile.png' : 'zone-preview-v032-desktop.png'}`,
+    path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'zone-preview-v032-unmapped-mobile.png' : 'zone-preview-v032-unmapped-desktop.png'}`,
   })
 
   expect(consoleErrors, `V0.32 customization preview console errors: ${consoleErrors.join('\n')}`).toEqual([])
