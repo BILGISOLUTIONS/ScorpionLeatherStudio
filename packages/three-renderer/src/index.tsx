@@ -25,6 +25,8 @@ export interface ThreeCustomizationLayer {
 }
 
 const EMPTY_CUSTOMIZATION_LAYERS: readonly ThreeCustomizationLayer[] = []
+const EMPTY_SELECTION_MAP: Readonly<Record<string, string>> = Object.freeze({})
+const EMPTY_ANIMATION_MAP: Readonly<Record<string, boolean>> = Object.freeze({})
 
 export interface ThreeProductViewerProps {
   product: ProductDefinition
@@ -547,9 +549,9 @@ function ProductModel({
   manifest,
   materials,
   selections,
-  animationStates = {},
-  materialOverrides = {},
-  componentOverrides = {},
+  animationStates = EMPTY_ANIMATION_MAP,
+  materialOverrides = EMPTY_SELECTION_MAP,
+  componentOverrides = EMPTY_SELECTION_MAP,
   customizationLayers = EMPTY_CUSTOMIZATION_LAYERS,
   onAssetIssues,
 }: ThreeProductViewerProps) {

@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { createInitialConfiguration, setSelection } from '@sls/configurator-core'
 import { ThreeProductViewer } from '@sls/three-renderer'
 import type { StudioBuildDraft } from '@sls/order-engine'
@@ -50,6 +50,17 @@ function WeldingHoodViewerComponent({
   const [autoRotate, setAutoRotate] = useState(false)
   const [cameraPreset, setCameraPreset] = useState(sampleProduct.asset.defaultCameraPreset)
   const [assetIssues, setAssetIssues] = useState<ValidationIssue[]>([])
+  const handleAssetIssues = useCallback((next: ValidationIssue[]) => {
+    setAssetIssues((current) => {
+      if (
+        current.length === next.length &&
+        current.every((entry, index) => entry.path === next[index]?.path && entry.message === next[index]?.message)
+      ) {
+        return current
+      }
+      return next
+    })
+  }, [])
   const configuration = useMemo(() => resolveHoodConfiguration(referenceId), [referenceId])
   const materials = useMemo(
     () => createRendererMaterialMap(scorpionMaterialDefinitions, preferredMaterialTextureEdge()),
@@ -67,6 +78,7 @@ function WeldingHoodViewerComponent({
     () => buildCustomizationPreview(sampleManifest, personalization, artwork),
     [artwork, personalization],
   )
+  const animationStates = useMemo(() => ({ 'visor.open': visorOpen }), [visorOpen])
 
   const activeLeatherMaterial = useMemo(() => {
     const selectedBuild = sampleProduct.optionGroups
@@ -86,10 +98,10 @@ function WeldingHoodViewerComponent({
         selections={configuration.selections}
         materialOverrides={materialOverrides}
         customizationLayers={customizationPreview.layers}
-        animationStates={{ 'visor.open': visorOpen }}
+        animationStates={animationStates}
         cameraPreset={cameraPreset}
         autoRotate={autoRotate}
-        onAssetIssues={setAssetIssues}
+        onAssetIssues={handleAssetIssues}
       />
 
       <div className="view-selector" aria-label="Product views">
