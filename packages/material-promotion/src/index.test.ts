@@ -73,6 +73,7 @@ const qa: QaApprovalPacket = {
     roughness: { file: 'SCL-005-1k-roughness.png', width: 1024, height: 1024 },
     normal: { file: 'SCL-005-1k-normal.png', width: 1024, height: 1024 },
   },
+  physicalTextureTileSizeMm: [400, 400],
   viewer: {
     repeat: 2.5,
     normalScale: 0.9,
@@ -130,10 +131,12 @@ describe('material promotion', () => {
         reviewer: 'QA Reviewer',
         decision: 'approved-for-registry-promotion',
       },
+      physical: {
+        textureTileSizeMm: [400, 400],
+      },
       renderer: {
         roughness: 0.82,
         normalScale: 0.9,
-        textureRepeat: [2.5, 2.5],
       },
     })
     expect(result.material.textureTiers?.map((tier) => tier.maxEdge)).toEqual([1024, 2048])
@@ -143,6 +146,15 @@ describe('material promotion', () => {
       source: 'source-base.png',
       destination: '/materials/SCL-005/1k/basecolor.webp',
     })
+  })
+
+  it('requires calibrated physical texture tile dimensions before production promotion', () => {
+    const invalid = {
+      ...qa,
+      physicalTextureTileSizeMm: [0, 400] as [number, number],
+    }
+    expect(validatePromotionChain(draft, processing, invalid).map((entry) => entry.path))
+      .toContain('qa.physicalTextureTileSizeMm')
   })
 
   it('requires a valid QA roughness scalar for production', () => {
