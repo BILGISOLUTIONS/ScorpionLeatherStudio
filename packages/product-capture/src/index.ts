@@ -1,4 +1,4 @@
-import type { AssetManifest, AssetTangentPolicy, MaterialKind } from '@sls/product-schema'
+import type { AssetCustomizationPurpose, AssetManifest, AssetTangentPolicy, MaterialKind } from '@sls/product-schema'
 
 export type ReferenceKind =
   | 'required-view'
@@ -37,6 +37,20 @@ export interface ProductMaterialSlotRequirement {
   requiresUv0: boolean
   requiresNormals: boolean
   tangents: AssetTangentPolicy
+  metersPerUvUnit?: number
+  uvScaleToleranceRatio?: number
+}
+
+export interface ProductCustomizationZoneRequirement {
+  zoneId: string
+  label: string
+  nodeRole: string
+  purposes: AssetCustomizationPurpose[]
+  origin: [number, number, number]
+  normal: [number, number, number]
+  up: [number, number, number]
+  sizeMeters: [number, number]
+  safeInsetMeters?: number
 }
 
 export interface ProductCapturePlan {
@@ -47,6 +61,7 @@ export interface ProductCapturePlan {
   dimensionRequirements: ProductDimensionRequirement[]
   nodeRequirements: ProductNodeRequirement[]
   materialSlotRequirements?: ProductMaterialSlotRequirement[]
+  customizationZoneRequirements?: ProductCustomizationZoneRequirement[]
 }
 
 export interface CapturedReferenceFrame {
@@ -406,6 +421,8 @@ export function buildAssetManifestScaffold(args: {
         requiresUv0: requirement.requiresUv0,
         requiresNormals: requirement.requiresNormals,
         tangents: requirement.tangents,
+        metersPerUvUnit: requirement.metersPerUvUnit,
+        uvScaleToleranceRatio: requirement.uvScaleToleranceRatio,
       }] as const] : []
     }),
   )
@@ -414,6 +431,23 @@ export function buildAssetManifestScaffold(args: {
     construction.components
       .filter((component) => component.status === 'confirmed')
       .map((component) => [`${component.groupId}.${component.valueId}`, component.nodeNames] as const),
+  )
+
+  const nodeByRole = new Map(construction.constructionNodes.map((node) => [node.role, node.nodeName]))
+  const customizationZones = Object.fromEntries(
+    (plan.customizationZoneRequirements ?? []).flatMap((zone) => {
+      const node = nodeByRole.get(zone.nodeRole)?.trim()
+      return node ? [[zone.zoneId, {
+        label: zone.label,
+        node,
+        purposes: zone.purposes,
+        origin: zone.origin,
+        normal: zone.normal,
+        up: zone.up,
+        sizeMeters: zone.sizeMeters,
+        safeInsetMeters: zone.safeInsetMeters,
+      }] as const] : []
+    }),
   )
 
   const maxDimension = Math.max(width, height, depth)
@@ -431,6 +465,7 @@ export function buildAssetManifestScaffold(args: {
     materialSlots,
     materialSlotProfiles,
     defaultMaterialVariants,
+    customizationZones,
     components,
     animations: {},
     cameraPresets: {
@@ -503,8 +538,107 @@ export const weldingHoodCapturePlan: ProductCapturePlan = {
     { role: 'visor-lens', label: 'Visor lens', required: true, suggestedNodeName: 'Visor_Lens' },
   ],
   materialSlotRequirements: [
-    { slotId: 'LeatherPrimary', label: 'Primary leather surface', kind: 'leather', required: true, nodeRoles: ['shell-main'], requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
-    { slotId: 'HardwarePrimary', label: 'Primary visor hardware', kind: 'metal', required: true, nodeRoles: ['visor-frame'], requiresUv0: true, requiresNormals: true, tangents: 'optional' },
+    {
+      slotId: 'LeatherPrimary',
+      label: 'Primary leather surface',
+      kind: 'leather',
+      required: true,
+      nodeRoles: ['shell-main'],
+      requiresUv0: true,
+      requiresNormals: true,
+      tangents: 'recommended',
+      metersPerUvUnit: 1,
+      uvScaleToleranceRatio: 0.2,
+    },
+    {
+      slotId: 'HardwarePrimary',
+      label: 'Primary visor hardware',
+      kind: 'metal',
+      required: true,
+      nodeRoles: ['visor-frame'],
+      requiresUv0: true,
+      requiresNormals: true,
+      tangents: 'optional',
+      metersPerUvUnit: 1,
+      uvScaleToleranceRatio: 0.25,
+    },
     { slotId: 'Lens', label: 'Visor lens', kind: 'glass', required: true, nodeRoles: ['visor-lens'], requiresUv0: false, requiresNormals: true, tangents: 'optional' },
   ],
+  customizationZoneRequirements: [
+    {
+      zoneId: 'front-panel',
+      label: 'Front shell customization area',
+      nodeRole: 'shell-main',
+      purposes: ['tooling', 'text', 'logo', 'artwork'],
+      origin: [0, 0.05, 0.27],
+      normal: [0, 0, 1],
+      up: [0, 1, 0],
+      sizeMeters: [0.22, 0.24],
+      safeInsetMeters: 0.012,
+    },
+  ],
+}
+
+export interface ProductTypeAuthoringTemplate {
+  id: 'welding-hood' | 'radio-harness' | 'belt' | 'pouch' | 'strap'
+  label: string
+  rootNode: 'SLS_ProductRoot'
+  semanticRoles: readonly string[]
+  materialSlots: readonly string[]
+  customizationPurposes: readonly AssetCustomizationPurpose[]
+  physicalUvMetersPerUnit: 1
+}
+
+export const productTypeAuthoringTemplates: readonly ProductTypeAuthoringTemplate[] = [
+  {
+    id: 'welding-hood',
+    label: 'Leather welding hood',
+    rootNode: 'SLS_ProductRoot',
+    semanticRoles: ['shell-main', 'visor-pivot', 'visor-frame', 'visor-lens'],
+    materialSlots: ['LeatherPrimary', 'HardwarePrimary', 'Lens'],
+    customizationPurposes: ['tooling', 'text', 'logo', 'artwork'],
+    physicalUvMetersPerUnit: 1,
+  },
+  {
+    id: 'radio-harness',
+    label: 'Radio harness',
+    rootNode: 'SLS_ProductRoot',
+    semanticRoles: ['body-main', 'shoulder-left', 'shoulder-right', 'radio-pocket', 'hardware'],
+    materialSlots: ['LeatherPrimary', 'HardwarePrimary'],
+    customizationPurposes: ['tooling', 'text', 'logo', 'artwork'],
+    physicalUvMetersPerUnit: 1,
+  },
+  {
+    id: 'belt',
+    label: 'Leather belt',
+    rootNode: 'SLS_ProductRoot',
+    semanticRoles: ['strap-main', 'buckle', 'keeper'],
+    materialSlots: ['LeatherPrimary', 'HardwarePrimary'],
+    customizationPurposes: ['tooling', 'text', 'logo'],
+    physicalUvMetersPerUnit: 1,
+  },
+  {
+    id: 'pouch',
+    label: 'Leather pouch',
+    rootNode: 'SLS_ProductRoot',
+    semanticRoles: ['body-main', 'flap', 'hardware'],
+    materialSlots: ['LeatherPrimary', 'HardwarePrimary'],
+    customizationPurposes: ['tooling', 'text', 'logo', 'artwork'],
+    physicalUvMetersPerUnit: 1,
+  },
+  {
+    id: 'strap',
+    label: 'Leather strap',
+    rootNode: 'SLS_ProductRoot',
+    semanticRoles: ['strap-main', 'hardware-start', 'hardware-end'],
+    materialSlots: ['LeatherPrimary', 'HardwarePrimary'],
+    customizationPurposes: ['tooling', 'text', 'logo'],
+    physicalUvMetersPerUnit: 1,
+  },
+]
+
+export function getProductTypeAuthoringTemplate(id: ProductTypeAuthoringTemplate['id']): ProductTypeAuthoringTemplate {
+  const template = productTypeAuthoringTemplates.find((entry) => entry.id === id)
+  if (!template) throw new Error(`Unknown product authoring template: ${id}`)
+  return template
 }
