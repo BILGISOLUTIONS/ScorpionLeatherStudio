@@ -188,3 +188,57 @@ A production asset is not accepted until checked for:
 - no invented product features
 
 Final acceptance is visual and functional, not merely “the GLB loads.”
+
+
+## Material-ready surface contract
+
+A production digital twin is not considered material-ready merely because a texture can be assigned in Three.js. Every runtime-swappable surface must have an explicit contract.
+
+For each material slot:
+
+- mesh ownership must be unambiguous; one semantic mesh node cannot belong to multiple material slots;
+- the manifest declares the expected material kind: leather, metal, glass, or generic;
+- the manifest declares whether UV0 coordinates are required;
+- the manifest declares whether vertex normals are required;
+- tangent policy is explicit: optional, recommended, or required;
+- runtime material assignments are validated against the declared material kind;
+- Digital Twin QA inspects the actual loaded model attributes instead of trusting authoring notes.
+
+The current web renderer uses UV0 for texture mapping. Do not depend on product-specific substring matching or corrective UV logic in the customer application.
+
+## Capture-to-authoring scaffold
+
+The Product Capture tool now records required material slots alongside semantic construction nodes. Once the physical-evidence gate passes, the capture package can generate a deterministic asset-manifest scaffold that carries:
+
+- the confirmed product root;
+- confirmed material slot ownership;
+- default material registry IDs;
+- UV/normal/tangent readiness requirements;
+- confirmed configurable component mappings;
+- camera starting points derived from the measured physical envelope;
+- ground, shadow, and orbit-control starting values.
+
+The scaffold is an authoring contract, not an approval. Product silhouette, topology, UV quality, camera composition, mechanical pivots, and real material response must still be authored and reviewed.
+
+## Diagnostic material QA for 3D assets
+
+Digital Twin QA now records mesh-level readiness data:
+
+- triangle count by mesh;
+- material count by mesh;
+- UV0 presence;
+- UV1 presence;
+- vertex-normal presence;
+- tangent presence.
+
+The local model viewer also supports UV-checker and normal diagnostic views. These exist specifically to catch stretched mapping, missing coordinates, bad seams, and shading problems before a GLB is promoted.
+
+## Runtime configuration binding
+
+Customer construction choices may affect the 3D view only through explicit material-slot or component bindings. The renderer accepts controlled overrides on top of the photographed starting build and validates the resulting material assignment.
+
+Development examples such as brass/nickel hardware previews remain visual references until the physical availability and production material records are confirmed.
+
+The long-term product path is therefore:
+
+**physical product → evidence-backed capture packet → material-slot contract → authored GLB → automated/human Digital Twin QA → controlled production promotion → customer configuration**
