@@ -9,6 +9,16 @@ export interface ProductAssetQaIssue {
   message: string
 }
 
+export interface ProductMeshInspection {
+  nodeName: string
+  triangleCount: number
+  materialCount: number
+  hasUv0: boolean
+  hasUv1: boolean
+  hasNormals: boolean
+  hasTangents: boolean
+}
+
 export interface ProductAssetInspection {
   schemaVersion: 1
   assetId: string
@@ -35,6 +45,7 @@ export interface ProductAssetInspection {
   nonUniformScaleNodes: string[]
   negativeScaleNodes: string[]
   animationClipNames: string[]
+  meshDiagnostics: ProductMeshInspection[]
 }
 
 export interface ProductAssetQaPolicy {
@@ -47,6 +58,7 @@ export interface ProductAssetQaPolicy {
   maxTextureEdge: number
   dimensionToleranceRatio: number
   requireGlb: boolean
+  requireMaterialSlotProfiles: boolean
 }
 
 export const defaultProductAssetQaPolicy: ProductAssetQaPolicy = {
@@ -59,6 +71,7 @@ export const defaultProductAssetQaPolicy: ProductAssetQaPolicy = {
   maxTextureEdge: 2048,
   dimensionToleranceRatio: 0.08,
   requireGlb: true,
+  requireMaterialSlotProfiles: true,
 }
 
 export type ProductAssetReviewCheck =
@@ -344,6 +357,35 @@ export function evaluateProductAssetQa(args: {
       issues.push(issue('error', 'inspection.duplicateNodeNames', `Semantic node "${duplicate}" is duplicated; runtime resolution would be ambiguous.`))
     } else {
       issues.push(issue('warning', 'inspection.duplicateNodeNames', `Node name "${duplicate}" is duplicated.`))
+    }
+  }
+
+  const meshByName = new Map(inspection.meshDiagnostics.map((mesh) => [mesh.nodeName, mesh]))
+  for (const [slotId, slotNodes] of Object.entries(manifest.materialSlots)) {
+    const profile = manifest.materialSlotProfiles?.[slotId]
+    if (!profile) {
+      issues.push(issue(
+        policy.requireMaterialSlotProfiles ? 'error' : 'warning',
+        `manifest.materialSlotProfiles.${slotId}`,
+        `Material slot "${slotId}" has no surface profile. Production assets must declare mapping/readiness requirements.`,
+      ))
+      continue
+    }
+
+    for (const nodeName of slotNodes) {
+      const mesh = meshByName.get(nodeName)
+      if (!mesh) continue
+      if (profile.requiresUv0 && !mesh.hasUv0) {
+        issues.push(issue('error', `inspection.meshDiagnostics.${nodeName}.uv0`, `Material-ready node "${nodeName}" is missing UV0 coordinates.`))
+      }
+      if (profile.requiresNormals && !mesh.hasNormals) {
+        issues.push(issue('error', `inspection.meshDiagnostics.${nodeName}.normals`, `Material-ready node "${nodeName}" is missing vertex normals.`))
+      }
+      if (profile.tangents === 'required' && !mesh.hasTangents) {
+        issues.push(issue('error', `inspection.meshDiagnostics.${nodeName}.tangents`, `Node "${nodeName}" requires tangents for its material slot.`))
+      } else if (profile.tangents === 'recommended' && !mesh.hasTangents) {
+        issues.push(issue('warning', `inspection.meshDiagnostics.${nodeName}.tangents`, `Node "${nodeName}" has no authored tangents. Verify normal-map response on the production asset.`))
+      }
     }
   }
 
