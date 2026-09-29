@@ -171,7 +171,7 @@ export const sampleProduct: ProductDefinition = {
 
 export const sampleManifest: AssetManifest = {
   schemaVersion: 1,
-  assetId: 'placeholder-welding-hood-v4',
+  assetId: 'placeholder-welding-hood-v5',
   model: '/models/placeholder-welding-hood.gltf',
   units: 'meters',
   upAxis: 'Y',
