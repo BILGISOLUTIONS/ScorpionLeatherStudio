@@ -84,6 +84,10 @@ test('Digital Twin QA keeps Three.js deferred and inspects a local product asset
   await expect(page.getByRole('button', { name: 'UV checker' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: 'Normals' }).click()
   await expect(page.getByRole('button', { name: 'Normals' })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Placement zones' }).click()
+  await expect(page.getByRole('button', { name: 'Placement zones' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText('Physical UV scale')).toBeVisible()
+  await expect(page.getByText('Placement zones')).toBeVisible()
 
   await expect.poll(() => scriptRequests.some((url) => url.includes('ProductAssetQaViewer'))).toBe(true)
 
