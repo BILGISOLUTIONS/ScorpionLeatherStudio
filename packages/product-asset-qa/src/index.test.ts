@@ -49,14 +49,26 @@ const manifest: AssetManifest = {
     Lens: ['Visor_Lens'],
   },
   materialSlotProfiles: {
-    LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
-    HardwarePrimary: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional' },
+    LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended', metersPerUvUnit: 1, uvScaleToleranceRatio: 0.2 },
+    HardwarePrimary: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional', metersPerUvUnit: 1, uvScaleToleranceRatio: 0.25 },
     Lens: { kind: 'glass', mapping: 'uv0', requiresUv0: false, requiresNormals: true, tangents: 'optional' },
   },
   defaultMaterialVariants: {
     LeatherPrimary: 'SCL-001',
     HardwarePrimary: 'SCH-001',
     Lens: 'SGL-001',
+  },
+  customizationZones: {
+    front: {
+      label: 'Front tooling area',
+      node: 'Shell_Main',
+      purposes: ['tooling', 'text'],
+      origin: [0, 0.05, 0.16],
+      normal: [0, 0, 1],
+      up: [0, 1, 0],
+      sizeMeters: [0.2, 0.18],
+      safeInsetMeters: 0.01,
+    },
   },
   components: {},
   animations: {
@@ -93,8 +105,8 @@ const inspection: ProductAssetInspection = {
   negativeScaleNodes: [],
   animationClipNames: [],
   meshDiagnostics: [
-    { nodeName: 'Shell_Main', triangleCount: 60_000, materialCount: 1, hasUv0: true, hasUv1: false, hasNormals: true, hasTangents: true },
-    { nodeName: 'Visor_Frame', triangleCount: 12_000, materialCount: 1, hasUv0: true, hasUv1: false, hasNormals: true, hasTangents: false },
+    { nodeName: 'Shell_Main', triangleCount: 60_000, materialCount: 1, hasUv0: true, hasUv1: false, hasNormals: true, hasTangents: true, estimatedMetersPerUvUnit: 1, uvScaleVariationRatio: 1.08, uv0Bounds: { min: [0, 0], max: [1, 1] } },
+    { nodeName: 'Visor_Frame', triangleCount: 12_000, materialCount: 1, hasUv0: true, hasUv1: false, hasNormals: true, hasTangents: false, estimatedMetersPerUvUnit: 1, uvScaleVariationRatio: 1.12, uv0Bounds: { min: [0, 0], max: [1, 1] } },
     { nodeName: 'Visor_Lens', triangleCount: 12_000, materialCount: 1, hasUv0: false, hasUv1: false, hasNormals: true, hasTangents: false },
   ],
 }
@@ -156,6 +168,38 @@ describe('product asset QA', () => {
       materialLifecycleById: lifecycles,
     })
     expect(issues.some((entry) => entry.path.endsWith('Shell_Main.uv0') && entry.severity === 'error')).toBe(true)
+  })
+
+  it('blocks material surfaces whose UV scale does not match the physical authoring contract', () => {
+    const issues = evaluateProductAssetQa({
+      construction,
+      manifest,
+      inspection: {
+        ...inspection,
+        meshDiagnostics: inspection.meshDiagnostics.map((mesh) => (
+          mesh.nodeName === 'Shell_Main'
+            ? { ...mesh, estimatedMetersPerUvUnit: 0.35 }
+            : mesh
+        )),
+      },
+      materialLifecycleById: lifecycles,
+    })
+    expect(issues.some((entry) => entry.path.endsWith('Shell_Main.estimatedMetersPerUvUnit') && entry.severity === 'error')).toBe(true)
+  })
+
+  it('blocks placement zones that no longer point at a renderable mesh', () => {
+    const issues = evaluateProductAssetQa({
+      construction,
+      manifest: {
+        ...manifest,
+        customizationZones: {
+          front: { ...manifest.customizationZones!.front, node: 'Visor_Pivot' },
+        },
+      },
+      inspection,
+      materialLifecycleById: lifecycles,
+    })
+    expect(issues.some((entry) => entry.path === 'manifest.customizationZones.front.node')).toBe(true)
   })
 
   it('enforces production budgets', () => {
