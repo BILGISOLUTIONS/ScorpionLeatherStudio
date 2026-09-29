@@ -1,3 +1,5 @@
+import type { AssetManifest, AssetTangentPolicy, MaterialKind } from '@sls/product-schema'
+
 export type ReferenceKind =
   | 'required-view'
   | 'mechanical-state'
@@ -26,6 +28,17 @@ export interface ProductNodeRequirement {
   suggestedNodeName?: string
 }
 
+export interface ProductMaterialSlotRequirement {
+  slotId: string
+  label: string
+  kind: MaterialKind
+  required: boolean
+  nodeRoles: string[]
+  requiresUv0: boolean
+  requiresNormals: boolean
+  tangents: AssetTangentPolicy
+}
+
 export interface ProductCapturePlan {
   schemaVersion: 1
   id: string
@@ -33,6 +46,7 @@ export interface ProductCapturePlan {
   referenceRequirements: ProductReferenceRequirement[]
   dimensionRequirements: ProductDimensionRequirement[]
   nodeRequirements: ProductNodeRequirement[]
+  materialSlotRequirements?: ProductMaterialSlotRequirement[]
 }
 
 export interface CapturedReferenceFrame {
@@ -236,6 +250,31 @@ export function validateProductCapture(
     }
   }
 
+  const materialSlotsById = new Map(session.materialSlots.map((slot) => [slot.slotId, slot]))
+  for (const requirement of plan.materialSlotRequirements ?? []) {
+    const slot = materialSlotsById.get(requirement.slotId)
+    if (!slot) {
+      if (requirement.required) issues.push(issue(`materialSlots.${requirement.slotId}`, `Required material slot is missing: ${requirement.label}.`))
+      continue
+    }
+    if (requirement.required && slot.status !== 'confirmed') {
+      issues.push(issue(`materialSlots.${requirement.slotId}.status`, `Material slot must be confirmed: ${requirement.label}.`))
+    }
+    const requiredNodeNames = requirement.nodeRoles
+      .map((role) => session.constructionNodes.find((node) => node.role === role && node.status === 'confirmed')?.nodeName.trim())
+      .filter((name): name is string => Boolean(name))
+    if (slot.status === 'confirmed') {
+      for (const nodeName of requiredNodeNames) {
+        if (!slot.nodeNames.includes(nodeName)) {
+          issues.push(issue(
+            `materialSlots.${requirement.slotId}.nodeNames`,
+            `Confirmed material slot must include semantic node "${nodeName}".`,
+          ))
+        }
+      }
+    }
+  }
+
   const referenceKeys = new Set(Object.keys(session.references))
   for (const component of session.components) {
     const prefix = `components.${component.groupId}.${component.valueId}`
@@ -327,6 +366,92 @@ export function buildProductConstructionPacket(args: {
   }
 }
 
+export function buildAssetManifestScaffold(args: {
+  construction: ProductConstructionPacket
+  plan: ProductCapturePlan
+  assetId: string
+  modelFileName?: string
+}): AssetManifest {
+  const { construction, plan } = args
+  if (construction.capturePlanId !== plan.id) {
+    throw new Error('Construction packet does not match the selected capture plan.')
+  }
+  const assetId = args.assetId.trim()
+  if (!assetId) throw new Error('Asset ID is required.')
+
+  const width = construction.dimensionsMm.maxWidth / 1000
+  const height = construction.dimensionsMm.maxHeight / 1000
+  const depth = construction.dimensionsMm.maxDepth / 1000
+  if (![width, height, depth].every((value) => Number.isFinite(value) && value > 0)) {
+    throw new Error('Authoritative maximum width, height, and depth are required to generate an asset scaffold.')
+  }
+
+  const rootNode = construction.constructionNodes
+    .find((node) => node.role === 'product-root' && node.status === 'confirmed')
+    ?.nodeName.trim()
+  if (!rootNode) throw new Error('A confirmed product-root semantic node is required.')
+
+  const confirmedSlots = construction.materialSlots.filter((slot) => slot.status === 'confirmed')
+  const materialSlots = Object.fromEntries(confirmedSlots.map((slot) => [slot.slotId, slot.nodeNames]))
+  const defaultMaterialVariants = Object.fromEntries(
+    confirmedSlots.flatMap((slot) => slot.materialId ? [[slot.slotId, slot.materialId] as const] : []),
+  )
+  const requirementBySlot = new Map((plan.materialSlotRequirements ?? []).map((entry) => [entry.slotId, entry]))
+  const materialSlotProfiles = Object.fromEntries(
+    confirmedSlots.flatMap((slot) => {
+      const requirement = requirementBySlot.get(slot.slotId)
+      return requirement ? [[slot.slotId, {
+        kind: requirement.kind,
+        mapping: 'uv0' as const,
+        requiresUv0: requirement.requiresUv0,
+        requiresNormals: requirement.requiresNormals,
+        tangents: requirement.tangents,
+      }] as const] : []
+    }),
+  )
+
+  const components = Object.fromEntries(
+    construction.components
+      .filter((component) => component.status === 'confirmed')
+      .map((component) => [`${component.groupId}.${component.valueId}`, component.nodeNames] as const),
+  )
+
+  const maxDimension = Math.max(width, height, depth)
+  const distance = maxDimension * 1.9
+  const groundY = -height / 2
+
+  return {
+    schemaVersion: 1,
+    assetId,
+    model: args.modelFileName?.trim() || `${assetId}.glb`,
+    units: 'meters',
+    upAxis: 'Y',
+    frontAxis: '-Z',
+    rootNode,
+    materialSlots,
+    materialSlotProfiles,
+    defaultMaterialVariants,
+    components,
+    animations: {},
+    cameraPresets: {
+      hero: { label: 'Hero', target: [0, 0, 0], position: [distance * 0.62, distance * 0.34, distance], fov: 35 },
+      front: { label: 'Front', target: [0, 0, 0], position: [0, 0, distance * 1.08], fov: 34 },
+      rear: { label: 'Rear', target: [0, 0, 0], position: [0, 0, -distance * 1.08], fov: 34 },
+      detail: { label: 'Detail', target: [0, 0, 0], position: [distance * 0.48, distance * 0.28, distance * 0.72], fov: 27 },
+    },
+    presentation: {
+      groundY,
+      shadowScale: Math.max(width, depth) * 1.8,
+      orbit: {
+        minDistance: Math.max(maxDimension * 0.55, 0.12),
+        maxDistance: Math.max(maxDimension * 5.5, 1),
+        minPolarAngle: 0.3,
+        maxPolarAngle: 2.65,
+      },
+    },
+  }
+}
+
 export const weldingHoodCapturePlan: ProductCapturePlan = {
   schemaVersion: 1,
   id: 'scorpion-welding-hood-v1',
@@ -376,5 +501,10 @@ export const weldingHoodCapturePlan: ProductCapturePlan = {
     { role: 'visor-pivot', label: 'Visor pivot', required: true, suggestedNodeName: 'Visor_Pivot' },
     { role: 'visor-frame', label: 'Visor frame', required: true, suggestedNodeName: 'Visor_Frame' },
     { role: 'visor-lens', label: 'Visor lens', required: true, suggestedNodeName: 'Visor_Lens' },
+  ],
+  materialSlotRequirements: [
+    { slotId: 'LeatherPrimary', label: 'Primary leather surface', kind: 'leather', required: true, nodeRoles: ['shell-main'], requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
+    { slotId: 'HardwarePrimary', label: 'Primary visor hardware', kind: 'metal', required: true, nodeRoles: ['visor-frame'], requiresUv0: true, requiresNormals: true, tangents: 'optional' },
+    { slotId: 'Lens', label: 'Visor lens', kind: 'glass', required: true, nodeRoles: ['visor-lens'], requiresUv0: false, requiresNormals: true, tangents: 'optional' },
   ],
 }
