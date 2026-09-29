@@ -17,6 +17,12 @@ export interface ProductMeshInspection {
   hasUv1: boolean
   hasNormals: boolean
   hasTangents: boolean
+  estimatedMetersPerUvUnit?: number
+  uvScaleVariationRatio?: number
+  uv0Bounds?: {
+    min: [number, number]
+    max: [number, number]
+  }
 }
 
 export interface ProductAssetInspection {
@@ -80,6 +86,7 @@ export type ProductAssetReviewCheck =
   | 'materialRealism'
   | 'mechanicalMotion'
   | 'uvAndNormals'
+  | 'customizationPlacement'
   | 'cameraFraming'
   | 'configurationState'
   | 'mobilePerformance'
@@ -89,7 +96,8 @@ export const productAssetReviewLabels: Record<ProductAssetReviewCheck, string> =
   constructionAccuracy: 'Seams, hardware, panels and construction details are faithful',
   materialRealism: 'Leather, hardware and lens materials match approved references',
   mechanicalMotion: 'Mechanical pivots and motion ranges behave correctly',
-  uvAndNormals: 'UVs, normals and texture seams are visually clean',
+  uvAndNormals: 'UVs, normals and texture seams are visually clean and physically scaled',
+  customizationPlacement: 'Tooling, text, logo and artwork zones sit on the intended physical surfaces and avoid seams/hardware',
   cameraFraming: 'Camera presets frame the product consistently and usefully',
   configurationState: 'All configurable states resolve to the intended geometry/materials',
   mobilePerformance: 'The asset remains responsive on the target mobile performance tier',
@@ -350,6 +358,7 @@ export function evaluateProductAssetQa(args: {
     ...Object.values(manifest.materialSlots).flat(),
     ...Object.values(manifest.components).flat(),
     ...Object.values(manifest.animations).map((animation) => animation.target),
+    ...Object.values(manifest.customizationZones ?? {}).map((zone) => zone.node),
     ...semanticNodeNames,
   ])
   for (const duplicate of inspection.duplicateNodeNames) {
@@ -386,6 +395,53 @@ export function evaluateProductAssetQa(args: {
       } else if (profile.tangents === 'recommended' && !mesh.hasTangents) {
         issues.push(issue('warning', `inspection.meshDiagnostics.${nodeName}.tangents`, `Node "${nodeName}" has no authored tangents. Verify normal-map response on the production asset.`))
       }
+
+      if (profile.metersPerUvUnit !== undefined) {
+        const actualScale = mesh.estimatedMetersPerUvUnit
+        if (!finitePositive(actualScale ?? Number.NaN)) {
+          issues.push(issue(
+            'error',
+            `inspection.meshDiagnostics.${nodeName}.estimatedMetersPerUvUnit`,
+            `Node "${nodeName}" does not provide a measurable physical UV scale.`,
+          ))
+        } else {
+          const tolerance = profile.uvScaleToleranceRatio ?? 0.2
+          const delta = Math.abs(actualScale! - profile.metersPerUvUnit) / profile.metersPerUvUnit
+          if (delta > tolerance) {
+            issues.push(issue(
+              'error',
+              `inspection.meshDiagnostics.${nodeName}.estimatedMetersPerUvUnit`,
+              `Node "${nodeName}" UV scale is approximately ${actualScale!.toFixed(3)} m/unit; expected ${profile.metersPerUvUnit.toFixed(3)} m/unit ±${Math.round(tolerance * 100)}%.`,
+            ))
+          }
+        }
+      }
+      if ((mesh.uvScaleVariationRatio ?? 1) > 1.5) {
+        issues.push(issue(
+          'warning',
+          `inspection.meshDiagnostics.${nodeName}.uvScaleVariationRatio`,
+          `Node "${nodeName}" has uneven UV scale. Inspect the checker pattern for stretching before promotion.`,
+        ))
+      }
+    }
+  }
+
+  for (const [zoneId, zone] of Object.entries(manifest.customizationZones ?? {})) {
+    const mesh = meshByName.get(zone.node)
+    if (!mesh) {
+      issues.push(issue(
+        'error',
+        `manifest.customizationZones.${zoneId}.node`,
+        `Customization zone "${zoneId}" must target a renderable mesh node.`,
+      ))
+      continue
+    }
+    if (!mesh.hasNormals) {
+      issues.push(issue(
+        'error',
+        `inspection.meshDiagnostics.${zone.node}.normals`,
+        `Customization zone "${zoneId}" requires surface normals on "${zone.node}".`,
+      ))
     }
   }
 
