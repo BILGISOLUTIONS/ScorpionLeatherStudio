@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import {
   validateAssetManifest,
+  validateMaterialSlotAssignments,
   type AssetManifest,
   type MaterialVariant,
   type ProductDefinition,
@@ -17,6 +18,8 @@ export interface ThreeProductViewerProps {
   materials: Record<string, MaterialVariant>
   selections: Record<string, string>
   animationStates?: Record<string, boolean>
+  materialOverrides?: Record<string, string>
+  componentOverrides?: Record<string, string>
   cameraPreset?: string
   autoRotate?: boolean
   onAssetIssues?: (issues: ValidationIssue[]) => void
@@ -174,17 +177,49 @@ function MechanicalAnimations({
   return null
 }
 
+function resolveVisualState(
+  product: ProductDefinition,
+  manifest: AssetManifest,
+  selections: Record<string, string>,
+  materialOverrides: Record<string, string>,
+  componentOverrides: Record<string, string>,
+) {
+  const activeComponents = new Map<string, string>()
+  const selectedMaterialVariants = new Map<string, string>(Object.entries(manifest.defaultMaterialVariants ?? {}))
+
+  for (const group of product.optionGroups) {
+    const selectedValue = group.values.find((value) => value.id === selections[group.id])
+    if (selectedValue?.visual?.componentGroup && selectedValue.visual.componentValue) {
+      activeComponents.set(selectedValue.visual.componentGroup, selectedValue.visual.componentValue)
+    }
+    if (selectedValue?.visual?.materialSlot && selectedValue.visual.materialVariant) {
+      selectedMaterialVariants.set(selectedValue.visual.materialSlot, selectedValue.visual.materialVariant)
+    }
+  }
+
+  for (const [group, value] of Object.entries(componentOverrides)) activeComponents.set(group, value)
+  for (const [slot, materialId] of Object.entries(materialOverrides)) selectedMaterialVariants.set(slot, materialId)
+
+  return { activeComponents, selectedMaterialVariants }
+}
+
 function ProductModel({
   product,
   manifest,
   materials,
   selections,
   animationStates = {},
+  materialOverrides = {},
+  componentOverrides = {},
   onAssetIssues,
 }: ThreeProductViewerProps) {
   const { invalidate, gl } = useThree()
   const gltf = useGLTF(manifest.model)
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene])
+  const visualState = useMemo(
+    () => resolveVisualState(product, manifest, selections, materialOverrides, componentOverrides),
+    [componentOverrides, manifest, materialOverrides, product, selections],
+  )
 
   useEffect(() => {
     const names: string[] = []
@@ -195,26 +230,22 @@ function ProductModel({
         object.receiveShadow = true
       }
     })
-    onAssetIssues?.(validateAssetManifest(manifest, Object.keys(materials), names))
-  }, [manifest, materials, onAssetIssues, scene])
+    onAssetIssues?.([
+      ...validateAssetManifest(manifest, Object.keys(materials), names),
+      ...validateMaterialSlotAssignments(
+        manifest,
+        Object.fromEntries(visualState.selectedMaterialVariants),
+        materials,
+      ),
+    ])
+  }, [manifest, materials, onAssetIssues, scene, visualState])
 
   useEffect(() => {
     const createdMaterials: THREE.MeshPhysicalMaterial[] = []
     const textureCleanups: Array<() => void> = []
     const materialByVariant = new Map<string, THREE.MeshPhysicalMaterial>()
     const maxAnisotropy = gl.capabilities.getMaxAnisotropy()
-    const activeComponents = new Map<string, string>()
-    const selectedMaterialVariants = new Map<string, string>(Object.entries(manifest.defaultMaterialVariants ?? {}))
-
-    for (const group of product.optionGroups) {
-      const selectedValue = group.values.find((value) => value.id === selections[group.id])
-      if (selectedValue?.visual?.componentGroup && selectedValue.visual.componentValue) {
-        activeComponents.set(selectedValue.visual.componentGroup, selectedValue.visual.componentValue)
-      }
-      if (selectedValue?.visual?.materialSlot && selectedValue.visual.materialVariant) {
-        selectedMaterialVariants.set(selectedValue.visual.materialSlot, selectedValue.visual.materialVariant)
-      }
-    }
+    const { activeComponents, selectedMaterialVariants } = visualState
 
     for (const [componentKey, nodeNames] of Object.entries(manifest.components)) {
       const [groupName, componentValue] = componentKey.split('.')
@@ -259,9 +290,8 @@ function ProductModel({
     gl,
     invalidate,
     materials,
-    product.optionGroups,
     scene,
-    selections,
+    visualState,
   ])
 
   return (
@@ -363,10 +393,10 @@ function CameraRig({
     <OrbitControls
       ref={controls}
       enablePan={false}
-      minDistance={0.38}
-      maxDistance={1.6}
-      minPolarAngle={0.35}
-      maxPolarAngle={2.55}
+      minDistance={manifest.presentation?.orbit?.minDistance ?? 0.38}
+      maxDistance={manifest.presentation?.orbit?.maxDistance ?? 1.6}
+      minPolarAngle={manifest.presentation?.orbit?.minPolarAngle ?? 0.35}
+      maxPolarAngle={manifest.presentation?.orbit?.maxPolarAngle ?? 2.55}
       autoRotate={autoRotate && !reducedMotion}
       autoRotateSpeed={0.65}
       makeDefault
@@ -400,9 +430,9 @@ export function ThreeProductViewer(props: ThreeProductViewerProps) {
       <Suspense fallback={<LoadingFallback />}>
         <ProductModel {...props} />
         <ContactShadows
-          position={[0, -0.34, 0]}
+          position={[0, props.manifest.presentation?.groundY ?? -0.34, 0]}
           opacity={0.44}
-          scale={1.2}
+          scale={props.manifest.presentation?.shadowScale ?? 1.2}
           blur={2.6}
           far={1.2}
           frames={1}
