@@ -88,6 +88,11 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
     await page.getByLabel('Confirm ' + label + ' material slot').check()
   }
 
+  await expect(page.getByRole('heading', { name: '3D authoring contract' })).toBeVisible()
+  await expect(page.getByText('1 UV unit = 1 meter on material-ready surfaces')).toBeVisible()
+  await expect(page.getByText('Front shell customization area')).toBeVisible()
+  await expect(page.getByText(/220 × 240 mm/)).toBeVisible()
+
   await expect(page.getByText('Capture gate passed')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Download construction packet' })).toBeEnabled()
 
@@ -127,11 +132,17 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
   expect(manifestPath).not.toBeNull()
   const manifest = JSON.parse(await fs.readFile(manifestPath!, 'utf8')) as {
     rootNode: string
-    materialSlotProfiles: Record<string, { kind: string; requiresUv0: boolean }>
+    materialSlotProfiles: Record<string, { kind: string; requiresUv0: boolean; metersPerUvUnit?: number }>
+    customizationZones: Record<string, { node: string; purposes: string[]; sizeMeters: [number, number] }>
     presentation: { orbit: { minDistance: number; maxDistance: number } }
   }
   expect(manifest.rootNode).toBe('SLS_ProductRoot')
-  expect(manifest.materialSlotProfiles.LeatherPrimary).toMatchObject({ kind: 'leather', requiresUv0: true })
+  expect(manifest.materialSlotProfiles.LeatherPrimary).toMatchObject({ kind: 'leather', requiresUv0: true, metersPerUvUnit: 1 })
+  expect(manifest.customizationZones['front-panel']).toMatchObject({
+    node: 'Shell_Main',
+    purposes: ['tooling', 'text', 'logo', 'artwork'],
+    sizeMeters: [0.22, 0.24],
+  })
   expect(manifest.presentation.orbit.maxDistance).toBeGreaterThan(manifest.presentation.orbit.minDistance)
 
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
