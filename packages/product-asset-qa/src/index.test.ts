@@ -48,6 +48,11 @@ const manifest: AssetManifest = {
     HardwarePrimary: ['Visor_Frame'],
     Lens: ['Visor_Lens'],
   },
+  materialSlotProfiles: {
+    LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
+    HardwarePrimary: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional' },
+    Lens: { kind: 'glass', mapping: 'uv0', requiresUv0: false, requiresNormals: true, tangents: 'optional' },
+  },
   defaultMaterialVariants: {
     LeatherPrimary: 'SCL-001',
     HardwarePrimary: 'SCH-001',
@@ -87,6 +92,11 @@ const inspection: ProductAssetInspection = {
   nonUniformScaleNodes: [],
   negativeScaleNodes: [],
   animationClipNames: [],
+  meshDiagnostics: [
+    { nodeName: 'Shell_Main', triangleCount: 60_000, materialCount: 1, hasUv0: true, hasUv1: false, hasNormals: true, hasTangents: true },
+    { nodeName: 'Visor_Frame', triangleCount: 12_000, materialCount: 1, hasUv0: true, hasUv1: false, hasNormals: true, hasTangents: false },
+    { nodeName: 'Visor_Lens', triangleCount: 12_000, materialCount: 1, hasUv0: false, hasUv1: false, hasNormals: true, hasTangents: false },
+  ],
 }
 
 const lifecycles = {
@@ -131,6 +141,21 @@ describe('product asset QA', () => {
     expect(issues.some((entry) => entry.path === 'inspection.boundsMeters.width' && entry.severity === 'error')).toBe(true)
     expect(issues.some((entry) => entry.message.includes('Visor_Pivot'))).toBe(true)
     expect(issues.some((entry) => entry.message.includes('reference-only'))).toBe(true)
+  })
+
+  it('blocks a texture-swappable surface that is missing UV0', () => {
+    const issues = evaluateProductAssetQa({
+      construction,
+      manifest,
+      inspection: {
+        ...inspection,
+        meshDiagnostics: inspection.meshDiagnostics.map((mesh) => (
+          mesh.nodeName === 'Shell_Main' ? { ...mesh, hasUv0: false } : mesh
+        )),
+      },
+      materialLifecycleById: lifecycles,
+    })
+    expect(issues.some((entry) => entry.path.endsWith('Shell_Main.uv0') && entry.severity === 'error')).toBe(true)
   })
 
   it('enforces production budgets', () => {
