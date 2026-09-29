@@ -7,6 +7,7 @@ import {
   validateAssetManifest,
   validateMaterialSlotAssignments,
   type AssetCustomizationPurpose,
+  type AssetCustomizationZone,
   type AssetManifest,
   type MaterialVariant,
   type ProductDefinition,
@@ -396,7 +397,7 @@ function loadPreviewImage(url: string): Promise<HTMLImageElement | null> {
 
 async function drawCustomizationCanvas(
   canvas: HTMLCanvasElement,
-  zone: AssetManifest['customizationZones'] extends Record<string, infer T> ? T : never,
+  zone: AssetCustomizationZone,
   layers: readonly ThreeCustomizationLayer[],
 ) {
   const context = canvas.getContext('2d')
