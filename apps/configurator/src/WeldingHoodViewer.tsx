@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from 'react'
 import { createInitialConfiguration, setSelection } from '@sls/configurator-core'
 import { ThreeProductViewer } from '@sls/three-renderer'
+import type { StudioBuildDraft } from '@sls/order-engine'
 import type { ValidationIssue } from '@sls/product-schema'
 import { createRendererMaterialMap } from '@sls/material-library'
 import { sampleManifest, sampleProduct } from './sample-product'
@@ -33,7 +34,13 @@ function resolveHoodConfiguration(referenceId: string) {
   return configuration
 }
 
-function WeldingHoodViewerComponent({ referenceId }: { referenceId: string }) {
+function WeldingHoodViewerComponent({
+  referenceId,
+  construction,
+}: {
+  referenceId: string
+  construction: StudioBuildDraft['personalization']['construction']
+}) {
   const [visorOpen, setVisorOpen] = useState(false)
   const [autoRotate, setAutoRotate] = useState(false)
   const [cameraPreset, setCameraPreset] = useState(sampleProduct.asset.defaultCameraPreset)
@@ -43,6 +50,13 @@ function WeldingHoodViewerComponent({ referenceId }: { referenceId: string }) {
     () => createRendererMaterialMap(scorpionMaterialDefinitions, preferredMaterialTextureEdge()),
     [],
   )
+  const materialOverrides = useMemo<Record<string, string>>(() => {
+    const hardware = construction.hardware
+    if (hardware === 'nickel') return { HardwarePrimary: 'SCH-001' }
+    if (hardware === 'antique-brass' || hardware === 'brass') return { HardwarePrimary: 'SCH-002' }
+    return {}
+  }, [construction.hardware])
+
   const activeLeatherMaterial = useMemo(() => {
     const selectedBuild = sampleProduct.optionGroups
       .find((group) => group.id === 'catalogBuild')
@@ -59,6 +73,7 @@ function WeldingHoodViewerComponent({ referenceId }: { referenceId: string }) {
         manifest={sampleManifest}
         materials={materials}
         selections={configuration.selections}
+        materialOverrides={materialOverrides}
         animationStates={{ 'visor.open': visorOpen }}
         cameraPreset={cameraPreset}
         autoRotate={autoRotate}
@@ -99,6 +114,7 @@ function WeldingHoodViewerComponent({ referenceId }: { referenceId: string }) {
       <div className="viewer-caption">
         Development digital twin · photographed product is the visual authority
         {activeLeatherMaterial ? ` · ${activeLeatherMaterial.lifecycle}` : ''}
+        {Object.keys(materialOverrides).length ? ' · mapped hardware preview active' : ''}
       </div>
       <div className={`asset-status ${assetIssues.length ? 'has-issues' : ''}`}>
         {assetIssues.length
