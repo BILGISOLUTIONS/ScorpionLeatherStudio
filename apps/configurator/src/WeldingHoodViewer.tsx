@@ -51,10 +51,11 @@ function WeldingHoodViewerComponent({
     [],
   )
   const materialOverrides = useMemo<Record<string, string>>(() => {
+    const overrides: Record<string, string> = {}
     const hardware = construction.hardware
-    if (hardware === 'nickel') return { HardwarePrimary: 'SCH-001' }
-    if (hardware === 'antique-brass' || hardware === 'brass') return { HardwarePrimary: 'SCH-002' }
-    return {}
+    if (hardware === 'nickel') overrides.HardwarePrimary = 'SCH-001'
+    if (hardware === 'antique-brass' || hardware === 'brass') overrides.HardwarePrimary = 'SCH-002'
+    return overrides
   }, [construction.hardware])
 
   const activeLeatherMaterial = useMemo(() => {
