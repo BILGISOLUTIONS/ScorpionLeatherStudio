@@ -183,14 +183,26 @@ export const sampleManifest: AssetManifest = {
     Lens: ['Visor_Lens'],
   },
   materialSlotProfiles: {
-    LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
-    HardwarePrimary: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional' },
+    LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended', metersPerUvUnit: 1, uvScaleToleranceRatio: 0.2 },
+    HardwarePrimary: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional', metersPerUvUnit: 1, uvScaleToleranceRatio: 0.25 },
     Lens: { kind: 'glass', mapping: 'uv0', requiresUv0: false, requiresNormals: true, tangents: 'optional' },
   },
   defaultMaterialVariants: {
     LeatherPrimary: 'SCL-COGNAC',
     HardwarePrimary: 'SCH-002',
     Lens: 'SGL-001',
+  },
+  customizationZones: {
+    'front-panel': {
+      label: 'Front shell customization area',
+      node: 'Shell_Main',
+      purposes: ['tooling', 'text', 'logo', 'artwork'],
+      origin: [0, 0.05, 0.27],
+      normal: [0, 0, 1],
+      up: [0, 1, 0],
+      sizeMeters: [0.22, 0.24],
+      safeInsetMeters: 0.012,
+    },
   },
   components: {
     'neckGuard.standard': ['NeckGuard_Standard'],
