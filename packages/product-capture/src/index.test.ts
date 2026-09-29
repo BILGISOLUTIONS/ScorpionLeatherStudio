@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   buildAssetManifestScaffold,
   buildProductConstructionPacket,
+  getProductTypeAuthoringTemplate,
+  productTypeAuthoringTemplates,
   validateProductCapture,
   weldingHoodCapturePlan,
   type ProductCaptureSession,
@@ -97,6 +99,21 @@ describe('product capture validation', () => {
       .toContain('materialSlots.LeatherPrimary.status')
   })
 
+  it('exposes reusable authoring conventions for the main leather-product families', () => {
+    expect(productTypeAuthoringTemplates.map((entry) => entry.id)).toEqual([
+      'welding-hood',
+      'radio-harness',
+      'belt',
+      'pouch',
+      'strap',
+    ])
+    expect(getProductTypeAuthoringTemplate('radio-harness')).toMatchObject({
+      rootNode: 'SLS_ProductRoot',
+      physicalUvMetersPerUnit: 1,
+      materialSlots: ['LeatherPrimary', 'HardwarePrimary'],
+    })
+  })
+
   it('builds a deterministic reconstruction packet without mutating the asset library', () => {
     const packet = buildProductConstructionPacket({
       session: completeSession(),
@@ -132,7 +149,13 @@ describe('product capture validation', () => {
       model: 'model.glb',
       rootNode: 'SLS_ProductRoot',
       materialSlotProfiles: {
-        LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true },
+        LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true, metersPerUvUnit: 1 },
+      },
+      customizationZones: {
+        'front-panel': {
+          node: 'Shell_Main',
+          purposes: ['tooling', 'text', 'logo', 'artwork'],
+        },
       },
     })
     expect(manifest.presentation?.orbit?.maxDistance).toBeGreaterThan(manifest.presentation?.orbit?.minDistance ?? 0)
