@@ -54,6 +54,7 @@ export interface QaApprovalPacket {
     roughness: { file: string; width: number; height: number }
     normal: { file: string; width: number; height: number }
   }
+  physicalTextureTileSizeMm: [number, number]
   viewer: {
     repeat: number
     normalScale: number
@@ -163,8 +164,16 @@ export function validatePromotionChain(
     }
   }
 
+  if (
+    !Array.isArray(qa.physicalTextureTileSizeMm) ||
+    qa.physicalTextureTileSizeMm.length !== 2 ||
+    qa.physicalTextureTileSizeMm.some((value) => !Number.isFinite(value) || value <= 0)
+  ) {
+    issues.push(issue('qa.physicalTextureTileSizeMm', 'QA approval must record the physical width and height represented by one texture tile in millimeters.'))
+  }
+
   if (!Number.isFinite(qa.viewer.repeat) || qa.viewer.repeat <= 0 || qa.viewer.repeat > 16) {
-    issues.push(issue('qa.viewer.repeat', 'QA texture repeat must be greater than zero and no more than 16.'))
+    issues.push(issue('qa.viewer.repeat', 'QA preview repeat must be greater than zero and no more than 16.'))
   }
   if (!Number.isFinite(qa.viewer.normalScale) || qa.viewer.normalScale < 0 || qa.viewer.normalScale > 4) {
     issues.push(issue('qa.viewer.normalScale', 'QA normal scale must be between 0 and 4.'))
@@ -243,18 +252,21 @@ export function promoteMaterial(args: {
 
   const roughness = Math.max(0, Math.min(1, args.qa.viewer.roughnessScalar))
   const normalScale = Math.max(0, Math.min(4, args.qa.viewer.normalScale))
-  const repeat = Math.max(0.1, Math.min(16, args.qa.viewer.repeat))
-
   const qaNotes = args.qa.notes?.trim()
   const provenanceNotes = [
     args.draft.provenance.notes?.trim(),
     qaNotes ? `QA: ${qaNotes}` : '',
   ].filter(Boolean).join(' ')
 
+  const { textureRepeat: _legacyTextureRepeat, ...rendererBase } = args.draft.renderer
   const material: ScorpionMaterialDefinition = {
     ...args.draft,
     lifecycle: 'production-approved',
     previewColor: args.processing.derivedPreviewColor,
+    physical: {
+      ...args.draft.physical,
+      textureTileSizeMm: [...args.qa.physicalTextureTileSizeMm] as [number, number],
+    },
     provenance: {
       ...args.draft.provenance,
       notes: provenanceNotes || undefined,
@@ -266,10 +278,9 @@ export function promoteMaterial(args: {
       sourceQaPacket: args.sourceQaPacket,
     },
     renderer: {
-      ...args.draft.renderer,
+      ...rendererBase,
       roughness,
       normalScale,
-      textureRepeat: [repeat, repeat],
     },
     textureTiers: materialTiers,
   }
