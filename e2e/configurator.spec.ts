@@ -726,6 +726,8 @@ test('Material QA renders processed maps and exports an explicit approval packet
 
   await page.getByLabel('Lighting').selectOption('raking-left')
   await page.getByLabel('Test shape').selectOption('cylinder')
+  await page.getByLabel('Physical tile width (mm)').fill('400')
+  await page.getByLabel('Physical tile height (mm)').fill('400')
   await page.getByLabel('Reviewer *').fill('QA Reviewer')
 
   const checks = page.locator('.qa-check input[type="checkbox"]')
@@ -748,6 +750,7 @@ test('Material QA renders processed maps and exports an explicit approval packet
     decision: string
     automaticRegistryMutation: boolean
     reviewer: string
+    physicalTextureTileSizeMm: [number, number]
     maps: Record<string, { width: number; height: number }>
   }
 
@@ -755,6 +758,7 @@ test('Material QA renders processed maps and exports an explicit approval packet
   expect(approval.decision).toBe('approved-for-registry-promotion')
   expect(approval.automaticRegistryMutation).toBe(false)
   expect(approval.reviewer).toBe('QA Reviewer')
+  expect(approval.physicalTextureTileSizeMm).toEqual([400, 400])
   expect(approval.maps.baseColor).toMatchObject({ width: 4, height: 4 })
 
   expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
