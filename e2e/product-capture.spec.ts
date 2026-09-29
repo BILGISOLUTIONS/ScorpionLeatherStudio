@@ -78,6 +78,16 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
     await page.getByLabel('Confirm ' + label).check()
   }
 
+  const materialSlots = [
+    ['Primary leather surface', 'SCL-TEST'],
+    ['Primary visor hardware', 'SCH-TEST'],
+    ['Visor lens', 'SGL-TEST'],
+  ] as const
+  for (const [label, materialId] of materialSlots) {
+    await page.getByLabel(label + ' material registry ID').fill(materialId)
+    await page.getByLabel('Confirm ' + label + ' material slot').check()
+  }
+
   await expect(page.getByText('Capture gate passed')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Download construction packet' })).toBeEnabled()
 
@@ -96,6 +106,7 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
     dimensionsMm: Record<string, number>
     referenceCoverage: Array<{ key: string }>
     constructionNodes: Array<{ status: string }>
+    materialSlots: Array<{ slotId: string; status: string }>
   }
 
   expect(packet.productId).toBe('SC-WH-001')
@@ -105,6 +116,23 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
   expect(packet.dimensionsMm.maxWidth).toBe(100)
   expect(packet.referenceCoverage).toHaveLength(18)
   expect(packet.constructionNodes.every((node) => node.status === 'confirmed')).toBe(true)
+  expect(packet.materialSlots).toHaveLength(3)
+  expect(packet.materialSlots.every((slot) => slot.status === 'confirmed')).toBe(true)
+
+  const [manifestDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download 3D manifest scaffold' }).click(),
+  ])
+  const manifestPath = await manifestDownload.path()
+  expect(manifestPath).not.toBeNull()
+  const manifest = JSON.parse(await fs.readFile(manifestPath!, 'utf8')) as {
+    rootNode: string
+    materialSlotProfiles: Record<string, { kind: string; requiresUv0: boolean }>
+    presentation: { orbit: { minDistance: number; maxDistance: number } }
+  }
+  expect(manifest.rootNode).toBe('SLS_ProductRoot')
+  expect(manifest.materialSlotProfiles.LeatherPrimary).toMatchObject({ kind: 'leather', requiresUv0: true })
+  expect(manifest.presentation.orbit.maxDistance).toBeGreaterThan(manifest.presentation.orbit.minDistance)
 
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
   expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
