@@ -6,6 +6,8 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import type { AssetManifest } from '@sls/product-schema'
 import type { ProductAssetInspection } from '@sls/product-asset-qa'
 
+export type ProductAssetDiagnosticMode = 'original' | 'uv-checker' | 'normals'
+
 interface Runtime {
   renderer: THREE.WebGLRenderer
   scene: THREE.Scene
@@ -14,6 +16,9 @@ interface Runtime {
   model?: THREE.Object3D
   render: () => void
   resizeObserver: ResizeObserver
+  originalMaterials: Map<THREE.Mesh, THREE.Material | THREE.Material[]>
+  diagnosticMaterials: THREE.Material[]
+  checkerTexture?: THREE.DataTexture
 }
 
 function textureEdges(texture: THREE.Texture): number[] {
@@ -55,6 +60,7 @@ function inspectScene(args: {
   let meshCount = 0
   let triangles = 0
   let unnamedMeshCount = 0
+  const meshDiagnostics: ProductAssetInspection['meshDiagnostics'] = []
 
   args.scene.traverse((object) => {
     if (object.name) {
@@ -73,9 +79,19 @@ function inspectScene(args: {
     if (!(object instanceof THREE.Mesh)) return
     meshCount += 1
     if (!object.name) unnamedMeshCount += 1
-    triangles += triangleCount(object.geometry)
+    const meshTriangles = triangleCount(object.geometry)
+    triangles += meshTriangles
 
     const meshMaterials = Array.isArray(object.material) ? object.material : [object.material]
+    meshDiagnostics.push({
+      nodeName: object.name || object.uuid,
+      triangleCount: meshTriangles,
+      materialCount: meshMaterials.length,
+      hasUv0: Boolean(object.geometry.getAttribute('uv')),
+      hasUv1: Boolean(object.geometry.getAttribute('uv1')),
+      hasNormals: Boolean(object.geometry.getAttribute('normal')),
+      hasTangents: Boolean(object.geometry.getAttribute('tangent')),
+    })
     for (const material of meshMaterials) {
       materials.add(material)
       for (const texture of materialTextures(material)) textures.add(texture)
@@ -113,7 +129,65 @@ function inspectScene(args: {
     nonUniformScaleNodes: [...new Set(nonUniformScaleNodes)].sort(),
     negativeScaleNodes: [...new Set(negativeScaleNodes)].sort(),
     animationClipNames: args.animations.map((clip) => clip.name || '(unnamed)').sort(),
+    meshDiagnostics,
   }
+}
+
+function createCheckerTexture(): THREE.DataTexture {
+  const size = 8
+  const data = new Uint8Array(size * size * 4)
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const offset = (y * size + x) * 4
+      const bright = (x + y) % 2 === 0
+      data[offset] = bright ? 210 : 50
+      data[offset + 1] = bright ? 173 : 43
+      data[offset + 2] = bright ? 98 : 38
+      data[offset + 3] = 255
+    }
+  }
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(6, 6)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.needsUpdate = true
+  return texture
+}
+
+function restoreOriginalMaterials(runtime: Runtime) {
+  for (const [mesh, material] of runtime.originalMaterials) mesh.material = material
+  for (const material of runtime.diagnosticMaterials) material.dispose()
+  runtime.diagnosticMaterials = []
+  runtime.checkerTexture?.dispose()
+  runtime.checkerTexture = undefined
+}
+
+function applyDiagnosticMode(runtime: Runtime, mode: ProductAssetDiagnosticMode) {
+  restoreOriginalMaterials(runtime)
+  if (!runtime.model || mode === 'original') {
+    runtime.render()
+    return
+  }
+
+  if (mode === 'normals') {
+    runtime.model.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return
+      const material = new THREE.MeshNormalMaterial()
+      runtime.diagnosticMaterials.push(material)
+      object.material = material
+    })
+  } else {
+    const texture = createCheckerTexture()
+    runtime.checkerTexture = texture
+    runtime.model.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return
+      const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
+      runtime.diagnosticMaterials.push(material)
+      object.material = material
+    })
+  }
+  runtime.render()
 }
 
 function disposeObject(root: THREE.Object3D | undefined) {
@@ -132,11 +206,13 @@ function disposeObject(root: THREE.Object3D | undefined) {
 export default function ProductAssetQaViewer({
   file,
   manifest,
+  diagnosticMode = 'original',
   onInspection,
   onError,
 }: {
   file: File
   manifest: AssetManifest
+  diagnosticMode?: ProductAssetDiagnosticMode
   onInspection: (inspection: ProductAssetInspection) => void
   onError: (message: string) => void
 }) {
@@ -188,7 +264,16 @@ export default function ProductAssetQaViewer({
     })
     resizeObserver.observe(canvas.parentElement ?? canvas)
 
-    runtimeRef.current = { renderer, scene, camera, controls, render, resizeObserver }
+    runtimeRef.current = {
+      renderer,
+      scene,
+      camera,
+      controls,
+      render,
+      resizeObserver,
+      originalMaterials: new Map(),
+      diagnosticMaterials: [],
+    }
     render()
 
     return () => {
@@ -198,6 +283,7 @@ export default function ProductAssetQaViewer({
       controls.removeEventListener('change', render)
       controls.dispose()
       if (runtime?.model) {
+        restoreOriginalMaterials(runtime)
         scene.remove(runtime.model)
         disposeObject(runtime.model)
       }
@@ -224,13 +310,18 @@ export default function ProductAssetQaViewer({
         }
 
         if (runtime.model) {
+          restoreOriginalMaterials(runtime)
           runtime.scene.remove(runtime.model)
           disposeObject(runtime.model)
+          runtime.originalMaterials.clear()
         }
 
         const model = gltf.scene
         runtime.model = model
         runtime.scene.add(model)
+        model.traverse((object) => {
+          if (object instanceof THREE.Mesh) runtime.originalMaterials.set(object, object.material)
+        })
         model.updateMatrixWorld(true)
 
         const bounds = new THREE.Box3().setFromObject(model)
@@ -249,7 +340,7 @@ export default function ProductAssetQaViewer({
         runtime.controls.minDistance = radius * 0.7
         runtime.controls.maxDistance = radius * 8
         runtime.controls.update()
-        runtime.render()
+        applyDiagnosticMode(runtime, diagnosticMode)
 
         onInspection(inspectScene({ scene: model, animations: gltf.animations, manifest, file }))
       } catch (error) {
@@ -262,6 +353,12 @@ export default function ProductAssetQaViewer({
       cancelled = true
     }
   }, [file, manifest, onError, onInspection])
+
+  useEffect(() => {
+    const runtime = runtimeRef.current
+    if (!runtime?.model) return
+    applyDiagnosticMode(runtime, diagnosticMode)
+  }, [diagnosticMode])
 
   return (
     <div className="asset-qa-viewer" aria-label="Digital twin QA viewer">
