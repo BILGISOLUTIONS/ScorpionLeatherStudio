@@ -20,6 +20,7 @@ const capturedLeather: ScorpionMaterialDefinition = {
     grain: 'Textured',
     finish: 'Matte',
     thicknessMm: 2.1,
+    textureTileSizeMm: [200, 250],
   },
   provenance: {
     source: 'field-capture',
@@ -79,6 +80,28 @@ describe('material library', () => {
       metalness: 0,
     })
     expect(map['SCL-TEST'].textures?.baseColor).toContain('/1k/')
+  })
+
+  it('derives renderer repeat from the calibrated physical texture tile when no override is supplied', () => {
+    const material: ScorpionMaterialDefinition = {
+      ...capturedLeather,
+      renderer: {
+        roughness: 0.8,
+        metalness: 0,
+      },
+    }
+
+    const map = createRendererMaterialMap([material], 1024)
+    expect(map['SCL-TEST'].textureRepeat).toEqual([5, 4])
+  })
+
+  it('requires physical texture scale metadata for mapped production leather', () => {
+    const invalid: ScorpionMaterialDefinition = {
+      ...capturedLeather,
+      physical: { ...capturedLeather.physical, textureTileSizeMm: undefined },
+    }
+
+    expect(validateMaterialDefinition(invalid).map((issue) => issue.path)).toContain('physical.textureTileSizeMm')
   })
 
   it('does not allow reference-only placeholders to masquerade as production-approved material captures', () => {
