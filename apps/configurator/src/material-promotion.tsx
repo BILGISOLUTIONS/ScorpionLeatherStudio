@@ -418,6 +418,7 @@ function MaterialPromotion() {
               <div><span>Preview color</span><strong>{promotion.material.previewColor}</strong></div>
               <div><span>Reviewer</span><strong>{promotion.material.approval?.reviewer}</strong></div>
               <div><span>Texture tiers</span><strong>{promotion.material.textureTiers?.map((tier) => `${tier.maxEdge / 1024}K`).join(' · ')}</strong></div>
+              <div><span>Physical tile</span><strong>{promotion.material.physical?.textureTileSizeMm ? `${promotion.material.physical.textureTileSizeMm[0]} × ${promotion.material.physical.textureTileSizeMm[1]} mm` : '—'}</strong></div>
               <div><span>Asset root</span><strong>{promotion.assetPlacement.root}</strong></div>
             </div>
 
