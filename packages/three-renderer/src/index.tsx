@@ -656,16 +656,22 @@ function CameraRig({
   const { camera, invalidate } = useThree()
   const reducedMotion = useReducedMotion()
   const controls = useRef<OrbitControlsImpl>(null)
+  const startPosition = useRef(new THREE.Vector3())
+  const startTarget = useRef(new THREE.Vector3())
   const destination = useRef(new THREE.Vector3())
   const destinationTarget = useRef(new THREE.Vector3())
+  const transitionElapsed = useRef(0)
   const transitioning = useRef(true)
 
   useEffect(() => {
     const preset = manifest.cameraPresets[presetName]
     if (!preset) return
 
+    startPosition.current.copy(camera.position)
+    startTarget.current.copy(controls.current?.target ?? new THREE.Vector3())
     destination.current.set(...preset.position)
     destinationTarget.current.set(...preset.target)
+    transitionElapsed.current = 0
 
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.fov = preset.fov
@@ -704,20 +710,23 @@ function CameraRig({
   useFrame((_, delta) => {
     if (!transitioning.current || reducedMotion) return
 
-    const alpha = 1 - Math.exp(-7 * delta)
-    camera.position.lerp(destination.current, alpha)
+    transitionElapsed.current += Math.min(delta, 0.05)
+    const durationSeconds = 0.48
+    const linear = Math.min(1, transitionElapsed.current / durationSeconds)
+    const eased = linear < 0.5
+      ? 4 * linear * linear * linear
+      : 1 - Math.pow(-2 * linear + 2, 3) / 2
+
+    camera.position.lerpVectors(startPosition.current, destination.current, eased)
 
     if (controls.current) {
-      controls.current.target.lerp(destinationTarget.current, alpha)
+      controls.current.target.lerpVectors(startTarget.current, destinationTarget.current, eased)
       controls.current.update()
     } else {
       camera.lookAt(destinationTarget.current)
     }
 
-    const positionDone = camera.position.distanceTo(destination.current) < 0.002
-    const targetDone = !controls.current || controls.current.target.distanceTo(destinationTarget.current) < 0.002
-
-    if (positionDone && targetDone) {
+    if (linear >= 1) {
       camera.position.copy(destination.current)
       if (controls.current) {
         controls.current.target.copy(destinationTarget.current)
@@ -726,15 +735,17 @@ function CameraRig({
         camera.lookAt(destinationTarget.current)
       }
       transitioning.current = false
-    } else {
-      invalidate()
+      return
     }
+
+    invalidate()
   })
 
   return (
     <OrbitControls
       ref={controls}
       enablePan={false}
+      enableDamping={false}
       minDistance={manifest.presentation?.orbit?.minDistance ?? 0.38}
       maxDistance={manifest.presentation?.orbit?.maxDistance ?? 1.6}
       minPolarAngle={manifest.presentation?.orbit?.minPolarAngle ?? 0.35}
