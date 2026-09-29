@@ -96,6 +96,7 @@ test('Material Promotion verifies provenance and emits a production material pac
       roughness: { file: 'SCL-005-1k-roughness.png', width: 1024, height: 1024 },
       normal: { file: 'SCL-005-1k-normal.png', width: 1024, height: 1024 },
     },
+    physicalTextureTileSizeMm: [400, 400],
     viewer: {
       repeat: 2.5,
       normalScale: 0.9,
@@ -171,6 +172,7 @@ test('Material Promotion verifies provenance and emits a production material pac
     lifecycle: string
     previewColor: string
     approval?: { reviewer?: string; sourceQaPacket?: string }
+    physical?: { textureTileSizeMm?: number[] }
     renderer: { roughness: number; normalScale?: number; textureRepeat?: number[] }
     textureTiers?: Array<{ maxEdge: number; textures: Record<string, string> }>
   }
@@ -183,12 +185,15 @@ test('Material Promotion verifies provenance and emits a production material pac
       reviewer: 'QA Reviewer',
       sourceQaPacket: 'SCL-005-qa-approval.json',
     },
+    physical: {
+      textureTileSizeMm: [400, 400],
+    },
     renderer: {
       roughness: 0.82,
       normalScale: 0.9,
-      textureRepeat: [2.5, 2.5],
     },
   })
+  expect(definition.renderer.textureRepeat).toBeUndefined()
   expect(definition.textureTiers).toHaveLength(1)
   expect(definition.textureTiers?.[0]).toMatchObject({
     maxEdge: 1024,
