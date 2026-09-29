@@ -171,6 +171,51 @@ test('multi-product studio builds and captures a customized order request', asyn
 })
 
 
+test('V0.32 renders mapped welding-hood customization in the explicit 3D zone', async ({ page }, testInfo) => {
+  const consoleErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Western floral' }).click()
+  await page.getByRole('checkbox', { name: /Add text/i }).check()
+  await page.getByPlaceholder('Name, initials, company, unit, etc.').fill('SCORPION CREW')
+  await page.getByRole('button', { name: 'Western', exact: true }).click()
+  await page.getByLabel('Requested placement').selectOption({ label: 'Forehead panel' })
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'mark.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=', 'base64'),
+  })
+
+  await page.getByRole('tab', { name: 'Interactive 3D' }).click()
+  await expect(page.locator('canvas')).toBeVisible()
+
+  const previewStatus = page.getByTestId('customization-preview-status')
+  await expect(previewStatus).toBeVisible()
+  await expect(previewStatus).toContainText('Front shell customization area')
+  await expect(previewStatus).toContainText('Final scale and placement are confirmed by Scorpion')
+
+  const focusButton = page.getByRole('button', { name: 'Focus custom' })
+  await expect(focusButton).toBeVisible()
+  await focusButton.click()
+  await expect(page.getByRole('button', { name: 'Front', exact: true })).toHaveAttribute('aria-pressed', 'true')
+
+  await page.getByLabel('Requested placement').selectOption({ label: 'Left side panel' })
+  await expect(previewStatus).toContainText('not mapped to a verified 3D placement zone')
+  await expect(page.getByRole('button', { name: 'Focus custom' })).toHaveCount(0)
+
+  await page.locator('.viewer-panel').screenshot({
+    path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'zone-preview-v032-mobile.png' : 'zone-preview-v032-desktop.png'}`,
+  })
+
+  expect(consoleErrors, `V0.32 customization preview console errors: ${consoleErrors.join('\n')}`).toEqual([])
+})
+
+
 test('Shopify embed deep link opens the requested real catalog product without loading 3D', async ({ page }) => {
   const scriptRequests: string[] = []
   page.on('request', (request) => {

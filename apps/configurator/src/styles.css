@@ -208,7 +208,10 @@ a:focus-visible,
   top: 16px;
   z-index: 3;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 7px;
+  max-width: calc(100% - 32px);
 }
 
 .viewer-actions button {
@@ -229,6 +232,34 @@ a:focus-visible,
   font-size: .71rem;
   letter-spacing: .04em;
   pointer-events: none;
+}
+
+.customization-preview-status {
+  position: absolute;
+  right: 18px;
+  bottom: 54px;
+  z-index: 3;
+  max-width: min(430px, calc(100% - 36px));
+  padding: 8px 10px;
+  border: 1px solid rgba(126, 104, 63, .44);
+  background: rgba(13, 11, 8, .86);
+  color: #c9b98f;
+  font-size: .66rem;
+  line-height: 1.42;
+  letter-spacing: .025em;
+  pointer-events: none;
+  backdrop-filter: blur(9px);
+}
+
+.customization-preview-status.is-ready {
+  color: #d7c9a3;
+  border-color: rgba(165, 132, 72, .52);
+}
+
+.customization-preview-status.is-unmapped {
+  color: #d6ab83;
+  border-color: rgba(179, 115, 79, .5);
+  background: rgba(24, 13, 8, .86);
 }
 
 .asset-status {
@@ -727,6 +758,14 @@ a:focus-visible,
     left: 10px;
     bottom: 10px;
     font-size: .64rem;
+  }
+
+  .customization-preview-status {
+    left: 10px;
+    right: 10px;
+    bottom: 46px;
+    max-width: none;
+    font-size: .62rem;
   }
 
   .option-list,

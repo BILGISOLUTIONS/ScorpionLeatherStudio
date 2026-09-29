@@ -115,6 +115,8 @@ export interface AssetCustomizationZone {
   label: string
   node: string
   purposes: AssetCustomizationPurpose[]
+  placementLabels?: string[]
+  cameraPreset?: string
   origin: [number, number, number]
   normal: [number, number, number]
   up: [number, number, number]
@@ -304,6 +306,7 @@ export function validateAssetManifest(
   }
 
   const vectorLength = (value: [number, number, number]) => Math.hypot(value[0], value[1], value[2])
+  const placementLabelOwner = new Map<string, string>()
   for (const [zoneId, zone] of Object.entries(manifest.customizationZones ?? {})) {
     const prefix = `customizationZones.${zoneId}`
     if (!zoneId.trim()) issues.push({ path: prefix, message: 'Customization zone id is required.' })
@@ -315,6 +318,39 @@ export function validateAssetManifest(
     if (!zone.purposes.length || zone.purposes.some((purpose) => !['tooling', 'text', 'logo', 'artwork'].includes(purpose))) {
       issues.push({ path: `${prefix}.purposes`, message: 'Customization zone must declare at least one supported purpose.' })
     }
+
+    const localPlacementLabels = new Set<string>()
+    for (const rawLabel of zone.placementLabels ?? []) {
+      const label = rawLabel.trim()
+      const normalized = label.toLowerCase()
+      if (!label) {
+        issues.push({ path: `${prefix}.placementLabels`, message: 'Customization placement labels must be non-empty.' })
+        continue
+      }
+      if (localPlacementLabels.has(normalized)) {
+        issues.push({ path: `${prefix}.placementLabels`, message: `Placement label "${label}" is duplicated in the same zone.` })
+      } else {
+        localPlacementLabels.add(normalized)
+      }
+      const owner = placementLabelOwner.get(normalized)
+      if (owner && owner !== zoneId) {
+        issues.push({
+          path: `${prefix}.placementLabels`,
+          message: `Placement label "${label}" is already assigned to customization zone "${owner}".`,
+        })
+      } else {
+        placementLabelOwner.set(normalized, zoneId)
+      }
+    }
+
+    if (zone.cameraPreset !== undefined) {
+      if (!zone.cameraPreset.trim()) {
+        issues.push({ path: `${prefix}.cameraPreset`, message: 'Customization zone camera preset must be non-empty when provided.' })
+      } else if (!manifest.cameraPresets[zone.cameraPreset]) {
+        issues.push({ path: `${prefix}.cameraPreset`, message: `Camera preset "${zone.cameraPreset}" does not exist in this asset manifest.` })
+      }
+    }
+
     if (![...zone.origin, ...zone.normal, ...zone.up, ...zone.sizeMeters].every(Number.isFinite)) {
       issues.push({ path: prefix, message: 'Customization zone coordinates and size must be finite.' })
       continue

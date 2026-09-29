@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "assetId": "placeholder-welding-hood-v5",
+  "assetId": "placeholder-welding-hood-v6",
   "model": "/models/placeholder-welding-hood.gltf",
   "units": "meters",
   "upAxis": "Y",
@@ -165,7 +165,11 @@
         0.22,
         0.24
       ],
-      "safeInsetMeters": 0.012
+      "safeInsetMeters": 0.012,
+      "placementLabels": [
+        "Forehead panel"
+      ],
+      "cameraPreset": "front"
     }
   }
 }

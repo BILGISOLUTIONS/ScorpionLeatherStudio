@@ -3,6 +3,8 @@ import { createInitialConfiguration, setSelection } from '@sls/configurator-core
 import { ThreeProductViewer } from '@sls/three-renderer'
 import type { StudioBuildDraft } from '@sls/order-engine'
 import type { ValidationIssue } from '@sls/product-schema'
+import type { ArtworkAttachment } from './studio-types'
+import { buildCustomizationPreview } from './customization-preview'
 import { createRendererMaterialMap } from '@sls/material-library'
 import { sampleManifest, sampleProduct } from './sample-product'
 import {
@@ -36,11 +38,14 @@ function resolveHoodConfiguration(referenceId: string) {
 
 function WeldingHoodViewerComponent({
   referenceId,
-  construction,
+  personalization,
+  artwork,
 }: {
   referenceId: string
-  construction: StudioBuildDraft['personalization']['construction']
+  personalization: StudioBuildDraft['personalization']
+  artwork: ArtworkAttachment | null
 }) {
+  const construction = personalization.construction
   const [visorOpen, setVisorOpen] = useState(false)
   const [autoRotate, setAutoRotate] = useState(false)
   const [cameraPreset, setCameraPreset] = useState(sampleProduct.asset.defaultCameraPreset)
@@ -57,6 +62,11 @@ function WeldingHoodViewerComponent({
     if (hardware === 'antique-brass' || hardware === 'brass') overrides.HardwarePrimary = 'SCH-002'
     return overrides
   }, [construction.hardware])
+
+  const customizationPreview = useMemo(
+    () => buildCustomizationPreview(sampleManifest, personalization, artwork),
+    [artwork, personalization],
+  )
 
   const activeLeatherMaterial = useMemo(() => {
     const selectedBuild = sampleProduct.optionGroups
@@ -75,6 +85,7 @@ function WeldingHoodViewerComponent({
         materials={materials}
         selections={configuration.selections}
         materialOverrides={materialOverrides}
+        customizationLayers={customizationPreview.layers}
         animationStates={{ 'visor.open': visorOpen }}
         cameraPreset={cameraPreset}
         autoRotate={autoRotate}
@@ -110,12 +121,35 @@ function WeldingHoodViewerComponent({
         <button type="button" aria-pressed={visorOpen} onClick={() => setVisorOpen((open) => !open)}>
           {visorOpen ? 'Close visor' : 'Open visor'}
         </button>
+        {customizationPreview.renderable && customizationPreview.cameraPreset ? (
+          <button
+            type="button"
+            onClick={() => {
+              setCameraPreset(customizationPreview.cameraPreset!)
+              setAutoRotate(false)
+            }}
+          >
+            Focus custom
+          </button>
+        ) : null}
       </div>
+
+      {customizationPreview.active ? (
+        <div
+          className={`customization-preview-status ${customizationPreview.renderable ? 'is-ready' : 'is-unmapped'}`}
+          data-testid="customization-preview-status"
+          role="status"
+          aria-live="polite"
+        >
+          {customizationPreview.message}
+        </div>
+      ) : null}
 
       <div className="viewer-caption">
         Development digital twin · photographed product is the visual authority
         {activeLeatherMaterial ? ` · ${activeLeatherMaterial.lifecycle}` : ''}
         {Object.keys(materialOverrides).length ? ' · mapped hardware preview active' : ''}
+        {customizationPreview.renderable ? ' · zone-driven concept overlay active' : ''}
       </div>
       <div className={`asset-status ${assetIssues.length ? 'has-issues' : ''}`}>
         {assetIssues.length

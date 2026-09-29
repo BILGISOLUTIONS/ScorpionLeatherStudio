@@ -27,6 +27,8 @@ const manifest: AssetManifest = {
       label: 'Front panel',
       node: 'Shell',
       purposes: ['tooling', 'text'],
+      placementLabels: ['Forehead panel'],
+      cameraPreset: 'hero',
       origin: [0, 0, 0.01],
       normal: [0, 0, 1],
       up: [0, 1, 0],
@@ -81,6 +83,8 @@ describe('asset manifest validation', () => {
           label: 'Bad zone',
           node: 'Missing',
           purposes: [],
+          placementLabels: ['', 'Forehead panel', 'Forehead panel'],
+          cameraPreset: 'missing',
           origin: [0, 0, 0],
           normal: [0, 1, 0],
           up: [0, 2, 0],
@@ -94,6 +98,8 @@ describe('asset manifest validation', () => {
     expect(issues.some((entry) => entry.path.endsWith('metersPerUvUnit'))).toBe(true)
     expect(issues.some((entry) => entry.path.endsWith('uvScaleToleranceRatio'))).toBe(true)
     expect(issues.some((entry) => entry.path.endsWith('customizationZones.bad.node'))).toBe(true)
+    expect(issues.some((entry) => entry.path.endsWith('customizationZones.bad.placementLabels'))).toBe(true)
+    expect(issues.some((entry) => entry.path.endsWith('customizationZones.bad.cameraPreset'))).toBe(true)
     expect(issues.some((entry) => entry.message.includes('must not be parallel'))).toBe(true)
     expect(issues.some((entry) => entry.path.endsWith('sizeMeters'))).toBe(true)
   })

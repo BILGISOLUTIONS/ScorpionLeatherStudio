@@ -171,7 +171,7 @@ export const sampleProduct: ProductDefinition = {
 
 export const sampleManifest: AssetManifest = {
   schemaVersion: 1,
-  assetId: 'placeholder-welding-hood-v5',
+  assetId: 'placeholder-welding-hood-v6',
   model: '/models/placeholder-welding-hood.gltf',
   units: 'meters',
   upAxis: 'Y',
@@ -197,6 +197,8 @@ export const sampleManifest: AssetManifest = {
       label: 'Front shell customization area',
       node: 'Shell_Main',
       purposes: ['tooling', 'text', 'logo', 'artwork'],
+      placementLabels: ['Forehead panel'],
+      cameraPreset: 'front',
       origin: [0, 0.05, 0.27],
       normal: [0, 0, 1],
       up: [0, 1, 0],
