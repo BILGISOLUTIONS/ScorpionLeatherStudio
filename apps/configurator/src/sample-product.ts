@@ -171,7 +171,7 @@ export const sampleProduct: ProductDefinition = {
 
 export const sampleManifest: AssetManifest = {
   schemaVersion: 1,
-  assetId: 'placeholder-welding-hood-v3',
+  assetId: 'placeholder-welding-hood-v4',
   model: '/models/placeholder-welding-hood.gltf',
   units: 'meters',
   upAxis: 'Y',
@@ -181,6 +181,11 @@ export const sampleManifest: AssetManifest = {
     LeatherPrimary: ['Shell_Main', 'NeckGuard_Standard', 'NeckGuard_Extended'],
     HardwarePrimary: ['Visor_Frame', 'Rivets'],
     Lens: ['Visor_Lens'],
+  },
+  materialSlotProfiles: {
+    LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
+    HardwarePrimary: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional' },
+    Lens: { kind: 'glass', mapping: 'uv0', requiresUv0: false, requiresNormals: true, tangents: 'optional' },
   },
   defaultMaterialVariants: {
     LeatherPrimary: 'SCL-COGNAC',
@@ -199,5 +204,10 @@ export const sampleManifest: AssetManifest = {
     front: { label: 'Front', target: [0, 0.04, 0], position: [0, 0.08, 0.82], fov: 34 },
     rear: { label: 'Rear', target: [0, 0.04, 0], position: [0, 0.08, -0.82], fov: 34 },
     detail: { label: 'Visor', target: [0, 0.12, 0.13], position: [0.34, 0.24, 0.48], fov: 27 },
+  },
+  presentation: {
+    groundY: -0.34,
+    shadowScale: 1.2,
+    orbit: { minDistance: 0.38, maxDistance: 1.6, minPolarAngle: 0.35, maxPolarAngle: 2.55 },
   },
 }
