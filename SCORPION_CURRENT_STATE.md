@@ -242,3 +242,20 @@ Validated V0.26 characteristics:
 - Share links continue to carry configuration only. Contact details and uploaded artwork are intentionally not serialized into the build token.
 - Adds pure unit coverage for share/copy outcomes and desktop/mobile Playwright coverage that saves, reloads, shares, clears browser storage, opens the shared URL, and verifies configuration restoration with customer fields absent.
 - No new dependency, API function, polling loop, cloud persistence, or global internal-tool payload.
+
+
+## SLS V0.30 material-ready digital twin framework — CANDIDATE
+
+- Active branch: `feature/v030-digital-twin-framework`, based on shipped V0.29 main `5db2951b40249627ab48160068eac33884d0bcf2`.
+- Goal: make Scorpion product assets materially swappable and reconstruction-ready without turning the 3D layer into a second source of product truth.
+- Product-schema manifest now supports explicit material-slot profiles: expected material kind, UV0 requirement, normals requirement, tangent policy, plus per-asset ground/shadow/orbit presentation values.
+- Renderer now validates explicit material-slot assignments, accepts controlled material/component overrides, and reads orbit/shadow presentation from the manifest instead of requiring product-specific renderer edits.
+- Product Capture now includes welding-hood material-slot requirements and validation. It can emit a deterministic asset-manifest authoring scaffold from a validated construction packet, carrying semantic nodes, confirmed material slots, material IDs, mapping requirements, components, measured-envelope camera starts, and presentation defaults.
+- Digital Twin QA now records per-mesh UV0/UV1, normals, tangents, triangles and material counts; production QA blocks required UV/normal/tangent failures according to the manifest profile.
+- Digital Twin QA local viewer adds Original / UV checker / Normals diagnostic modes for mapping and shading inspection.
+- Customer welding-hood preview now routes supported construction hardware preferences through explicit `HardwarePrimary` material-slot overrides, demonstrating that customer configuration can change the 3D material state without guessed mesh traversal.
+- Welding-hood development manifest advanced to v4 with material-slot profiles and manifest-owned presentation settings. The geometry remains a development scaffold and is not represented as a production-fidelity model.
+- `docs/3D-ASSET-STANDARD.md` now documents the material-ready surface contract, capture-to-authoring scaffold, diagnostic QA, and runtime configuration binding.
+- CI run `36517712614` caught an ambiguous Playwright label introduced by the new Visor Lens material-slot control; the test selector was corrected to exact checkbox matching. Subsequent candidate `e567ee7283084ce6b48ba6f732aca33b09501cc0` passed CI, and later candidate commits also passed until the latest documentation/manifest changes. Current head CI must be green before promotion.
+- No new Vercel function, database dependency, polling loop, third-party 3D service, or Shopify theme publication.
+- Do not promote V0.30 until the exact latest branch head passes the full suite and browser QA is reviewed.
