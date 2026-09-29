@@ -33,7 +33,7 @@ interface QaChecks {
 const checkLabels: Array<[keyof QaChecks, string]> = [
   ['colorMatch', 'Color visually matches the physical swatch under controlled light'],
   ['seamFree', 'No unacceptable seams or repeating capture artifacts are visible'],
-  ['scaleCorrect', 'Leather grain scale looks physically believable on the product'],
+  ['scaleCorrect', 'Leather grain scale matches the measured physical texture tile'],
   ['normalCorrect', 'Normal direction/strength is correct under raking light'],
   ['roughnessMatch', 'Roughness response matches the physical finish'],
   ['performanceAcceptable', '1K/2K material remains responsive on the target device'],
@@ -146,6 +146,8 @@ function MaterialQa() {
   const [shape, setShape] = useState<MaterialQaShape>('sphere')
   const [lighting, setLighting] = useState<MaterialQaLightingPreset>('studio')
   const [repeat, setRepeat] = useState(2)
+  const [tileWidthMm, setTileWidthMm] = useState('')
+  const [tileHeightMm, setTileHeightMm] = useState('')
   const [normalScale, setNormalScale] = useState(1)
   const [roughnessScalar, setRoughnessScalar] = useState(1)
   const [reviewer, setReviewer] = useState('')
@@ -175,7 +177,9 @@ function MaterialQa() {
     return assets.every((asset) => asset.width === assets[0].width && asset.height === assets[0].height)
   }, [maps])
 
-  const approved = Object.values(checks).every(Boolean) && Boolean(reviewer.trim()) && allMapsLoaded && matchingDimensions
+  const physicalTileSizeMm: [number, number] = [Number(tileWidthMm), Number(tileHeightMm)]
+  const physicalScaleReady = physicalTileSizeMm.every((value) => Number.isFinite(value) && value > 0)
+  const approved = Object.values(checks).every(Boolean) && Boolean(reviewer.trim()) && allMapsLoaded && matchingDimensions && physicalScaleReady
 
   const loadMap = async (key: MaterialQaMapKey, file: File) => {
     try {
@@ -214,6 +218,7 @@ function MaterialQa() {
           },
         ]),
       ),
+      physicalTextureTileSizeMm: physicalTileSizeMm,
       viewer: {
         repeat,
         normalScale,
@@ -335,7 +340,28 @@ function MaterialQa() {
                 <option value="top">Top light</option>
               </select>
             </label>
-            <label className="range-field"><span>Texture repeat <output>{repeat.toFixed(1)}×</output></span><input type="range" min="0.5" max="8" step="0.25" value={repeat} onChange={(event) => setRepeat(Number(event.target.value))} /></label>
+            <label className="range-field"><span>Preview repeat <output>{repeat.toFixed(1)}×</output></span><input type="range" min="0.5" max="8" step="0.25" value={repeat} onChange={(event) => setRepeat(Number(event.target.value))} /></label>
+            <label>Physical tile width (mm)
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={tileWidthMm}
+                onChange={(event) => setTileWidthMm(event.target.value)}
+                placeholder="Measured width"
+              />
+            </label>
+            <label>Physical tile height (mm)
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={tileHeightMm}
+                onChange={(event) => setTileHeightMm(event.target.value)}
+                placeholder="Measured height"
+              />
+            </label>
+            <small className="physical-scale-note">These dimensions define the real-world area represented by one texture tile. Production repeat is derived from this measurement.</small>
             <label className="range-field"><span>Normal scale <output>{normalScale.toFixed(2)}</output></span><input type="range" min="0" max="2.5" step="0.05" value={normalScale} onChange={(event) => setNormalScale(Number(event.target.value))} /></label>
             <label className="range-field"><span>Roughness scalar <output>{roughnessScalar.toFixed(2)}</output></span><input type="range" min="0.35" max="1" step="0.05" value={roughnessScalar} onChange={(event) => setRoughnessScalar(Number(event.target.value))} /></label>
 
@@ -375,7 +401,7 @@ function MaterialQa() {
         <div className={approved ? 'approval-state is-ready' : 'approval-state'}>
           <div>
             <strong>{approved ? 'Eligible for registry promotion' : 'Approval incomplete'}</strong>
-            <p>{approved ? 'This QA session can produce an approval packet. The registry still requires a separate explicit promotion step.' : 'Load all matching maps, enter the reviewer, and complete every physical comparison check.'}</p>
+            <p>{approved ? 'This QA session can produce an approval packet. The registry still requires a separate explicit promotion step.' : 'Load all matching maps, enter the measured physical tile size and reviewer, then complete every physical comparison check.'}</p>
           </div>
           <button type="button" disabled={!approved || !manifest?.materialId} onClick={exportPacket}>Export QA approval packet</button>
         </div>
