@@ -507,19 +507,24 @@ function CustomizationOverlays({
         })
         material.toneMapped = false
 
-        const normal = new THREE.Vector3(...zone.normal).normalize()
-        const up = new THREE.Vector3(...zone.up).normalize()
-        const right = new THREE.Vector3().crossVectors(up, normal).normalize()
-        const correctedUp = new THREE.Vector3().crossVectors(normal, right).normalize()
-        const basis = new THREE.Matrix4().makeBasis(right, correctedUp, normal)
+        target.updateWorldMatrix(true, false)
+        const localOrigin = new THREE.Vector3(...zone.origin)
+        const localNormalPoint = localOrigin.clone().add(new THREE.Vector3(...zone.normal))
+        const localUpPoint = localOrigin.clone().add(new THREE.Vector3(...zone.up))
+        const worldOrigin = target.localToWorld(localOrigin.clone())
+        const worldNormal = target.localToWorld(localNormalPoint).sub(worldOrigin).normalize()
+        const worldUp = target.localToWorld(localUpPoint).sub(worldOrigin).normalize()
+        const worldRight = new THREE.Vector3().crossVectors(worldUp, worldNormal).normalize()
+        const correctedWorldUp = new THREE.Vector3().crossVectors(worldNormal, worldRight).normalize()
+        const basis = new THREE.Matrix4().makeBasis(worldRight, correctedWorldUp, worldNormal)
 
         const overlay = new THREE.Mesh(geometry, material)
         overlay.name = `SLS_CustomizationPreview_${zoneId}`
-        overlay.position.set(...zone.origin).addScaledVector(normal, 0.0025)
+        overlay.position.copy(worldOrigin).addScaledVector(worldNormal, 0.0025)
         overlay.quaternion.setFromRotationMatrix(basis)
         overlay.renderOrder = 20
 
-        target.add(overlay)
+        scene.add(overlay)
         overlays.push(overlay)
         textures.push(texture)
         materials.push(material)

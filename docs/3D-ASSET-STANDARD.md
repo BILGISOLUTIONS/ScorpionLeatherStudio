@@ -275,4 +275,6 @@ Customization is authored through manifest placement zones that declare:
 - safe inset;
 - allowed purposes: tooling, text, logo, artwork.
 
+The origin/orientation follow the target mesh transform, but `sizeMeters` remains a physical world-space size. Runtime overlays must not inherit a target node's non-uniform authoring scale and thereby shrink/stretch the requested customization area. Production assets should still freeze/apply transforms; this rule keeps the placement contract physically meaningful while development/legacy assets are being corrected.
+
 This keeps material scale independent from personalization placement and lets Digital Twin QA visualize the intended usable area directly on the candidate model.

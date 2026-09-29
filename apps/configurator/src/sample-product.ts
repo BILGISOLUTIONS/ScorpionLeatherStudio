@@ -199,7 +199,7 @@ export const sampleManifest: AssetManifest = {
       purposes: ['tooling', 'text', 'logo', 'artwork'],
       placementLabels: ['Forehead panel'],
       cameraPreset: 'front',
-      origin: [0, 0.05, 0.27],
+      origin: [0, 0.05, 0.51],
       normal: [0, 0, 1],
       up: [0, 1, 0],
       sizeMeters: [0.22, 0.24],
