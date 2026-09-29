@@ -100,3 +100,17 @@ button,input,textarea{font:inherit}
 .material-slot-nodes code{padding:8px 9px;border:1px solid #312d26;background:#090908;color:#bfb4a1;font-size:.62rem;overflow-wrap:anywhere}
 @media(max-width:900px){.material-slot-row{grid-template-columns:1fr 1fr}.material-slot-row .confirm-node{grid-column:2}}
 @media(max-width:700px){.material-slot-row{grid-template-columns:1fr}.material-slot-row .confirm-node{grid-column:auto}}
+
+
+.authoring-contract{display:grid;gap:10px;margin-top:15px}
+.authoring-standard,.authoring-zone{border:1px solid #302c25;background:#0d0d0b;padding:12px 13px}
+.authoring-standard{display:grid;gap:4px}
+.authoring-standard strong,.authoring-zone strong{color:#eee4d2;font-size:.76rem}
+.authoring-standard span{color:#c7b28b;font-size:.72rem}
+.authoring-standard small{color:#8d8375;font-size:.62rem;line-height:1.45}
+.authoring-zone{display:grid;grid-template-columns:minmax(180px,1fr) minmax(160px,.8fr) minmax(220px,1fr);gap:12px;align-items:center}
+.authoring-zone>div{display:grid;gap:3px}
+.authoring-zone small{color:#8d8375;font-size:.61rem}
+.authoring-zone>span{color:#bda778;font-size:.66rem;text-transform:capitalize}
+.authoring-zone code{color:#bfb5a5;font-size:.64rem;overflow-wrap:anywhere}
+@media(max-width:760px){.authoring-zone{grid-template-columns:1fr}.authoring-zone code{padding-top:2px}}
