@@ -27,6 +27,7 @@ export interface PhysicalMaterialMetadata {
   grain?: string
   finish?: string
   thicknessMm?: number
+  textureTileSizeMm?: [number, number]
   supplier?: string
   supplierItem?: string
 }
@@ -110,6 +111,17 @@ export function validateMaterialDefinition(material: ScorpionMaterialDefinition)
   if (material.physical?.thicknessMm !== undefined && material.physical.thicknessMm <= 0) {
     issue('physical.thicknessMm', 'Material thickness must be greater than zero.')
   }
+  if (
+    material.physical?.textureTileSizeMm &&
+    material.physical.textureTileSizeMm.some((value) => !Number.isFinite(value) || value <= 0)
+  ) {
+    issue('physical.textureTileSizeMm', 'Texture tile physical width and height must be positive millimeter values.')
+  }
+  if (material.lifecycle === 'production-approved' && material.kind === 'leather' && material.textureTiers?.length) {
+    if (!material.physical?.textureTileSizeMm) {
+      issue('physical.textureTileSizeMm', 'Production leather with texture maps requires the physical tile size used by the captured maps.')
+    }
+  }
 
   const seenEdges = new Set<number>()
   for (const tier of material.textureTiers ?? []) {
@@ -146,6 +158,10 @@ export function toMaterialVariant(
   preferredMaxEdge = 2048,
 ): MaterialVariant {
   const tier = selectTextureTier(material, preferredMaxEdge)
+  const physicalTile = material.physical?.textureTileSizeMm
+  const physicalRepeat = physicalTile
+    ? [1000 / physicalTile[0], 1000 / physicalTile[1]] as [number, number]
+    : undefined
 
   return {
     id: material.id,
@@ -153,6 +169,7 @@ export function toMaterialVariant(
     kind: material.kind,
     color: material.previewColor,
     ...material.renderer,
+    ...(!material.renderer.textureRepeat && physicalRepeat ? { textureRepeat: physicalRepeat } : {}),
     ...(tier ? { textures: tier.textures } : {}),
   }
 }
