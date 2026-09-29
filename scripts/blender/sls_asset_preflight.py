@@ -8,6 +8,7 @@ import argparse
 import json
 import math
 import os
+import statistics
 import sys
 
 import bpy
@@ -24,6 +25,39 @@ def parse_args():
 
 def close(a, b, epsilon=1e-4):
     return abs(a - b) <= epsilon
+
+
+def estimate_meters_per_uv_unit(obj):
+    mesh = obj.data
+    uv_layer = mesh.uv_layers.active
+    if uv_layer is None:
+        return None
+
+    ratios = []
+    polygons = list(mesh.polygons)
+    stride = max(1, len(polygons) // 2000)
+
+    for polygon in polygons[::stride]:
+        loops = list(polygon.loop_indices)
+        if len(loops) < 3:
+            continue
+        for index, loop_index in enumerate(loops):
+            next_loop_index = loops[(index + 1) % len(loops)]
+            vertex_index = mesh.loops[loop_index].vertex_index
+            next_vertex_index = mesh.loops[next_loop_index].vertex_index
+
+            left = obj.matrix_world @ mesh.vertices[vertex_index].co
+            right = obj.matrix_world @ mesh.vertices[next_vertex_index].co
+            physical = (right - left).length
+
+            uv_left = uv_layer.data[loop_index].uv
+            uv_right = uv_layer.data[next_loop_index].uv
+            uv_distance = (uv_right - uv_left).length
+
+            if physical > 1e-5 and uv_distance > 1e-5:
+                ratios.append(physical / uv_distance)
+
+    return statistics.median(ratios) if ratios else None
 
 
 def main():
@@ -73,6 +107,25 @@ def main():
                     errors.append(f'Mesh "{node_name}" requires UV0 but has no UV map.')
                 elif obj.data.uv_layers.active is None:
                     errors.append(f'Mesh "{node_name}" has UV layers but no active UV0 layer.')
+
+            expected_uv_scale = profile.get("metersPerUvUnit")
+            if expected_uv_scale is not None and obj.data.uv_layers.active is not None:
+                actual_uv_scale = estimate_meters_per_uv_unit(obj)
+                if actual_uv_scale is None:
+                    errors.append(f'Mesh "{node_name}" physical UV scale could not be measured.')
+                else:
+                    tolerance = profile.get("uvScaleToleranceRatio", 0.2)
+                    delta = abs(actual_uv_scale - expected_uv_scale) / expected_uv_scale
+                    if delta > tolerance:
+                        errors.append(
+                            f'Mesh "{node_name}" UV scale is {actual_uv_scale:.4f} m/unit; '
+                            f'expected {expected_uv_scale:.4f} m/unit ±{tolerance * 100:.0f}%.'
+                        )
+                    else:
+                        print(
+                            f'UV SCALE: {node_name}: {actual_uv_scale:.4f} m/unit '
+                            f'(target {expected_uv_scale:.4f})'
+                        )
 
             if any(value < 0 for value in obj.scale):
                 warnings.append(f'Mesh "{node_name}" has negative object scale.')

@@ -18,6 +18,8 @@ jobs:
           node-version: 22
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
+      - name: Check Blender authoring script syntax
+        run: python3 -m py_compile scripts/blender/sls_asset_preflight.py
       - run: npm test
       - run: npm run build
       - run: npm run budget
