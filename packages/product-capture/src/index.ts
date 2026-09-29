@@ -559,8 +559,6 @@ export const weldingHoodCapturePlan: ProductCapturePlan = {
       requiresUv0: true,
       requiresNormals: true,
       tangents: 'optional',
-      metersPerUvUnit: 1,
-      uvScaleToleranceRatio: 0.25,
     },
     { slotId: 'Lens', label: 'Visor lens', kind: 'glass', required: true, nodeRoles: ['visor-lens'], requiresUv0: false, requiresNormals: true, tangents: 'optional' },
   ],

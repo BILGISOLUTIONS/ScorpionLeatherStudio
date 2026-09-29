@@ -50,7 +50,7 @@ const manifest: AssetManifest = {
   },
   materialSlotProfiles: {
     LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended', metersPerUvUnit: 1, uvScaleToleranceRatio: 0.2 },
-    HardwarePrimary: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional', metersPerUvUnit: 1, uvScaleToleranceRatio: 0.25 },
+    HardwarePrimary: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional' },
     Lens: { kind: 'glass', mapping: 'uv0', requiresUv0: false, requiresNormals: true, tangents: 'optional' },
   },
   defaultMaterialVariants: {

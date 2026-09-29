@@ -99,6 +99,9 @@ export function validateMaterialDefinition(material: ScorpionMaterialDefinition)
     }
 
     if (material.kind === 'leather') {
+      if (material.renderer.textureRepeat) {
+        issue('renderer.textureRepeat', 'Production leather repeat must be derived from physical.textureTileSizeMm, not a manual renderer override.')
+      }
       if (!material.textureTiers?.length) {
         issue('textureTiers', 'Production-approved leather requires at least one texture tier.')
       }

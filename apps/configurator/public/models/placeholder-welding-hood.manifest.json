@@ -35,9 +35,7 @@
       "mapping": "uv0",
       "requiresUv0": true,
       "requiresNormals": true,
-      "tangents": "optional",
-      "metersPerUvUnit": 1,
-      "uvScaleToleranceRatio": 0.25
+      "tangents": "optional"
     },
     "Lens": {
       "kind": "glass",

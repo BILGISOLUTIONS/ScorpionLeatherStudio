@@ -40,7 +40,6 @@ const capturedLeather: ScorpionMaterialDefinition = {
     sheen: 0.14,
     sheenRoughness: 0.77,
     normalScale: 0.8,
-    textureRepeat: [2, 2],
   },
   textureTiers: [
     {
@@ -102,6 +101,15 @@ describe('material library', () => {
     }
 
     expect(validateMaterialDefinition(invalid).map((issue) => issue.path)).toContain('physical.textureTileSizeMm')
+  })
+
+  it('rejects manual production repeat overrides that could change real-world grain scale', () => {
+    const invalid: ScorpionMaterialDefinition = {
+      ...capturedLeather,
+      renderer: { ...capturedLeather.renderer, textureRepeat: [7, 7] },
+    }
+
+    expect(validateMaterialDefinition(invalid).map((issue) => issue.path)).toContain('renderer.textureRepeat')
   })
 
   it('does not allow reference-only placeholders to masquerade as production-approved material captures', () => {
