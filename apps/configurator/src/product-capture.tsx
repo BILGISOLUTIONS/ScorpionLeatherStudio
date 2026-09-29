@@ -445,6 +445,7 @@ function ProductCaptureAssistant() {
                   <small>{requirement.slotId} · {requirement.kind}</small>
                   <em>
                     {requirement.requiresUv0 ? 'UV0 required' : 'UV0 optional'} · {requirement.requiresNormals ? 'normals required' : 'normals optional'} · tangents {requirement.tangents}
+                    {requirement.metersPerUvUnit ? ` · 1 UV unit = ${requirement.metersPerUvUnit} m` : ''}
                   </em>
                 </div>
                 <label>
@@ -490,6 +491,34 @@ function ProductCaptureAssistant() {
       <section className="product-capture-panel">
         <div className="section-heading">
           <span>06</span>
+          <div>
+            <h2>3D authoring contract</h2>
+            <p>Use the same physical UV scale, semantic names and placement zones in Blender so materials and customization stay reusable across products.</p>
+          </div>
+        </div>
+
+        <div className="authoring-contract">
+          <div className="authoring-standard">
+            <strong>Physical UV convention</strong>
+            <span>1 UV unit = 1 meter on material-ready surfaces</span>
+            <small>Captured material tile size controls grain repeat. Do not resize leather grain independently per product.</small>
+          </div>
+          {(weldingHoodCapturePlan.customizationZoneRequirements ?? []).map((zone) => (
+            <div className="authoring-zone" key={zone.zoneId}>
+              <div>
+                <strong>{zone.label}</strong>
+                <small>{zone.zoneId} · node role {zone.nodeRole}</small>
+              </div>
+              <span>{zone.purposes.join(' · ')}</span>
+              <code>{Math.round(zone.sizeMeters[0] * 1000)} × {Math.round(zone.sizeMeters[1] * 1000)} mm · inset {Math.round((zone.safeInsetMeters ?? 0) * 1000)} mm</code>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="product-capture-panel">
+        <div className="section-heading">
+          <span>07</span>
           <div>
             <h2>Validation & export</h2>
             <p>A reconstruction-ready packet is created only when the capture plan passes. This remains a manual gate before any GLB or manifest promotion.</p>
