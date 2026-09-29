@@ -1025,7 +1025,7 @@ export function App() {
             aria-labelledby={family.supports3D ? `preview-tab-${viewerMode}` : undefined} tabIndex={0}>
           {family.supports3D && viewerMode === '3d' ? (
             <Suspense fallback={<div className="viewer-panel viewer-loading">Loading interactive 3D…</div>}>
-              <WeldingHoodViewer referenceId={reference.id} />
+              <WeldingHoodViewer referenceId={reference.id} construction={build.personalization.construction} />
             </Suspense>
           ) : (
             <ReferenceStage family={family} reference={reference} />
