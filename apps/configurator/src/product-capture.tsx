@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
+  buildAssetManifestScaffold,
   buildProductConstructionPacket,
   validateProductCapture,
   weldingHoodCapturePlan,
@@ -45,7 +46,16 @@ function defaultSession(): ProductCaptureSession {
       status: 'pending',
     })),
     components: [],
-    materialSlots: [],
+    materialSlots: (weldingHoodCapturePlan.materialSlotRequirements ?? []).map((requirement) => ({
+      slotId: requirement.slotId,
+      label: requirement.label,
+      materialId: '',
+      nodeNames: requirement.nodeRoles.map((role) => (
+        weldingHoodCapturePlan.nodeRequirements.find((node) => node.role === role)?.suggestedNodeName ?? role
+      )),
+      status: 'pending',
+      evidenceFrameKeys: [],
+    })),
     notes: '',
   }
 }
@@ -56,6 +66,7 @@ function normalizeSession(input: Partial<ProductCaptureSession>): ProductCapture
 
   const dimensionsById = new Map((input.dimensions ?? []).map((item) => [item.id, item]))
   const nodesByRole = new Map((input.constructionNodes ?? []).map((item) => [item.role, item]))
+  const slotsById = new Map((input.materialSlots ?? []).map((item) => [item.slotId, item]))
 
   return {
     ...fresh,
@@ -76,7 +87,17 @@ function normalizeSession(input: Partial<ProductCaptureSession>): ProductCapture
       ...nodesByRole.get(requirement.role),
     })),
     components: input.components ?? [],
-    materialSlots: input.materialSlots ?? [],
+    materialSlots: (weldingHoodCapturePlan.materialSlotRequirements ?? []).map((requirement) => ({
+      slotId: requirement.slotId,
+      label: requirement.label,
+      materialId: '',
+      nodeNames: requirement.nodeRoles.map((role) => (
+        weldingHoodCapturePlan.nodeRequirements.find((node) => node.role === role)?.suggestedNodeName ?? role
+      )),
+      status: 'pending' as const,
+      evidenceFrameKeys: [],
+      ...slotsById.get(requirement.slotId),
+    })),
   }
 }
 
@@ -174,18 +195,39 @@ function ProductCaptureAssistant() {
     setStatus('New product-capture session started.')
   }
 
+  function validatedConstructionPacket() {
+    return buildProductConstructionPacket({
+      session,
+      plan: weldingHoodCapturePlan,
+      generatedAt: new Date().toISOString(),
+    })
+  }
+
   function exportConstructionPacket() {
     try {
-      const packet = buildProductConstructionPacket({
-        session,
-        plan: weldingHoodCapturePlan,
-        generatedAt: new Date().toISOString(),
-      })
+      const packet = validatedConstructionPacket()
       const productId = safeFilePart(session.productId, 'product')
       downloadJson(`${productId}-construction-packet.json`, packet)
       setStatus('Validated construction packet downloaded. No production assets were modified.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Construction packet could not be generated.')
+    }
+  }
+
+  function exportManifestScaffold() {
+    try {
+      const packet = validatedConstructionPacket()
+      const productId = safeFilePart(session.productId, 'product').toLowerCase()
+      const manifest = buildAssetManifestScaffold({
+        construction: packet,
+        plan: weldingHoodCapturePlan,
+        assetId: `${productId}-v1`,
+        modelFileName: 'model.glb',
+      })
+      downloadJson(`${productId}-asset-manifest-scaffold.json`, manifest)
+      setStatus('Material-ready 3D manifest scaffold downloaded. Geometry, UV quality, cameras, motion and fidelity still require authoring and QA.')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Asset manifest scaffold could not be generated.')
     }
   }
 
@@ -387,6 +429,68 @@ function ProductCaptureAssistant() {
         <div className="section-heading">
           <span>05</span>
           <div>
+            <h2>Material-ready surface contract</h2>
+            <p>Bind semantic meshes to stable material slots before reconstruction. These IDs become the interface for leather, hardware and lens swaps.</p>
+          </div>
+        </div>
+
+        <div className="material-slot-list">
+          {(weldingHoodCapturePlan.materialSlotRequirements ?? []).map((requirement) => {
+            const slot = session.materialSlots.find((entry) => entry.slotId === requirement.slotId)
+            if (!slot) return null
+            return (
+              <div className={slot.status === 'confirmed' ? 'material-slot-row is-confirmed' : 'material-slot-row'} key={requirement.slotId}>
+                <div className="material-slot-meta">
+                  <strong>{requirement.label}</strong>
+                  <small>{requirement.slotId} · {requirement.kind}</small>
+                  <em>
+                    {requirement.requiresUv0 ? 'UV0 required' : 'UV0 optional'} · {requirement.requiresNormals ? 'normals required' : 'normals optional'} · tangents {requirement.tangents}
+                  </em>
+                </div>
+                <label>
+                  Material registry ID
+                  <input
+                    aria-label={`${requirement.label} material registry ID`}
+                    value={slot.materialId ?? ''}
+                    placeholder={requirement.kind === 'leather' ? 'SCL-…' : requirement.kind === 'metal' ? 'SCH-…' : 'SGL-…'}
+                    onChange={(event) => setSession((current) => ({
+                      ...current,
+                      materialSlots: current.materialSlots.map((entry) => (
+                        entry.slotId === requirement.slotId ? { ...entry, materialId: event.target.value } : entry
+                      )),
+                    }))}
+                  />
+                </label>
+                <div className="material-slot-nodes">
+                  <span>Bound mesh nodes</span>
+                  <code>{slot.nodeNames.join(', ') || 'None'}</code>
+                </div>
+                <label className="confirm-node">
+                  <input
+                    aria-label={`Confirm ${requirement.label} material slot`}
+                    type="checkbox"
+                    checked={slot.status === 'confirmed'}
+                    onChange={(event) => setSession((current) => ({
+                      ...current,
+                      materialSlots: current.materialSlots.map((entry) => (
+                        entry.slotId === requirement.slotId
+                          ? { ...entry, status: event.target.checked ? 'confirmed' : 'pending' }
+                          : entry
+                      )),
+                    }))}
+                  />
+                  <span>Confirmed</span>
+                </label>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="product-capture-panel">
+        <div className="section-heading">
+          <span>06</span>
+          <div>
             <h2>Validation & export</h2>
             <p>A reconstruction-ready packet is created only when the capture plan passes. This remains a manual gate before any GLB or manifest promotion.</p>
           </div>
@@ -430,6 +534,9 @@ function ProductCaptureAssistant() {
           </button>
           <button type="button" className="primary" disabled={issues.length > 0} onClick={exportConstructionPacket}>
             Download construction packet
+          </button>
+          <button type="button" disabled={issues.length > 0} onClick={exportManifestScaffold}>
+            Download 3D manifest scaffold
           </button>
           <button type="button" className="danger" onClick={clearSession}>New / clear session</button>
         </div>
