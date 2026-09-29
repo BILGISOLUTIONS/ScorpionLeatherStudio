@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validateAssetManifest, type AssetManifest } from './index'
+import { validateAssetManifest, validateMaterialSlotAssignments, type AssetManifest } from './index'
 
 const manifest: AssetManifest = {
   schemaVersion: 1,
@@ -10,6 +10,9 @@ const manifest: AssetManifest = {
   frontAxis: '-Z',
   rootNode: 'Root',
   materialSlots: { Leather: ['Shell'] },
+  materialSlotProfiles: {
+    Leather: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
+  },
   defaultMaterialVariants: { Leather: 'LEATHER-1' },
   components: { 'guard.standard': ['Guard'] },
   animations: {
@@ -37,5 +40,33 @@ describe('asset manifest validation', () => {
     expect(issues.some((issue) => issue.message.includes('LEATHER-1'))).toBe(true)
     expect(issues.some((issue) => issue.message.includes('Shell'))).toBe(true)
     expect(issues.some((issue) => issue.message.includes('Pivot'))).toBe(true)
+  })
+
+  it('rejects ambiguous material ownership and material-kind mismatches', () => {
+    const ambiguous: AssetManifest = {
+      ...manifest,
+      materialSlots: { Leather: ['Shell'], Hardware: ['Shell'] },
+      materialSlotProfiles: {
+        Leather: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
+        Hardware: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional' },
+      },
+    }
+    expect(validateAssetManifest(ambiguous, [], ['Root', 'Shell', 'Guard', 'Pivot'])
+      .some((entry) => entry.message.includes('Material ownership must be unambiguous'))).toBe(true)
+
+    expect(validateMaterialSlotAssignments(
+      manifest,
+      { Leather: 'METAL-1' },
+      {
+        'METAL-1': {
+          id: 'METAL-1',
+          label: 'Metal',
+          kind: 'metal',
+          color: '#999999',
+          roughness: 0.4,
+          metalness: 1,
+        },
+      },
+    ).some((entry) => entry.message.includes('requires "leather"'))).toBe(true)
   })
 })
