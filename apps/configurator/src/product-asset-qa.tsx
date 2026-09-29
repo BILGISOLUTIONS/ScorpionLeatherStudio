@@ -59,7 +59,7 @@ function AssetQaApp() {
   const [modelFile, setModelFile] = useState<File | null>(null)
   const [inspection, setInspection] = useState<ProductAssetInspection | null>(null)
   const [viewerError, setViewerError] = useState('')
-  const [diagnosticMode, setDiagnosticMode] = useState<'original' | 'uv-checker' | 'normals'>('original')
+  const [diagnosticMode, setDiagnosticMode] = useState<'original' | 'uv-checker' | 'normals' | 'zones'>('original')
   const [reviewer, setReviewer] = useState('')
   const [reviewNotes, setReviewNotes] = useState('')
   const [checks, setChecks] = useState<ProductAssetHumanReview['checks']>(defaultChecks)
@@ -264,6 +264,7 @@ function AssetQaApp() {
               ['original', 'Original'],
               ['uv-checker', 'UV checker'],
               ['normals', 'Normals'],
+              ['zones', 'Placement zones'],
             ] as const).map(([value, label]) => (
               <button
                 type="button"
@@ -300,6 +301,8 @@ function AssetQaApp() {
             <div><span>Largest texture</span><strong>{inspection.maxTextureEdge ? `${inspection.maxTextureEdge}px` : 'Embedded / none'}</strong></div>
             <div><span>UV0-ready meshes</span><strong>{inspection.meshDiagnostics.filter((mesh) => mesh.hasUv0).length} / {inspection.meshDiagnostics.length}</strong></div>
             <div><span>Normal-ready meshes</span><strong>{inspection.meshDiagnostics.filter((mesh) => mesh.hasNormals).length} / {inspection.meshDiagnostics.length}</strong></div>
+            <div><span>Physical UV scale</span><strong>{inspection.meshDiagnostics.filter((mesh) => mesh.estimatedMetersPerUvUnit !== undefined).length} measured</strong></div>
+            <div><span>Placement zones</span><strong>{Object.keys(manifest?.customizationZones ?? {}).length}</strong></div>
           </section>
 
           <section className="qa-panel">
@@ -307,7 +310,7 @@ function AssetQaApp() {
               <span>05</span>
               <div>
                 <h2>Automated production gate</h2>
-                <p>Physical dimensions, semantic nodes, material-slot UV/normal readiness, material lifecycle and web budgets are evaluated together.</p>
+                <p>Physical dimensions, semantic nodes, real-world UV scale, placement zones, material lifecycle and web budgets are evaluated together.</p>
               </div>
             </div>
 
