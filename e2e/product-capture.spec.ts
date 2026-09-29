@@ -75,7 +75,7 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
   }
 
   for (const label of ['Product root', 'Main leather shell', 'Visor pivot', 'Visor frame', 'Visor lens']) {
-    await page.getByLabel('Confirm ' + label).check()
+    await page.getByRole('checkbox', { name: 'Confirm ' + label, exact: true }).check()
   }
 
   const materialSlots = [
