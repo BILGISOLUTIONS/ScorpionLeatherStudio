@@ -1,24 +1,60 @@
 {
   "schemaVersion": 1,
-  "assetId": "placeholder-welding-hood-v2",
+  "assetId": "placeholder-welding-hood-v4",
   "model": "/models/placeholder-welding-hood.gltf",
   "units": "meters",
   "upAxis": "Y",
   "frontAxis": "-Z",
   "rootNode": "SLS_ProductRoot",
   "materialSlots": {
-    "LeatherPrimary": ["Shell_Main", "NeckGuard_Standard", "NeckGuard_Extended"],
-    "HardwarePrimary": ["Visor_Frame", "Rivets"],
-    "Lens": ["Visor_Lens"]
+    "LeatherPrimary": [
+      "Shell_Main",
+      "NeckGuard_Standard",
+      "NeckGuard_Extended"
+    ],
+    "HardwarePrimary": [
+      "Visor_Frame",
+      "Rivets"
+    ],
+    "Lens": [
+      "Visor_Lens"
+    ]
+  },
+  "materialSlotProfiles": {
+    "LeatherPrimary": {
+      "kind": "leather",
+      "mapping": "uv0",
+      "requiresUv0": true,
+      "requiresNormals": true,
+      "tangents": "recommended"
+    },
+    "HardwarePrimary": {
+      "kind": "metal",
+      "mapping": "uv0",
+      "requiresUv0": true,
+      "requiresNormals": true,
+      "tangents": "optional"
+    },
+    "Lens": {
+      "kind": "glass",
+      "mapping": "uv0",
+      "requiresUv0": false,
+      "requiresNormals": true,
+      "tangents": "optional"
+    }
   },
   "defaultMaterialVariants": {
-    "LeatherPrimary": "SCL-002",
+    "LeatherPrimary": "SCL-COGNAC",
     "HardwarePrimary": "SCH-002",
     "Lens": "SGL-001"
   },
   "components": {
-    "neckGuard.standard": ["NeckGuard_Standard"],
-    "neckGuard.extended": ["NeckGuard_Extended"]
+    "neckGuard.standard": [
+      "NeckGuard_Standard"
+    ],
+    "neckGuard.extended": [
+      "NeckGuard_Extended"
+    ]
   },
   "animations": {
     "visor.open": {
@@ -31,9 +67,71 @@
     }
   },
   "cameraPresets": {
-    "hero": {"label": "Hero", "target": [0, 0.04, 0], "position": [0.48, 0.28, 0.68], "fov": 35},
-    "front": {"label": "Front", "target": [0, 0.04, 0], "position": [0, 0.08, 0.82], "fov": 34},
-    "rear": {"label": "Rear", "target": [0, 0.04, 0], "position": [0, 0.08, -0.82], "fov": 34},
-    "detail": {"label": "Visor", "target": [0, 0.12, 0.13], "position": [0.34, 0.24, 0.48], "fov": 27}
+    "hero": {
+      "label": "Hero",
+      "target": [
+        0,
+        0.04,
+        0
+      ],
+      "position": [
+        0.48,
+        0.28,
+        0.68
+      ],
+      "fov": 35
+    },
+    "front": {
+      "label": "Front",
+      "target": [
+        0,
+        0.04,
+        0
+      ],
+      "position": [
+        0,
+        0.08,
+        0.82
+      ],
+      "fov": 34
+    },
+    "rear": {
+      "label": "Rear",
+      "target": [
+        0,
+        0.04,
+        0
+      ],
+      "position": [
+        0,
+        0.08,
+        -0.82
+      ],
+      "fov": 34
+    },
+    "detail": {
+      "label": "Visor",
+      "target": [
+        0,
+        0.12,
+        0.13
+      ],
+      "position": [
+        0.34,
+        0.24,
+        0.48
+      ],
+      "fov": 27
+    }
+  },
+  "presentation": {
+    "groundY": -0.34,
+    "shadowScale": 1.2,
+    "orbit": {
+      "minDistance": 0.38,
+      "maxDistance": 1.6,
+      "minPolarAngle": 0.35,
+      "maxPolarAngle": 2.55
+    }
   }
 }
