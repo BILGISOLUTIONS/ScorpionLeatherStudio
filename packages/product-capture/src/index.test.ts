@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildAssetManifestScaffold,
   buildProductConstructionPacket,
   validateProductCapture,
   weldingHoodCapturePlan,
@@ -43,7 +44,16 @@ function completeSession(): ProductCaptureSession {
       status: 'confirmed',
     })),
     components: [],
-    materialSlots: [],
+    materialSlots: (weldingHoodCapturePlan.materialSlotRequirements ?? []).map((requirement) => ({
+      slotId: requirement.slotId,
+      label: requirement.label,
+      materialId: requirement.kind === 'leather' ? 'SCL-TEST' : requirement.kind === 'metal' ? 'SCH-TEST' : 'SGL-TEST',
+      nodeNames: requirement.nodeRoles.map((role) => (
+        weldingHoodCapturePlan.nodeRequirements.find((node) => node.role === role)?.suggestedNodeName ?? role
+      )),
+      status: 'confirmed',
+      evidenceFrameKeys: [],
+    })),
     notes: 'Physical product captured without mixing construction versions.',
   }
 }
@@ -80,6 +90,13 @@ describe('product capture validation', () => {
       .toContain('components.neckGuard.standard.evidenceFrameKeys')
   })
 
+  it('requires the material-ready surface contract to be confirmed', () => {
+    const session = completeSession()
+    session.materialSlots[0] = { ...session.materialSlots[0], status: 'pending' }
+    expect(validateProductCapture(session, weldingHoodCapturePlan).map((entry) => entry.path))
+      .toContain('materialSlots.LeatherPrimary.status')
+  })
+
   it('builds a deterministic reconstruction packet without mutating the asset library', () => {
     const packet = buildProductConstructionPacket({
       session: completeSession(),
@@ -102,5 +119,22 @@ describe('product capture validation', () => {
     expect(packet.referenceCoverage).toHaveLength(
       weldingHoodCapturePlan.referenceRequirements.filter((requirement) => requirement.required).length,
     )
+    expect(packet.materialSlots).toHaveLength(3)
+
+    const manifest = buildAssetManifestScaffold({
+      construction: packet,
+      plan: weldingHoodCapturePlan,
+      assetId: 'sc-wh-001-v1',
+      modelFileName: 'model.glb',
+    })
+    expect(manifest).toMatchObject({
+      assetId: 'sc-wh-001-v1',
+      model: 'model.glb',
+      rootNode: 'SLS_ProductRoot',
+      materialSlotProfiles: {
+        LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true },
+      },
+    })
+    expect(manifest.presentation?.orbit?.maxDistance).toBeGreaterThan(manifest.presentation?.orbit?.minDistance ?? 0)
   })
 })
