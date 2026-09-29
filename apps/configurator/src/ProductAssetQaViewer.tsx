@@ -6,7 +6,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import type { AssetManifest } from '@sls/product-schema'
 import type { ProductAssetInspection } from '@sls/product-asset-qa'
 
-export type ProductAssetDiagnosticMode = 'original' | 'uv-checker' | 'normals'
+export type ProductAssetDiagnosticMode = 'original' | 'uv-checker' | 'normals' | 'zones'
 
 interface Runtime {
   renderer: THREE.WebGLRenderer
@@ -19,6 +19,7 @@ interface Runtime {
   originalMaterials: Map<THREE.Mesh, THREE.Material | THREE.Material[]>
   diagnosticMaterials: THREE.Material[]
   checkerTexture?: THREE.DataTexture
+  zoneOverlays: THREE.Object3D[]
 }
 
 function textureEdges(texture: THREE.Texture): number[] {
@@ -41,6 +42,74 @@ function materialTextures(material: THREE.Material): THREE.Texture[] {
 function triangleCount(geometry: THREE.BufferGeometry): number {
   const count = geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0
   return Math.floor(count / 3)
+}
+
+function inspectMeshUvScale(mesh: THREE.Mesh): Pick<
+  ProductAssetInspection['meshDiagnostics'][number],
+  'estimatedMetersPerUvUnit' | 'uvScaleVariationRatio' | 'uv0Bounds'
+> {
+  const position = mesh.geometry.getAttribute('position')
+  const uv = mesh.geometry.getAttribute('uv')
+  if (!position || !uv || position.count !== uv.count) return {}
+
+  let minU = Number.POSITIVE_INFINITY
+  let minV = Number.POSITIVE_INFINITY
+  let maxU = Number.NEGATIVE_INFINITY
+  let maxV = Number.NEGATIVE_INFINITY
+  for (let index = 0; index < uv.count; index += 1) {
+    const u = uv.getX(index)
+    const v = uv.getY(index)
+    minU = Math.min(minU, u)
+    minV = Math.min(minV, v)
+    maxU = Math.max(maxU, u)
+    maxV = Math.max(maxV, v)
+  }
+
+  const triangleCount = Math.floor((mesh.geometry.index?.count ?? position.count) / 3)
+  const stride = Math.max(1, Math.floor(triangleCount / 2000))
+  const ratios: number[] = []
+  const points = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]
+  const uvs = [new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2()]
+
+  const vertexIndex = (offset: number) => mesh.geometry.index?.getX(offset) ?? offset
+  for (let triangle = 0; triangle < triangleCount; triangle += stride) {
+    const base = triangle * 3
+    for (let corner = 0; corner < 3; corner += 1) {
+      const index = vertexIndex(base + corner)
+      points[corner].fromBufferAttribute(position, index).applyMatrix4(mesh.matrixWorld)
+      uvs[corner].set(uv.getX(index), uv.getY(index))
+    }
+
+    for (const [left, right] of [[0, 1], [1, 2], [2, 0]] as const) {
+      const physical = points[left].distanceTo(points[right])
+      const uvDistance = uvs[left].distanceTo(uvs[right])
+      if (physical > 0.00001 && uvDistance > 0.00001) ratios.push(physical / uvDistance)
+    }
+  }
+
+  if (!ratios.length) {
+    return {
+      uv0Bounds: {
+        min: [minU, minV],
+        max: [maxU, maxV],
+      },
+    }
+  }
+
+  ratios.sort((a, b) => a - b)
+  const percentile = (fraction: number) => ratios[Math.min(ratios.length - 1, Math.floor((ratios.length - 1) * fraction))]
+  const median = percentile(0.5)
+  const low = percentile(0.1)
+  const high = percentile(0.9)
+
+  return {
+    estimatedMetersPerUvUnit: median,
+    uvScaleVariationRatio: low > 0 ? high / low : undefined,
+    uv0Bounds: {
+      min: [minU, minV],
+      max: [maxU, maxV],
+    },
+  }
 }
 
 function inspectScene(args: {
@@ -91,6 +160,7 @@ function inspectScene(args: {
       hasUv1: Boolean(object.geometry.getAttribute('uv1')),
       hasNormals: Boolean(object.geometry.getAttribute('normal')),
       hasTangents: Boolean(object.geometry.getAttribute('tangent')),
+      ...inspectMeshUvScale(object),
     })
     for (const material of meshMaterials) {
       materials.add(material)
@@ -155,6 +225,57 @@ function createCheckerTexture(): THREE.DataTexture {
   return texture
 }
 
+function clearZoneOverlays(runtime: Runtime) {
+  for (const overlay of runtime.zoneOverlays) {
+    overlay.parent?.remove(overlay)
+    overlay.traverse((object) => {
+      if (!(object instanceof THREE.Mesh || object instanceof THREE.LineSegments)) return
+      object.geometry.dispose()
+      const materials = Array.isArray(object.material) ? object.material : [object.material]
+      materials.forEach((material) => material.dispose())
+    })
+  }
+  runtime.zoneOverlays = []
+}
+
+function showCustomizationZones(runtime: Runtime, manifest: AssetManifest) {
+  clearZoneOverlays(runtime)
+  if (!runtime.model) return
+
+  for (const [zoneId, zone] of Object.entries(manifest.customizationZones ?? {})) {
+    const target = runtime.model.getObjectByName(zone.node)
+    if (!target) continue
+
+    const normal = new THREE.Vector3(...zone.normal).normalize()
+    const up = new THREE.Vector3(...zone.up).normalize()
+    const right = new THREE.Vector3().crossVectors(up, normal).normalize()
+    const correctedUp = new THREE.Vector3().crossVectors(normal, right).normalize()
+    const basis = new THREE.Matrix4().makeBasis(right, correctedUp, normal)
+
+    const group = new THREE.Group()
+    group.name = `SLS_Zone_${zoneId}`
+    group.position.set(...zone.origin).addScaledVector(normal, 0.002)
+    group.quaternion.setFromRotationMatrix(basis)
+
+    const fillGeometry = new THREE.PlaneGeometry(zone.sizeMeters[0], zone.sizeMeters[1])
+    const fillMaterial = new THREE.MeshBasicMaterial({
+      color: '#c99d52',
+      transparent: true,
+      opacity: 0.16,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
+    group.add(new THREE.Mesh(fillGeometry, fillMaterial))
+
+    const edgeGeometry = new THREE.EdgesGeometry(new THREE.PlaneGeometry(zone.sizeMeters[0], zone.sizeMeters[1]))
+    const edgeMaterial = new THREE.LineBasicMaterial({ color: '#e1bd78', transparent: true, opacity: 0.95 })
+    group.add(new THREE.LineSegments(edgeGeometry, edgeMaterial))
+
+    target.add(group)
+    runtime.zoneOverlays.push(group)
+  }
+}
+
 function restoreOriginalMaterials(runtime: Runtime) {
   for (const [mesh, material] of runtime.originalMaterials) mesh.material = material
   for (const material of runtime.diagnosticMaterials) material.dispose()
@@ -163,9 +284,16 @@ function restoreOriginalMaterials(runtime: Runtime) {
   runtime.checkerTexture = undefined
 }
 
-function applyDiagnosticMode(runtime: Runtime, mode: ProductAssetDiagnosticMode) {
+function applyDiagnosticMode(runtime: Runtime, mode: ProductAssetDiagnosticMode, manifest: AssetManifest) {
   restoreOriginalMaterials(runtime)
+  clearZoneOverlays(runtime)
   if (!runtime.model || mode === 'original') {
+    runtime.render()
+    return
+  }
+
+  if (mode === 'zones') {
+    showCustomizationZones(runtime, manifest)
     runtime.render()
     return
   }
@@ -273,6 +401,7 @@ export default function ProductAssetQaViewer({
       resizeObserver,
       originalMaterials: new Map(),
       diagnosticMaterials: [],
+      zoneOverlays: [],
     }
     render()
 
@@ -284,6 +413,7 @@ export default function ProductAssetQaViewer({
       controls.dispose()
       if (runtime?.model) {
         restoreOriginalMaterials(runtime)
+        clearZoneOverlays(runtime)
         scene.remove(runtime.model)
         disposeObject(runtime.model)
       }
@@ -340,7 +470,7 @@ export default function ProductAssetQaViewer({
         runtime.controls.minDistance = radius * 0.7
         runtime.controls.maxDistance = radius * 8
         runtime.controls.update()
-        applyDiagnosticMode(runtime, diagnosticMode)
+        applyDiagnosticMode(runtime, diagnosticMode, manifest)
 
         onInspection(inspectScene({ scene: model, animations: gltf.animations, manifest, file }))
       } catch (error) {
@@ -357,8 +487,8 @@ export default function ProductAssetQaViewer({
   useEffect(() => {
     const runtime = runtimeRef.current
     if (!runtime?.model) return
-    applyDiagnosticMode(runtime, diagnosticMode)
-  }, [diagnosticMode])
+    applyDiagnosticMode(runtime, diagnosticMode, manifest)
+  }, [diagnosticMode, manifest])
 
   return (
     <div className="asset-qa-viewer" aria-label="Digital twin QA viewer">
