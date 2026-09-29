@@ -46,7 +46,11 @@ test('Digital Twin QA keeps Three.js deferred and inspects a local product asset
       { role: 'visor-lens', label: 'Visor lens', nodeName: 'Visor_Lens', status: 'confirmed' },
     ],
     components: [],
-    materialSlots: [],
+    materialSlots: [
+      { slotId: 'LeatherPrimary', label: 'Primary leather surface', materialId: 'SCL-COGNAC', nodeNames: ['Shell_Main'], status: 'confirmed', evidenceFrameKeys: [] },
+      { slotId: 'HardwarePrimary', label: 'Primary visor hardware', materialId: 'SCH-002', nodeNames: ['Visor_Frame'], status: 'confirmed', evidenceFrameKeys: [] },
+      { slotId: 'Lens', label: 'Visor lens', materialId: 'SGL-001', nodeNames: ['Visor_Lens'], status: 'confirmed', evidenceFrameKeys: [] },
+    ],
   }
 
   const manifest = JSON.parse(
@@ -75,6 +79,11 @@ test('Digital Twin QA keeps Three.js deferred and inspects a local product asset
   await expect(page.getByText(/production blocker/)).toBeVisible()
   await expect(page.getByText('Production assets must be delivered as GLB.')).toBeVisible()
   await expect(page.getByText(/not production-approved/).first()).toBeVisible()
+  await expect(page.getByText('UV0-ready meshes')).toBeVisible()
+  await page.getByRole('button', { name: 'UV checker' }).click()
+  await expect(page.getByRole('button', { name: 'UV checker' })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Normals' }).click()
+  await expect(page.getByRole('button', { name: 'Normals' })).toHaveAttribute('aria-pressed', 'true')
 
   await expect.poll(() => scriptRequests.some((url) => url.includes('ProductAssetQaViewer'))).toBe(true)
 
