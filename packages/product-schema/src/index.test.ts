@@ -11,9 +11,29 @@ const manifest: AssetManifest = {
   rootNode: 'Root',
   materialSlots: { Leather: ['Shell'] },
   materialSlotProfiles: {
-    Leather: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
+    Leather: {
+      kind: 'leather',
+      mapping: 'uv0',
+      requiresUv0: true,
+      requiresNormals: true,
+      tangents: 'recommended',
+      metersPerUvUnit: 1,
+      uvScaleToleranceRatio: 0.2,
+    },
   },
   defaultMaterialVariants: { Leather: 'LEATHER-1' },
+  customizationZones: {
+    front: {
+      label: 'Front panel',
+      node: 'Shell',
+      purposes: ['tooling', 'text'],
+      origin: [0, 0, 0.01],
+      normal: [0, 0, 1],
+      up: [0, 1, 0],
+      sizeMeters: [0.2, 0.16],
+      safeInsetMeters: 0.01,
+    },
+  },
   components: { 'guard.standard': ['Guard'] },
   animations: {
     'visor.open': {
@@ -42,13 +62,49 @@ describe('asset manifest validation', () => {
     expect(issues.some((issue) => issue.message.includes('Pivot'))).toBe(true)
   })
 
+  it('rejects invalid physical UV scale and customization-zone geometry', () => {
+    const invalid: AssetManifest = {
+      ...manifest,
+      materialSlotProfiles: {
+        Leather: {
+          kind: 'leather',
+          mapping: 'uv0',
+          requiresUv0: true,
+          requiresNormals: true,
+          tangents: 'recommended',
+          metersPerUvUnit: 0,
+          uvScaleToleranceRatio: 2,
+        },
+      },
+      customizationZones: {
+        bad: {
+          label: 'Bad zone',
+          node: 'Missing',
+          purposes: [],
+          origin: [0, 0, 0],
+          normal: [0, 1, 0],
+          up: [0, 2, 0],
+          sizeMeters: [0.2, -0.1],
+          safeInsetMeters: 0.2,
+        },
+      },
+    }
+
+    const issues = validateAssetManifest(invalid, ['LEATHER-1'], ['Root', 'Shell', 'Guard', 'Pivot'])
+    expect(issues.some((entry) => entry.path.endsWith('metersPerUvUnit'))).toBe(true)
+    expect(issues.some((entry) => entry.path.endsWith('uvScaleToleranceRatio'))).toBe(true)
+    expect(issues.some((entry) => entry.path.endsWith('customizationZones.bad.node'))).toBe(true)
+    expect(issues.some((entry) => entry.message.includes('must not be parallel'))).toBe(true)
+    expect(issues.some((entry) => entry.path.endsWith('sizeMeters'))).toBe(true)
+  })
+
   it('rejects ambiguous material ownership and material-kind mismatches', () => {
     const ambiguous: AssetManifest = {
       ...manifest,
       materialSlots: { Leather: ['Shell'], Hardware: ['Shell'] },
       materialSlotProfiles: {
         Leather: { kind: 'leather', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'recommended' },
-        Hardware: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional' },
+        Hardware: { kind: 'metal', mapping: 'uv0', requiresUv0: true, requiresNormals: true, tangents: 'optional', metersPerUvUnit: 1 },
       },
     }
     expect(validateAssetManifest(ambiguous, [], ['Root', 'Shell', 'Guard', 'Pivot'])
