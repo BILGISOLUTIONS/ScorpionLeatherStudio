@@ -293,3 +293,15 @@ Validated V0.26 characteristics:
 - Added `docs/examples/material-ktx2.example.json` and expanded `docs/PBR-MATERIAL-DELIVERY.md`.
 - No new API function, database dependency, polling loop, analytics SDK, runtime third-party service, or Shopify publication.
 - Promotion requires exact-head CI and desktop/mobile browser QA review.
+
+
+## Agent protocol resilience hardening — 2026-09-30
+
+- Canonical agent protocol now explicitly states that pull requests are optional unless branch protection/repository policy requires them.
+- Scorpion's normal promotion path is feature-branch exact-head CI + QA artifact review + non-forced fast-forward to `main` + exact-main verification.
+- A PR-endpoint failure must not be treated as a repository-wide write blocker when branch writes and safe promotion remain available.
+- Added an autonomous fallback ladder: classify failures precisely, check established workflow, inspect available capabilities, correct schema/invocation errors, use equivalent authorized paths, preserve safety invariants, and escalate only when user action is genuinely required.
+- Added interaction/usage-efficiency rules to minimize redundant retrieval, dead-end calls, repeated questions, and unnecessary user steering.
+- Browser/deployment fallback guidance now explicitly permits CI QA artifacts and GitHub deployment/status evidence when a direct local/Vercel path is unavailable, without fabricating verification.
+- This protocol hardening was committed on the active V0.34 feature branch so `main` remains stable until V0.34 itself passes release gates.
+- Previous V0.34 implementation commit was `b9ea9bdb1970c74b1df16801243d4d11015ef666`; protocol/state documentation commits advance the feature-branch head and therefore the final exact V0.34 candidate must be revalidated before promotion.
