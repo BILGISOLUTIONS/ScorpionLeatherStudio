@@ -28,7 +28,7 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByText('SLS', { exact: true }).first()).toBeVisible()
   const productRail = page.getByRole('navigation', { name: 'Customizable products' })
   await expect(productRail).toBeVisible()
-  await expect(productRail.getByRole('button')).toHaveCount(10)
+  await expect(productRail.getByRole('button')).toHaveCount(8)
 
   // The photographed catalog product is now the default authority. The heavier
   // development 3D runtime loads only when the customer explicitly asks for it.

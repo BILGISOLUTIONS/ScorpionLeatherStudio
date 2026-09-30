@@ -451,3 +451,13 @@ Validated V0.26 characteristics:
 - Animation state is now constructed imperatively into an explicit `Record<string, boolean>` so non-hood viewers cannot infer an optional undefined visor key.
 - Family customization zones are now explicitly typed `Record<string, AssetCustomizationZone>`, with purposes typed as `AssetCustomizationPurpose[]`.
 - This preserves the existing schema rather than loosening it. Full exact-head CI must rerun.
+
+
+### V0.36 CI #687 browser-fixture correction
+
+- Exact candidate `420c71836daebaa12bd23b30c4bc5acfb4ec9c41` completed CI #687 / run `36715125673`.
+- TypeScript, preflights, unit tests, build, budgets, function guard and Shopify smoke all passed.
+- Browser result was 66/68 pass. The new V0.36 non-hood 3D + procedural-material test passed on both desktop and mobile.
+- The only failures were a stale test fixture introduced by an over-broad count update: the product-family rail still correctly contains 8 families, while the material registry grew from 8 to 10.
+- Restored the product-family rail assertion to 8. Material-registry counts remain 10 total / 6 unverified.
+- No runtime/product behavior was weakened; exact corrected head must rerun the full release gate.
