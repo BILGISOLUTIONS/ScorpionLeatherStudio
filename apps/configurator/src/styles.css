@@ -2510,12 +2510,17 @@ legend.section-title-row { width: 100%; }
 }
 
 .material-lab__header {
+  position: sticky;
+  z-index: 2;
+  top: -1px;
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 11px;
   border-bottom: 1px solid rgba(91, 77, 54, .45);
+  background: rgba(20, 17, 12, .98);
+  box-shadow: 0 8px 16px rgba(9, 7, 4, .16);
 }
 
 .material-lab__header > div {
@@ -2737,11 +2742,22 @@ legend.section-title-row { width: 100%; }
 @media (max-width: 620px) {
   .material-lab {
     top: 104px;
-    left: 10px;
     right: 10px;
+    bottom: 10px;
+    left: 10px;
     width: auto;
-    max-height: calc(100% - 160px);
+    max-height: none;
     padding: 12px;
+    overscroll-behavior: contain;
+    scroll-padding-top: 52px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .viewer-panel.is-material-lab-open .viewer-caption,
+  .viewer-panel.is-material-lab-open .customization-preview-status,
+  .viewer-panel.is-material-lab-open .asset-status {
+    visibility: hidden;
+    opacity: 0;
   }
 
   .material-finish-row {

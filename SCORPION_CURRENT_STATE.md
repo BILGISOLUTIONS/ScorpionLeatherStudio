@@ -319,3 +319,14 @@ Validated V0.26 characteristics:
 - TextureCan assets remain development/reference inputs only. SLS will vendor approved local derivatives rather than hotlinking a third-party runtime, and unknown physical tile scale blocks production promotion until calibrated against real Scorpion material.
 - Construction-bearing upholstery textures (quilted/tufted/woven/stitched/etc.) are not to be misused as generic leather grain.
 - `docs/PBR-MATERIAL-DELIVERY.md` now records the development-source ingestion policy.
+
+
+## V0.34 mobile Material Lab visual QA correction — 2026-09-30
+
+- Browser artifact `11079359150` from CI #677 was inspected while the corrected exact-head CI was running.
+- Desktop V0.34 Material Lab composition view was visually acceptable.
+- Mobile artifact exposed a real polish issue: after scrolling through Structure → Dye → Finish, the Material Lab header/close control could scroll out of the visible sheet and the viewer caption competed with the bottom of the material controls.
+- Mobile Material Lab is now bounded with explicit top/bottom insets, contained touch overscroll, and a sticky internal header so the close control remains reachable while the material controls scroll.
+- Underlying viewer caption/customization/status overlays are hidden while the mobile Material Lab is open to prevent visual collision.
+- Browser coverage now asserts that the Material Lab close control remains in the viewport after selecting a lower Finish option.
+- This is a visual/interaction correction only; composition semantics, order-request isolation, and production-material authority are unchanged.

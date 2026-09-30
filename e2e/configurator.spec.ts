@@ -241,6 +241,7 @@ test('V0.34 Material Lab composes a development leather recipe without mutating 
   await lab.getByRole('button', { name: 'Oxblood', exact: true }).click()
   await lab.getByRole('button', { name: 'Satin', exact: true }).click()
 
+  await expect(lab.getByRole('button', { name: 'Close material lab' })).toBeInViewport()
   await expect(page.getByTestId('material-recipe-status')).toContainText('DEVELOPMENT MATERIAL RECIPE')
   await expect(page.getByTestId('material-recipe-status')).toContainText('Oxblood')
   await expect(page.getByTestId('material-recipe-status')).toContainText('Satin')

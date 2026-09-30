@@ -110,7 +110,10 @@ function WeldingHoodViewerComponent({
   const defaultStructureId = photographedStructureForReference(referenceId)
 
   return (
-    <div className="viewer-panel" aria-label="Interactive 3D product viewer">
+    <div
+      className={materialLabOpen ? 'viewer-panel is-material-lab-open' : 'viewer-panel'}
+      aria-label="Interactive 3D product viewer"
+    >
       <ThreeProductViewer
         product={sampleProduct}
         manifest={sampleManifest}
