@@ -353,3 +353,18 @@ Validated V0.26 characteristics:
 - V0.34 includes Structure × Dye × Finish composition, locked photographed-material behavior, the development-only neutral tintable leather base, premium Material Lab UI, KTX2 build/validation automation, TextureCan CC0 development-source policy, and the hardened Scorpion agent recovery protocol.
 - TextureCan assets were researched and candidate source URLs were identified, but no third-party texture binaries were added to this V0.34 release. Actual vendored texture ingestion is intentionally deferred to the next bounded development batch.
 - The documentation-only state commit following this release uses `[skip ci]` to avoid rerunning the full browser pipeline after both the exact feature head and exact production/main SHA already passed the complete gate.
+
+
+## V0.35 external asset-source research — 2026-09-30
+
+- New branch: `feature/v035-material-source-ingestion`, based on documentation-only main `fcf2ec227c193d8e3fb6b070e6e716ccc65b0ae6` following shipped V0.34.
+- Deep source survey added at `docs/ASSET-SOURCE-STRATEGY.md`.
+- Preferred unrestricted sources: Poly Haven, ambientCG, cgbookcase, TextureCan, 3DTextures.me, Texture Ninja, selected CC0 OpenGameArt content, and origin-verified CC0 aggregators.
+- Poly Haven is the preferred first automated connector because its public API is commercially usable and exposes asset metadata/downloads; the underlying assets are CC0.
+- License-constrained sources are separated from CC0 sources: AITextured, Blendkit RF assets, Adobe Substance Assets, Fab/Megascans, Textures.com, Poliigon, FreePBR and Architextures.
+- Geometry/reconstruction survey adds Poly Haven/Blendkit/Sketchfab/Fab model sources plus RealityScan, Polycam, Meshroom and local image-to-3D.
+- TripoSR is the leading local image-to-3D experiment for an 8 GB-class GPU because default inference is about 6 GB VRAM and the project/model are MIT licensed. TRELLIS remains a higher-memory option with an official 16 GB GPU requirement.
+- SLS geometry authority is now planned as G0 generic scaffold -> G1 AI/reference twin -> G2 calibrated visual twin -> G3 production twin.
+- Product-family master geometry + parametric dimensions/components/materials is preferred over scanning every SKU.
+- V0.35 should implement a source-agnostic provenance/license manifest and local ingestion pipeline, not a TextureCan-specific importer.
+- This research/documentation commit intentionally uses `[skip ci]`; no runtime code is changed yet.
