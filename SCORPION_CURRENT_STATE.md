@@ -433,3 +433,13 @@ Validated V0.26 characteristics:
 - No new API/Vercel function, database, polling loop, remote runtime texture dependency or eager 3D payload.
 - Added `docs/PRODUCT-FAMILY-3D-V036.md`, unit contract tests, and desktop/mobile browser coverage.
 - Promotion requires exact-head CI and artifact review.
+
+
+### V0.36 CI #685 type-contract correction
+
+- Initial V0.36 candidate `dc652b0c21599c6f434e48784f6976cb7dce73f7` reached CI #685 / run `36714900983`.
+- TypeScript correctly blocked the candidate before later gates.
+- Two type-contract defects were identified: the non-hood empty animation map inferred an optional `visor.open: undefined` key, and customization purposes were inferred readonly while `AssetCustomizationZone` expects a mutable purpose array.
+- The shared viewer now gives animation state an explicit `Record<string, boolean>` contract.
+- Family customization-zone purposes now infer the mutable array expected by the product-schema contract.
+- No test was weakened; exact corrected head must rerun the full release gate.

@@ -29,7 +29,7 @@ function makeDefinition(spec: FamilySpec): Studio3dDefinition {
     optionGroups:[],compatibilityRules:[],measurements:[],sizeRecommendations:[],
   }
   const customizationZones=Object.fromEntries(Object.entries(spec.zones).map(([zoneId,zone])=>[zoneId,{
-    label:zone.label,node:zone.node,purposes:['tooling','text','logo','artwork'] as const,
+    label:zone.label,node:zone.node,purposes:['tooling','text','logo','artwork'],
     placementLabels:zone.placementLabels,cameraPreset:zone.cameraPreset??'detail',
     origin:[0,0,0.51] as [number,number,number],normal:[0,0,1] as [number,number,number],
     up:[0,1,0] as [number,number,number],sizeMeters:zone.sizeMeters,
