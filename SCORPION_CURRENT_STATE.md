@@ -384,3 +384,11 @@ Validated V0.26 characteristics:
 - Added `docs/MATERIAL-SOURCE-INGESTION.md` and `docs/examples/material-source.polyhaven.example.json`.
 - CI now runs an offline provider self-test; CI does not depend on Poly Haven network availability.
 - Exact-head CI and browser regression gates are required before V0.35 promotion.
+
+
+### V0.35 KTX2 relative-path correction
+
+- Pre-promotion review caught that the generated KTX2 manifest initially calculated raw/runtime paths relative to the runtime directory rather than the manifest root.
+- Generator now emits `raw/<channel>.*` inputs, `runtime/<tier>/<channel>.ktx2` outputs, and `source-manifest.json` relative to the actual manifest location.
+- Offline self-test now asserts these path contracts directly.
+- Added `.sls-material-sources/` to `.gitignore` so vendored raw source caches/checksum working sets are not accidentally committed into the application repository.

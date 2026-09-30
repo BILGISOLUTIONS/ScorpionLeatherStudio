@@ -10,3 +10,4 @@ coverage/
 
 # Generated from the installed three package before dev/build.
 apps/configurator/public/basis/
+.sls-material-sources/

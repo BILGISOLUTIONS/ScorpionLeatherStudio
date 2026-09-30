@@ -319,19 +319,19 @@ async function downloadOne(file, destination) {
   return { bytes: fileStat.size, md5, sha256 }
 }
 
-function createKtx2Manifest(sourceManifest, rawDirectory, runtimeDirectory) {
+function createKtx2Manifest(sourceManifest, rawDirectory, runtimeDirectory, manifestRoot) {
   const jobs = sourceManifest.files
     .filter((file) => KTX_CHANNELS.has(file.role) && file.localPath)
     .map((file) => ({
       channel: file.role,
-      input: path.relative(path.dirname(runtimeDirectory), path.join(rawDirectory, file.localPath)).replaceAll(path.sep, '/'),
-      output: path.join(path.basename(runtimeDirectory), `${file.role}.ktx2`).replaceAll(path.sep, '/'),
+      input: path.relative(manifestRoot, path.join(rawDirectory, file.localPath)).replaceAll(path.sep, '/'),
+      output: path.relative(manifestRoot, path.join(runtimeDirectory, `${file.role}.ktx2`)).replaceAll(path.sep, '/'),
     }))
 
   return {
     schemaVersion: KTX_SCHEMA_VERSION,
     materialId: `SLS-EXT-${sourceManifest.provider.toUpperCase()}-${sourceManifest.assetId.toUpperCase().replace(/[^A-Z0-9]+/gu, '-')}`,
-    sourceManifest: '../source-manifest.json',
+    sourceManifest: 'source-manifest.json',
     jobs,
     report: 'ktx2-build-report.json',
   }
@@ -381,7 +381,7 @@ async function ingestPolyHavenAsset(assetId, options) {
   await writeFile(sourcePath, JSON.stringify(manifest, null, 2) + '\n')
 
   if (options.download) {
-    const ktxManifest = createKtx2Manifest(manifest, rawDirectory, runtimeDirectory)
+    const ktxManifest = createKtx2Manifest(manifest, rawDirectory, runtimeDirectory, assetRoot)
     if (!ktxManifest.jobs.length) throw new Error('No KTX2-compatible maps were downloaded.')
     const ktxPath = path.join(assetRoot, 'material.ktx2.json')
     await writeFile(ktxPath, JSON.stringify(ktxManifest, null, 2) + '\n')
@@ -454,6 +454,20 @@ function selfTest() {
   if (!validateSourceManifest(bad).includes('external source assets must remain development-reference')) {
     throw new Error('Authority safety self-test failed.')
   }
+
+  const ktxFixture = structuredClone(manifest)
+  for (const file of ktxFixture.files) file.localPath = safeFilename(file)
+  const ktx = createKtx2Manifest(
+    ktxFixture,
+    '/tmp/source/poly-haven/leather_test_01/raw',
+    '/tmp/source/poly-haven/leather_test_01/runtime/1k',
+    '/tmp/source/poly-haven/leather_test_01',
+  )
+  const baseJob = ktx.jobs.find((job) => job.channel === 'baseColor')
+  if (baseJob?.input !== 'raw/baseColor.png' || baseJob?.output !== 'runtime/1k/baseColor.ktx2') {
+    throw new Error('KTX2 manifest path self-test failed.')
+  }
+  if (ktx.sourceManifest !== 'source-manifest.json') throw new Error('KTX2 source-manifest path self-test failed.')
 
   const checksumBytes = Buffer.from('scorpion')
   if (sha256Bytes(checksumBytes).length !== 64 || md5Bytes(checksumBytes).length !== 32) {
