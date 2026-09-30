@@ -6,17 +6,17 @@ Last updated: 2026-09-30
 
 Repository: `BILGISOLUTIONS/ScorpionLeatherStudio`
 
-V0.34 is the current shipped product release on `main` at exact production SHA `fe5d3e288c625231470b0fb83a3bc0147bb10d50`.
+V0.35 is the current shipped product release on `main` at exact production SHA `60c435783318e0ea51f9d51b361a42b7a820b303`.
 
 Release verification:
 
-- final feature-branch CI #679 / run `36675901190`: PASS on the exact production SHA;
-- browser QA artifact `11079846742`: reviewed on desktop and mobile;
-- exact-main CI #680 / run `36676380950`: PASS on the same exact production SHA;
+- final feature-branch CI #683 / run `36709672865`: PASS on the exact production SHA;
+- browser regression QA artifact `11093567152`: reviewed on desktop and mobile;
+- exact-main CI #684 / run `36710176592`: PASS on the same exact production SHA;
 - GitHub Vercel status for the production SHA: SUCCESS;
-- promotion was a non-forced fast-forward from V0.33 `5327f6925a4c97c56227675dc7453c402e32c7c2`.
+- promotion was a non-forced fast-forward from documentation-only main `fcf2ec227c193d8e3fb6b070e6e716ccc65b0ae6`.
 
-This current-state update is documentation-only and follows the verified V0.34 production release.
+This current-state update is documentation-only and follows the verified V0.35 production release.
 
 ## Current product scope
 
@@ -207,12 +207,13 @@ Validated V0.26 characteristics:
 
 ## Immediate recovery steps
 
-1. Treat V0.34 production code at `fe5d3e288c625231470b0fb83a3bc0147bb10d50` as shipped and verified.
-2. For the next development batch, branch from current `main`; do not reopen V0.34 unless a regression is demonstrated.
-3. Recommended V0.35 scope: a bounded CC0 development-material ingestion layer using the documented TextureCan policy.
-4. Vendor selected assets locally; record source/license/acquisition/checksum provenance; prefer 1K web derivatives initially; do not hotlink third-party runtime assets.
-5. Keep TextureCan and other CC0 materials development/reference-only until real Scorpion capture, measured physical scale, Material QA, and controlled promotion establish production authority.
-6. Preserve the hardened fallback protocol: a tool/endpoint failure is not a blocker until equivalent safe paths have been exhausted.
+1. Treat V0.35 production code at `60c435783318e0ea51f9d51b361a42b7a820b303` as shipped and verified.
+2. Start the next development branch from current `main`; do not reopen V0.35 unless a regression is demonstrated.
+3. Next high-value material step: expand the source-agnostic provider layer beyond Poly Haven and ingest a small curated set of real CC0 leather structures into the existing KTX2/Material Lab pipeline.
+4. Keep every external asset provenance-locked and `development-reference` until real Scorpion capture/measurement/QA promotes it.
+5. Preserve local vendoring, checksums, OpenGL-normal discipline, physical-scale metadata when available, and zero storefront hotlinking.
+6. Continue the product-family / G0→G3 digital-twin strategy so full LiDAR capture is reserved for products that actually need production-grade geometry.
+
 
 ## V0.27 — accessibility release candidate
 
@@ -399,3 +400,20 @@ Validated V0.26 characteristics:
 - Pre-release security review identified that a manually supplied provider asset id is used as part of the local cache path.
 - Asset IDs are now restricted to Poly Haven-style slugs (letters, numbers, underscore and hyphen; bounded length) before any API or filesystem use.
 - Offline self-test explicitly rejects path traversal input such as `../../escape`.
+
+
+## V0.35 release closure — 2026-09-30
+
+- Exact production SHA: `60c435783318e0ea51f9d51b361a42b7a820b303`.
+- Feature branch: `feature/v035-material-source-ingestion`.
+- Final feature-branch CI: #683 / run `36709672865` — PASS.
+- Exact-main CI: #684 / run `36710176592` — PASS.
+- Browser regression QA artifact: `11093567152`, digest `sha256:363113115941e77e44b14a3e7b4649fe77ef0e038647ae7c366c682e8f1db0aa`.
+- Desktop/mobile storefront regression screenshots were reviewed; V0.35 introduced no customer-UI regression.
+- Vercel commit status on the exact production SHA: SUCCESS.
+- Promotion was a non-forced fast-forward; the feature branch was 4 commits ahead / 0 behind at promotion.
+- V0.35 ships a source-agnostic material provenance contract and the first live provider adapter for Poly Haven: texture search, metadata/file discovery, deterministic requested-resolution selection, OpenGL normal preference, local vendoring, provider byte-size/MD5 verification, local SHA-256 provenance, provider physical dimensions, and generation of an existing-pipeline-compatible KTX2 build manifest.
+- Security/reliability hardening includes correct manifest-relative raw/runtime paths, explicit path-contract self-tests, source-cache exclusion from Git, strict provider-asset slug validation, and path-traversal regression coverage.
+- External material authority remains hard-locked to `development-reference`; no external library asset can silently become a production Scorpion material.
+- V0.35 adds no runtime dependency, Vercel/API function, database, polling loop, customer hotlink, or storefront payload.
+- The documentation-only state commit following this release uses `[skip ci]` because both the exact feature head and exact production/main SHA already passed the complete release gate.
