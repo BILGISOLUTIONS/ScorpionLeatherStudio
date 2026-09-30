@@ -392,3 +392,10 @@ Validated V0.26 characteristics:
 - Generator now emits `raw/<channel>.*` inputs, `runtime/<tier>/<channel>.ktx2` outputs, and `source-manifest.json` relative to the actual manifest location.
 - Offline self-test now asserts these path contracts directly.
 - Added `.sls-material-sources/` to `.gitignore` so vendored raw source caches/checksum working sets are not accidentally committed into the application repository.
+
+
+### V0.35 source-cache path hardening
+
+- Pre-release security review identified that a manually supplied provider asset id is used as part of the local cache path.
+- Asset IDs are now restricted to Poly Haven-style slugs (letters, numbers, underscore and hyphen; bounded length) before any API or filesystem use.
+- Offline self-test explicitly rejects path traversal input such as `../../escape`.

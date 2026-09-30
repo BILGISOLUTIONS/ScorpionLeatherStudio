@@ -72,6 +72,14 @@ function normalizeQuery(query) {
   return normalized
 }
 
+function validateAssetId(assetId) {
+  const normalized = String(assetId ?? '').trim()
+  if (!/^[a-z0-9][a-z0-9_-]{0,127}$/iu.test(normalized)) {
+    throw new Error('Asset id must be a Poly Haven-style slug containing only letters, numbers, underscores, or hyphens.')
+  }
+  return normalized
+}
+
 function polyHavenSearchUrl(query, limit) {
   const url = new URL('/search', POLY_HAVEN_API)
   url.searchParams.set('q', normalizeQuery(query))
@@ -204,7 +212,7 @@ function positiveDimensionPair(dimensions) {
 }
 
 function createPolyHavenSourceManifest({ assetId, info, files, preferredResolution = '1k', acquiredAt }) {
-  if (!String(assetId).trim()) throw new Error('Poly Haven asset id is required.')
+  assetId = validateAssetId(assetId)
   if (!isRecord(info)) throw new Error('Poly Haven info payload must be an object.')
   if (Number(info.type) !== 1) throw new Error('Poly Haven source must be a texture asset.')
   const selected = selectPolyHavenTextureFiles(files, preferredResolution)
@@ -338,6 +346,7 @@ function createKtx2Manifest(sourceManifest, rawDirectory, runtimeDirectory, mani
 }
 
 async function ingestPolyHavenAsset(assetId, options) {
+  assetId = validateAssetId(assetId)
   const encoded = encodeURIComponent(assetId)
   const [info, fileTree] = await Promise.all([
     fetchJson(`${POLY_HAVEN_API}/info/${encoded}`),
@@ -406,6 +415,14 @@ async function searchPolyHaven(query, limit) {
 
 function selfTest() {
   if (normalizeQuery('  Leather   Grain ') !== 'leather grain') throw new Error('Query normalization self-test failed.')
+  if (validateAssetId('leather_grain-01') !== 'leather_grain-01') throw new Error('Asset slug self-test failed.')
+  let traversalRejected = false
+  try {
+    validateAssetId('../../escape')
+  } catch {
+    traversalRejected = true
+  }
+  if (!traversalRejected) throw new Error('Asset path traversal self-test failed.')
   const url = polyHavenSearchUrl('Leather Grain', 8)
   if (!url.includes('q=leather+grain') || !url.includes('t=textures') || !url.includes('limit=8')) {
     throw new Error('Poly Haven search URL self-test failed.')
