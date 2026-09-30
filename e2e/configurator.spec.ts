@@ -493,8 +493,10 @@ test('Material Lab inspects the registry without loading customer 3D runtime', a
   await page.goto('/materials.html')
 
   await expect(page.getByRole('heading', { name: 'Material Lab' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(7)
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(8)
   await expect(page.getByText('SCL-COGNAC')).toBeVisible()
+  await expect(page.getByText('SCL-NEUTRAL-DEV')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Neutral Leather Development Base' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Cognac Textured Reference' })).toBeVisible()
   await expect(
     page.getByRole('region', { name: 'Material library status' }).getByText('Production approved', { exact: true }),
@@ -505,14 +507,14 @@ test('Material Lab inspects the registry without loading customer 3D runtime', a
 
   await page.getByRole('searchbox', { name: 'Search materials' }).fill('')
   await page.getByRole('combobox', { name: 'Filter materials' }).selectOption('unverified')
-  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(3)
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(4)
 
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
   expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
   expect(consoleErrors, `Material Lab console errors: ${consoleErrors.join('\n')}`).toEqual([])
 
   await page.getByRole('combobox', { name: 'Filter materials' }).selectOption('all')
-  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(7)
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(8)
 
   const screenshotName = testInfo.project.name.includes('mobile')
     ? 'material-lab-mobile.png'

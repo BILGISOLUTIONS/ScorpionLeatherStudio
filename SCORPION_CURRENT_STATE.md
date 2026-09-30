@@ -305,3 +305,17 @@ Validated V0.26 characteristics:
 - Browser/deployment fallback guidance now explicitly permits CI QA artifacts and GitHub deployment/status evidence when a direct local/Vercel path is unavailable, without fabricating verification.
 - This protocol hardening was committed on the active V0.34 feature branch so `main` remains stable until V0.34 itself passes release gates.
 - Previous V0.34 implementation commit was `b9ea9bdb1970c74b1df16801243d4d11015ef666`; protocol/state documentation commits advance the feature-branch head and therefore the final exact V0.34 candidate must be revalidated before promotion.
+
+
+## V0.34 CI correction + TextureCan development sourcing — 2026-09-30
+
+- Exact candidate `5abe42269f0ef783a9e5af3c105f98f315626210` completed CI run `36674983018` / #677.
+- TypeScript, Blender preflight, KTX2 self-test, unit/API tests, production build, bundle budgets, function budget, Shopify smoke, and Chromium installation all passed.
+- Browser suite result was 64/66 pass. The only failures were the same Material Lab registry assertion on desktop/mobile.
+- Root cause was an obsolete test fixture: V0.34 intentionally added `SCL-NEUTRAL-DEV`, increasing the registry from 7 to 8 materials and the unverified filter from 3 to 4. This was not a product/runtime defect.
+- E2E assertions are corrected to the new exact counts and now explicitly verify `SCL-NEUTRAL-DEV` / `Neutral Leather Development Base` rather than weakening the test.
+- TextureCan was reviewed as a useful CC0 development-source library. Its published terms permit commercial use and redistribution without required attribution.
+- Vetted starting candidates: Fabrics 0067 Calf Leather, 0063 Synthetic Leather Fabric, 0073 Brown Alligator Leather Fabric, 0045 Brown Leather Texture, with 0054 Waxy Reddish-Brown as an optional wear/roughness stress material.
+- TextureCan assets remain development/reference inputs only. SLS will vendor approved local derivatives rather than hotlinking a third-party runtime, and unknown physical tile scale blocks production promotion until calibrated against real Scorpion material.
+- Construction-bearing upholstery textures (quilted/tufted/woven/stitched/etc.) are not to be misused as generic leather grain.
+- `docs/PBR-MATERIAL-DELIVERY.md` now records the development-source ingestion policy.

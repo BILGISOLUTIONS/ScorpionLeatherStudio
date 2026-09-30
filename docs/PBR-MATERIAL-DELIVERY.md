@@ -160,3 +160,49 @@ Current policy:
 - successful builds emit byte size + SHA-256 provenance in a JSON build report.
 
 The script uses the modern Khronos `ktx` CLI and never shells through interpolated command strings.
+
+
+## CC0 development texture source library
+
+External PBR libraries may be used to accelerate renderer and material-system development, but they are not physical Scorpion material authority.
+
+TextureCan is currently approved as a **development-source library** because its published Terms of Use state that its PBR textures are released under CC0 1.0, permit commercial use, require no attribution, and may be redistributed with projects.
+
+Initial useful leather candidates:
+
+- TextureCan `Fabrics 0067` — Calf Leather: general leather grain/wrinkle development structure.
+- TextureCan `Fabrics 0063` — Synthetic Leather Fabric: fine crack/grain study and a useful candidate for a neutralized tintable development base.
+- TextureCan `Fabrics 0073` — Brown Alligator Leather Fabric: exotic-scale development structure.
+- TextureCan `Fabrics 0045` — Brown Leather Texture: fine scale/bump structure for general renderer testing.
+- TextureCan `Fabrics 0054` — Waxy Reddish-Brown Fabric Leather: optional wear/roughness stress test, not a default customer material.
+
+Source pages:
+
+- https://www.texturecan.com/details/455/
+- https://www.texturecan.com/details/404/
+- https://www.texturecan.com/details/503/
+- https://www.texturecan.com/details/300/
+- https://www.texturecan.com/details/386/
+- https://www.texturecan.com/terms/
+
+### Ingestion rules
+
+1. Prefer 1K derivatives for initial browser development; promote 2K only after visual QA demonstrates a material benefit on desktop hardware.
+2. Download and vendor approved derivatives into the SLS asset pipeline. Do **not** hotlink TextureCan at storefront runtime.
+3. Record source site, source asset ID/page, license, acquisition date, original archive checksum, and derivative checksums.
+4. Treat source physical tile scale as **unknown** unless the source supplies a reliable measurement. A CC0 texture must not be promoted to production merely because it is seamless or visually convincing.
+5. Neutralize/tint source color only for explicitly development-only composition studies. Do not represent generated dyes as photographed Scorpion colors.
+6. Stitched, quilted, tufted, woven, padded, nailed, or otherwise construction-bearing textures are not generic leather grain. Use them only when the real product construction contains that physical pattern.
+7. Real Scorpion capture, measured scale, material QA, and controlled promotion remain required before a material becomes production-authoritative.
+
+The preferred long-term flow remains:
+
+```text
+CC0 / procedural development source
+  -> local development material
+  -> renderer / UX validation
+  -> real Scorpion material capture
+  -> measured PBR maps
+  -> Material QA
+  -> production promotion
+```
