@@ -17,7 +17,9 @@
     "budget:functions": "node scripts/check-vercel-functions.mjs",
     "smoke:shopify": "node scripts/check-shopify-embed.mjs",
     "material:ktx2": "node scripts/build-material-ktx2.mjs",
-    "material:ktx2:selftest": "node scripts/build-material-ktx2.mjs --self-test"
+    "material:ktx2:selftest": "node scripts/build-material-ktx2.mjs --self-test",
+    "material:source": "node scripts/ingest-material-source.mjs",
+    "material:source:selftest": "node scripts/ingest-material-source.mjs --self-test"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

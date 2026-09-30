@@ -368,3 +368,19 @@ Validated V0.26 characteristics:
 - Product-family master geometry + parametric dimensions/components/materials is preferred over scanning every SKU.
 - V0.35 should implement a source-agnostic provenance/license manifest and local ingestion pipeline, not a TextureCan-specific importer.
 - This research/documentation commit intentionally uses `[skip ci]`; no runtime code is changed yet.
+
+
+## V0.35 Poly Haven ingestion foundation — 2026-09-30
+
+- Added `scripts/ingest-material-source.mjs` as the first source-agnostic external-material ingestion tool, with Poly Haven as the first provider adapter.
+- Search uses Poly Haven's current `/search` API for published texture assets; asset acquisition uses `/info/{id}` and `/files/{id}`.
+- Poly Haven source manifests record CC0 license, source URL, API attribution requirement, provider `files_hash`, physical dimensions when supplied, selected resolution, channel, provider MD5/size metadata and local SHA-256 after download.
+- Deterministic texture selection prefers the requested resolution, lossless source formats, OpenGL normals, and excludes DirectX normal maps.
+- Base color, OpenGL normal and roughness are mandatory for a usable imported development PBR material. AO/height/metalness are retained when available.
+- Download mode vendors files locally and verifies provider byte size + MD5 before writing SHA-256 provenance.
+- Successful downloads also emit an existing-pipeline-compatible KTX2 build manifest for BaseColor/Normal/Roughness/AO.
+- External library authority is hard-locked to `development-reference`; source validation rejects attempts to mark these assets as production authority.
+- No third-party runtime hotlinking, new dependency, API/Vercel function, database, polling loop or storefront payload was added.
+- Added `docs/MATERIAL-SOURCE-INGESTION.md` and `docs/examples/material-source.polyhaven.example.json`.
+- CI now runs an offline provider self-test; CI does not depend on Poly Haven network availability.
+- Exact-head CI and browser regression gates are required before V0.35 promotion.

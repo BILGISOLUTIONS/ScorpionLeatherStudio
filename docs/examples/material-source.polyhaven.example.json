@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "provider": "poly-haven",
+  "assetId": "example_leather_01",
+  "assetType": "texture",
+  "label": "Example Leather 01",
+  "sourceUrl": "https://polyhaven.com/a/example_leather_01",
+  "providerApiUrl": "https://api.polyhaven.com",
+  "license": {
+    "id": "CC0-1.0",
+    "name": "Creative Commons CC0 1.0 Universal",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "commercialUse": true,
+    "rawRedistribution": true
+  },
+  "access": {
+    "method": "api",
+    "liveApiCreditRequired": true,
+    "credit": "Powered by Poly Haven"
+  },
+  "authority": "development-reference",
+  "physicalScale": {
+    "confidence": "provider-measured",
+    "dimensionsMm": [1000, 1000]
+  },
+  "preferredResolution": "1k",
+  "providerFilesHash": "provider-supplied-files-hash",
+  "files": [
+    {
+      "role": "baseColor",
+      "sourcePath": "Diff/1k/png",
+      "url": "https://cdn.polyhaven.com/example_diff_1k.png",
+      "md5": "11111111111111111111111111111111",
+      "bytes": 123456,
+      "resolution": "1k",
+      "format": "png"
+    },
+    {
+      "role": "normal",
+      "sourcePath": "nor_gl/1k/png",
+      "url": "https://cdn.polyhaven.com/example_nor_gl_1k.png",
+      "md5": "22222222222222222222222222222222",
+      "bytes": 234567,
+      "resolution": "1k",
+      "format": "png",
+      "normalConvention": "opengl"
+    },
+    {
+      "role": "roughness",
+      "sourcePath": "Rough/1k/png",
+      "url": "https://cdn.polyhaven.com/example_rough_1k.png",
+      "md5": "33333333333333333333333333333333",
+      "bytes": 112233,
+      "resolution": "1k",
+      "format": "png"
+    }
+  ]
+}
