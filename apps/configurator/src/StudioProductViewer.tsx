@@ -55,10 +55,11 @@ function StudioProductViewerComponent({familyId,referenceId,personalization,artw
     return overrides
   },[leatherComposition.variant.id,personalization.construction.hardware])
   const customizationPreview=useMemo(()=>buildCustomizationPreview(definition.manifest,personalization,artwork),[artwork,definition.manifest,personalization])
-  const animationStates=useMemo<Record<string, boolean>>(
-    () => familyId === 'welding-hood' ? { 'visor.open': visorOpen } : {},
-    [familyId, visorOpen],
-  )
+  const animationStates=useMemo<Record<string, boolean>>(() => {
+    const next: Record<string, boolean> = {}
+    if (familyId === 'welding-hood') next['visor.open'] = visorOpen
+    return next
+  }, [familyId, visorOpen])
   const activeLeatherMaterial=scorpionMaterialById.get(leatherComposition.structure.materialId)
   return <div className={materialLabOpen?'viewer-panel is-material-lab-open':'viewer-panel'} aria-label={`Interactive 3D ${familyId} viewer`} data-3d-authority={familyId==='welding-hood'?'development-twin':'g1-visual-reference'}>
     <ThreeProductViewer product={definition.product} manifest={definition.manifest} materials={materials} selections={definition.selections} materialOverrides={materialOverrides} customizationLayers={customizationPreview.layers} animationStates={animationStates} cameraPreset={cameraPreset} autoRotate={autoRotate} onAssetIssues={handleAssetIssues}/>

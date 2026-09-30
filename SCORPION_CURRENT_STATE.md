@@ -443,3 +443,11 @@ Validated V0.26 characteristics:
 - The shared viewer now gives animation state an explicit `Record<string, boolean>` contract.
 - Family customization-zone purposes now infer the mutable array expected by the product-schema contract.
 - No test was weakened; exact corrected head must rerun the full release gate.
+
+
+### V0.36 CI #686 inference correction
+
+- Corrected candidate `3e927b4494c3b2c1c3a3f7fee8083f592d9caf75` reached CI #686 / run `36715014200`; TypeScript still rejected two widened inferred types.
+- Animation state is now constructed imperatively into an explicit `Record<string, boolean>` so non-hood viewers cannot infer an optional undefined visor key.
+- Family customization zones are now explicitly typed `Record<string, AssetCustomizationZone>`, with purposes typed as `AssetCustomizationPurpose[]`.
+- This preserves the existing schema rather than loosening it. Full exact-head CI must rerun.

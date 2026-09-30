@@ -1,4 +1,4 @@
-import type { AssetManifest, ProductDefinition } from '@sls/product-schema'
+import type { AssetCustomizationPurpose, AssetCustomizationZone, AssetManifest, ProductDefinition } from '@sls/product-schema'
 import type { StudioFamilyKind } from './studio-catalog'
 
 export interface Studio3dDefinition {
@@ -28,13 +28,15 @@ function makeDefinition(spec: FamilySpec): Studio3dDefinition {
     asset:{manifestUrl:`/models/g1-${spec.familyId}.manifest.json`,defaultCameraPreset:'hero'},
     optionGroups:[],compatibilityRules:[],measurements:[],sizeRecommendations:[],
   }
-  const customizationZones=Object.fromEntries(Object.entries(spec.zones).map(([zoneId,zone])=>[zoneId,{
-    label:zone.label,node:zone.node,purposes:['tooling','text','logo','artwork'],
+  const customizationZones: Record<string, AssetCustomizationZone> = Object.fromEntries(
+    Object.entries(spec.zones).map(([zoneId,zone])=>[zoneId,{
+    label:zone.label,node:zone.node,purposes:['tooling','text','logo','artwork'] as AssetCustomizationPurpose[],
     placementLabels:zone.placementLabels,cameraPreset:zone.cameraPreset??'detail',
     origin:[0,0,0.51] as [number,number,number],normal:[0,0,1] as [number,number,number],
     up:[0,1,0] as [number,number,number],sizeMeters:zone.sizeMeters,
     safeInsetMeters:Math.min(...zone.sizeMeters)*0.06,
-  }]))
+  }]),
+  )
   const manifest:AssetManifest={
     schemaVersion:1,assetId:`g1-${spec.familyId}-v036`,model:spec.model,units:'meters',upAxis:'Y',frontAxis:'-Z',rootNode:'SLS_ProductRoot',
     materialSlots:{LeatherPrimary:spec.leatherNodes,HardwarePrimary:spec.hardwareNodes},
