@@ -1,20 +1,22 @@
 # Scorpion Leather Studio — Current State
 
-Last updated: 2026-09-28
+Last updated: 2026-09-30
 
 ## Repository / production
 
 Repository: `BILGISOLUTIONS/ScorpionLeatherStudio`
 
-V0.28 is the current shipped release on `main` at exact SHA `00b65d6f0ab4910a5af289dde7cc7a722ced6519`. Exact-main CI `36393027691` passed and GitHub Vercel status reported success.\n\nV0.26 was promoted to `main` from the exact green head:
+V0.34 is the current shipped product release on `main` at exact production SHA `fe5d3e288c625231470b0fb83a3bc0147bb10d50`.
 
-```text
-45b773b85cffbca543d8b0a3381f19a5a4330ec1
-```
+Release verification:
 
-This current-state update is documentation-only and follows that promoted release.
+- final feature-branch CI #679 / run `36675901190`: PASS on the exact production SHA;
+- browser QA artifact `11079846742`: reviewed on desktop and mobile;
+- exact-main CI #680 / run `36676380950`: PASS on the same exact production SHA;
+- GitHub Vercel status for the production SHA: SUCCESS;
+- promotion was a non-forced fast-forward from V0.33 `5327f6925a4c97c56227675dc7453c402e32c7c2`.
 
-Active development branch: `feature/v029-build-continuity`, based on shipped V0.28 main `00b65d6f0ab4910a5af289dde7cc7a722ced6519`. V0.29 improves local resume and cross-device share continuity without adding a backend dependency or Vercel function.
+This current-state update is documentation-only and follows the verified V0.34 production release.
 
 ## Current product scope
 
@@ -205,11 +207,12 @@ Validated V0.26 characteristics:
 
 ## Immediate recovery steps
 
-1. Verify the latest exact-`main` CI is green after this documentation-only state update.
-2. Treat V0.25 and V0.26 as shipped.
-3. Start the next feature branch from current `main`.
-4. Continue preserving customer/runtime isolation, authenticated staff attribution, bounded diagnostics, and dedicated budgets.
-5. Next high-value gaps: accessibility/keyboard/focus/reduced-motion audit, production Shopify theme compatibility smoke coverage, and cross-device save/share continuity.
+1. Treat V0.34 production code at `fe5d3e288c625231470b0fb83a3bc0147bb10d50` as shipped and verified.
+2. For the next development batch, branch from current `main`; do not reopen V0.34 unless a regression is demonstrated.
+3. Recommended V0.35 scope: a bounded CC0 development-material ingestion layer using the documented TextureCan policy.
+4. Vendor selected assets locally; record source/license/acquisition/checksum provenance; prefer 1K web derivatives initially; do not hotlink third-party runtime assets.
+5. Keep TextureCan and other CC0 materials development/reference-only until real Scorpion capture, measured physical scale, Material QA, and controlled promotion establish production authority.
+6. Preserve the hardened fallback protocol: a tool/endpoint failure is not a blocker until equivalent safe paths have been exhausted.
 
 ## V0.27 — accessibility release candidate
 
@@ -279,7 +282,7 @@ Validated V0.26 characteristics:
 - Promotion requires exact-head CI plus desktop/mobile QA review.
 
 
-## SLS V0.34 composited leather system — CANDIDATE
+## SLS V0.34 composited leather system — SHIPPED 2026-09-30
 
 - Active branch: `feature/v034-composited-leather-system`, based on shipped V0.33 main `5327f6925a4c97c56227675dc7453c402e32c7c2`.
 - Goal: turn the PBR renderer into a disciplined Structure × Dye × Finish material system while preserving physical-scale texture authority and avoiding fake recoloring of photographed leather.
@@ -292,7 +295,12 @@ Validated V0.26 characteristics:
 - Added modern Khronos KTX2 build automation at `scripts/build-material-ktx2.mjs` with manifest validation, dry-run mode, safe spawn argument arrays, channel-specific compression profiles, `ktx validate --gltf-basisu`, SHA-256/byte-size reports, and CI self-test.
 - Added `docs/examples/material-ktx2.example.json` and expanded `docs/PBR-MATERIAL-DELIVERY.md`.
 - No new API function, database dependency, polling loop, analytics SDK, runtime third-party service, or Shopify publication.
-- Promotion requires exact-head CI and desktop/mobile browser QA review.
+- Final production SHA: `fe5d3e288c625231470b0fb83a3bc0147bb10d50`.
+- Final branch CI #679 / `36675901190`: PASS.
+- Exact-main CI #680 / `36676380950`: PASS.
+- Browser QA artifact `11079846742` reviewed on desktop/mobile after the mobile Material Lab correction.
+- GitHub Vercel status on the exact production SHA: success.
+- Promoted to `main` by non-forced fast-forward after confirming the branch was 5 ahead / 0 behind.
 
 
 ## Agent protocol resilience hardening — 2026-09-30
@@ -330,3 +338,18 @@ Validated V0.26 characteristics:
 - Underlying viewer caption/customization/status overlays are hidden while the mobile Material Lab is open to prevent visual collision.
 - Browser coverage now asserts that the Material Lab close control remains in the viewport after selecting a lower Finish option.
 - This is a visual/interaction correction only; composition semantics, order-request isolation, and production-material authority are unchanged.
+
+
+## V0.34 release closure — 2026-09-30
+
+- Exact production SHA: `fe5d3e288c625231470b0fb83a3bc0147bb10d50`.
+- Feature branch: `feature/v034-composited-leather-system`.
+- Final feature-branch CI: #679 / run `36675901190` — PASS.
+- Exact-main CI: #680 / run `36676380950` — PASS.
+- Final browser QA artifact: `11079846742`, digest `sha256:5f829ba235bc72b7e753af685af4742f1d0d697c2cd50cd924cd2d83729eb2f9`.
+- Desktop and mobile V0.34 Material Lab screenshots were inspected from the exact-head artifact after the sticky-header/mobile collision correction.
+- Vercel commit status on the exact production SHA: SUCCESS.
+- Promotion was a non-forced fast-forward; `main` had not diverged.
+- V0.34 includes Structure × Dye × Finish composition, locked photographed-material behavior, the development-only neutral tintable leather base, premium Material Lab UI, KTX2 build/validation automation, TextureCan CC0 development-source policy, and the hardened Scorpion agent recovery protocol.
+- TextureCan assets were researched and candidate source URLs were identified, but no third-party texture binaries were added to this V0.34 release. Actual vendored texture ingestion is intentionally deferred to the next bounded development batch.
+- The documentation-only state commit following this release uses `[skip ci]` to avoid rerunning the full browser pipeline after both the exact feature head and exact production/main SHA already passed the complete gate.
