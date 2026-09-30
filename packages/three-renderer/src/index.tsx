@@ -101,6 +101,113 @@ function configureTexture(
   if (colorTexture) texture.colorSpace = THREE.SRGBColorSpace
 }
 
+function surfaceHash(x: number, y: number, seed: number): number {
+  let value = Math.imul((x + 1) ^ (seed + 0x9e3779b9), 0x85ebca6b)
+  value = Math.imul(value ^ ((y + 1) * 0xc2b2ae35), 0x27d4eb2d)
+  value ^= value >>> 15
+  return (value >>> 0) / 4294967295
+}
+
+function smoothNoiseCurve(value: number): number {
+  return value * value * (3 - 2 * value)
+}
+
+function valueNoise(x: number, y: number, seed: number): number {
+  const x0 = Math.floor(x)
+  const y0 = Math.floor(y)
+  const tx = smoothNoiseCurve(x - x0)
+  const ty = smoothNoiseCurve(y - y0)
+  const a = surfaceHash(x0, y0, seed)
+  const b = surfaceHash(x0 + 1, y0, seed)
+  const c = surfaceHash(x0, y0 + 1, seed)
+  const d = surfaceHash(x0 + 1, y0 + 1, seed)
+  return THREE.MathUtils.lerp(
+    THREE.MathUtils.lerp(a, b, tx),
+    THREE.MathUtils.lerp(c, d, tx),
+    ty,
+  )
+}
+
+function createProceduralLeatherTextures(
+  variant: MaterialVariant,
+  maxAnisotropy: number,
+): THREE.Texture[] {
+  const surface = variant.proceduralSurface
+  if (!surface || surface.kind !== 'leather-grain') return []
+
+  const size = surface.resolution ?? 256
+  const grainScale = surface.grainScale ?? (surface.pattern === 'pebbled' ? 14 : 28)
+  const amplitude = surface.amplitude ?? (surface.pattern === 'pebbled' ? 1.25 : 0.82)
+  const roughnessVariation = surface.roughnessVariation ?? 0.18
+  const count = size * size
+  const heights = new Float32Array(count)
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const u = x / size
+      const v = y / size
+      const base = valueNoise(u * grainScale, v * grainScale, surface.seed)
+      const detail = valueNoise(u * grainScale * 2.7, v * grainScale * 2.7, surface.seed + 37)
+      const micro = valueNoise(u * grainScale * 6.1, v * grainScale * 6.1, surface.seed + 91)
+      heights[y * size + x] = surface.pattern === 'pebbled'
+        ? Math.pow(THREE.MathUtils.clamp(base * 0.74 + detail * 0.2 + micro * 0.06, 0, 1), 1.55)
+        : THREE.MathUtils.clamp(base * 0.38 + detail * 0.38 + micro * 0.24, 0, 1)
+    }
+  }
+
+  const colorData = new Uint8Array(count * 4)
+  const normalData = new Uint8Array(count * 4)
+  const roughnessData = new Uint8Array(count * 4)
+  const sample = (x: number, y: number) => heights[((y + size) % size) * size + ((x + size) % size)]
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const index = y * size + x
+      const offset = index * 4
+      const h = heights[index]
+      const neutral = Math.round(205 + h * 42)
+      colorData[offset] = neutral
+      colorData[offset + 1] = neutral
+      colorData[offset + 2] = neutral
+      colorData[offset + 3] = 255
+
+      const dx = (sample(x + 1, y) - sample(x - 1, y)) * amplitude
+      const dy = (sample(x, y + 1) - sample(x, y - 1)) * amplitude
+      const normal = new THREE.Vector3(-dx, -dy, 1).normalize()
+      normalData[offset] = Math.round((normal.x * 0.5 + 0.5) * 255)
+      normalData[offset + 1] = Math.round((normal.y * 0.5 + 0.5) * 255)
+      normalData[offset + 2] = Math.round((normal.z * 0.5 + 0.5) * 255)
+      normalData[offset + 3] = 255
+
+      const roughness = THREE.MathUtils.clamp(
+        variant.roughness + (h - 0.5) * roughnessVariation,
+        0.04,
+        1,
+      )
+      const roughnessByte = Math.round(roughness * 255)
+      roughnessData[offset] = roughnessByte
+      roughnessData[offset + 1] = roughnessByte
+      roughnessData[offset + 2] = roughnessByte
+      roughnessData[offset + 3] = 255
+    }
+  }
+
+  const color = new THREE.DataTexture(colorData, size, size, THREE.RGBAFormat)
+  color.colorSpace = THREE.SRGBColorSpace
+  configureTexture(color, variant, maxAnisotropy, true)
+  color.needsUpdate = true
+
+  const normal = new THREE.DataTexture(normalData, size, size, THREE.RGBAFormat)
+  configureTexture(normal, variant, maxAnisotropy)
+  normal.needsUpdate = true
+
+  const roughness = new THREE.DataTexture(roughnessData, size, size, THREE.RGBAFormat)
+  configureTexture(roughness, variant, maxAnisotropy)
+  roughness.needsUpdate = true
+
+  return [color, normal, roughness]
+}
+
 function hydrateMaterialTextures(
   material: THREE.MeshPhysicalMaterial,
   variant: MaterialVariant,
@@ -123,6 +230,19 @@ function hydrateMaterialTextures(
 
   const loaded: THREE.Texture[] = []
   let disposed = false
+
+  const proceduralTextures = createProceduralLeatherTextures(variant, maxAnisotropy)
+  if (proceduralTextures.length === 3) {
+    const [color, normal, roughness] = proceduralTextures
+    material.map = color
+    material.normalMap = normal
+    material.roughnessMap = roughness
+    const normalScale = variant.normalScale ?? 1
+    material.normalScale.set(normalScale, normalScale)
+    loaded.push(...proceduralTextures)
+    material.needsUpdate = true
+    invalidate()
+  }
 
   const load = (
     url: string | undefined,

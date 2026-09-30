@@ -28,7 +28,7 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByText('SLS', { exact: true }).first()).toBeVisible()
   const productRail = page.getByRole('navigation', { name: 'Customizable products' })
   await expect(productRail).toBeVisible()
-  await expect(productRail.getByRole('button')).toHaveCount(8)
+  await expect(productRail.getByRole('button')).toHaveCount(10)
 
   // The photographed catalog product is now the default authority. The heavier
   // development 3D runtime loads only when the customer explicitly asks for it.
@@ -250,10 +250,43 @@ test('V0.34 Material Lab composes a development leather recipe without mutating 
     path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'material-lab-v034-mobile.png' : 'material-lab-v034-desktop.png'}`,
   })
 
-  await lab.getByRole('button', { name: 'Reset to photographed reference' }).click()
+  await lab.getByRole('button', { name: 'Reset to selected product reference' }).click()
   await expect(page.getByTestId('material-recipe-status')).toContainText('REFERENCE MATERIAL')
 
   expect(consoleErrors, `V0.34 Material Lab console errors: ${consoleErrors.join('\n')}`).toEqual([])
+})
+
+
+test('V0.36 renders G1 3D twins and procedural PBR leather across non-hood product families', async ({ page }, testInfo) => {
+  const consoleErrors:string[]=[]
+  page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())})
+  page.on('pageerror',error=>consoleErrors.push(error.message))
+  await page.goto('/?family=tool-belt&reference=tool-belt-black')
+  await expect(page.locator('canvas')).toHaveCount(0)
+  await page.getByRole('tab',{name:'Interactive 3D'}).click()
+  const viewer=page.locator('.viewer-panel')
+  await expect(viewer.locator('canvas')).toBeVisible()
+  await expect(viewer).toHaveAttribute('data-3d-authority','g1-visual-reference')
+  await expect(viewer.getByText(/G1 visual-reference twin/)).toBeVisible()
+  await expect(viewer.getByText('3D contract validated')).toHaveText('3D contract validated')
+  await viewer.getByRole('button',{name:'Materials',exact:true}).click()
+  const lab=page.getByTestId('material-lab')
+  await lab.getByRole('button',{name:/Pebbled grain leather/i}).click()
+  await lab.getByRole('button',{name:'Emerald',exact:true}).click()
+  await lab.getByRole('button',{name:'Polished',exact:true}).click()
+  await expect(page.getByTestId('material-recipe-status')).toContainText('DEVELOPMENT MATERIAL RECIPE')
+  await expect(page.getByTestId('material-recipe-status')).toContainText('Emerald')
+  await expect(page.getByTestId('material-recipe-status')).toContainText('Polished')
+  await lab.getByRole('button',{name:'Close material lab'}).click()
+  await viewer.screenshot({path:`playwright-output/screenshots/${testInfo.project.name.includes('mobile')?'family-3d-v036-mobile.png':'family-3d-v036-desktop.png'}`})
+  await page.getByRole('tab',{name:'Photographed product'}).click()
+  await page.getByRole('button',{name:/Radio Harness/i}).click()
+  await expect(page.locator('canvas')).toHaveCount(0)
+  await page.getByRole('tab',{name:'Interactive 3D'}).click()
+  await expect(page.locator('canvas')).toBeVisible()
+  await expect(page.locator('.viewer-panel')).toHaveAttribute('data-3d-authority','g1-visual-reference')
+  await expect(page.getByText('3D contract validated')).toHaveText('3D contract validated')
+  expect(consoleErrors,`V0.36 family 3D console errors: ${consoleErrors.join('\n')}`).toEqual([])
 })
 
 
@@ -494,10 +527,14 @@ test('Material Lab inspects the registry without loading customer 3D runtime', a
   await page.goto('/materials.html')
 
   await expect(page.getByRole('heading', { name: 'Material Lab' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(8)
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(10)
   await expect(page.getByText('SCL-COGNAC')).toBeVisible()
   await expect(page.getByText('SCL-NEUTRAL-DEV')).toBeVisible()
+  await expect(page.getByText('SCL-FINE-GRAIN-DEV')).toBeVisible()
+  await expect(page.getByText('SCL-PEBBLED-GRAIN-DEV')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Neutral Leather Development Base' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Fine Grain Development Leather' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Pebbled Grain Development Leather' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Cognac Textured Reference' })).toBeVisible()
   await expect(
     page.getByRole('region', { name: 'Material library status' }).getByText('Production approved', { exact: true }),
@@ -508,14 +545,14 @@ test('Material Lab inspects the registry without loading customer 3D runtime', a
 
   await page.getByRole('searchbox', { name: 'Search materials' }).fill('')
   await page.getByRole('combobox', { name: 'Filter materials' }).selectOption('unverified')
-  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(4)
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(6)
 
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
   expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
   expect(consoleErrors, `Material Lab console errors: ${consoleErrors.join('\n')}`).toEqual([])
 
   await page.getByRole('combobox', { name: 'Filter materials' }).selectOption('all')
-  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(8)
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(10)
 
   const screenshotName = testInfo.project.name.includes('mobile')
     ? 'material-lab-mobile.png'

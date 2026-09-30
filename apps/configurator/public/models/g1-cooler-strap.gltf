@@ -1,0 +1,311 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "SLS V0.36 G1 family generator"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "SLS_cooler-strap",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "SLS_ProductRoot",
+      "children": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "extras": {
+        "slsAuthority": "G1-visual-reference",
+        "familyId": "cooler-strap"
+      }
+    },
+    {
+      "name": "Strap_Main",
+      "mesh": 0,
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.25,
+        0.09,
+        0.07
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.23770262642713458,
+        0.9713379748520297
+      ]
+    },
+    {
+      "name": "Shoulder_Pad",
+      "mesh": 0,
+      "translation": [
+        -0.02,
+        0.02,
+        0.05
+      ],
+      "scale": [
+        0.38,
+        0.17,
+        0.11
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.23770262642713458,
+        0.9713379748520297
+      ]
+    },
+    {
+      "name": "End_Tab_Top",
+      "mesh": 0,
+      "translation": [
+        -0.52,
+        0.31,
+        0.02
+      ],
+      "scale": [
+        0.18,
+        0.1,
+        0.08
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.23770262642713458,
+        0.9713379748520297
+      ]
+    },
+    {
+      "name": "End_Tab_Bottom",
+      "mesh": 0,
+      "translation": [
+        0.52,
+        -0.31,
+        0.02
+      ],
+      "scale": [
+        0.18,
+        0.1,
+        0.08
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.23770262642713458,
+        0.9713379748520297
+      ]
+    },
+    {
+      "name": "Hardware_Buckle_Top",
+      "mesh": 1,
+      "translation": [
+        -0.62,
+        0.37,
+        0.05
+      ],
+      "scale": [
+        0.05,
+        0.018,
+        0.05
+      ],
+      "rotation": [
+        0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ]
+    },
+    {
+      "name": "Hardware_Buckle_Bottom",
+      "mesh": 1,
+      "translation": [
+        0.62,
+        -0.37,
+        0.05
+      ],
+      "scale": [
+        0.05,
+        0.018,
+        0.05
+      ],
+      "rotation": [
+        0.7071067811865475,
+        0,
+        0,
+        0.7071067811865476
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "SLS_Box",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3
+        }
+      ]
+    },
+    {
+      "name": "SLS_Cylinder",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7
+        }
+      ]
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "data:application/octet-stream;base64,AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAA/AAAAPwAAAD8AAAA/AAAAvwAAAD8AAAA/AAAAPwAAAL8AAAC/AAAAvwAAAL8AAAC/AAAAvwAAAD8AAAC/AAAAPwAAAD8AAAC/AAAAPwAAAL8AAAA/AAAAPwAAAL8AAAC/AAAAPwAAAD8AAAC/AAAAPwAAAD8AAAA/AAAAvwAAAL8AAAC/AAAAvwAAAL8AAAA/AAAAvwAAAD8AAAA/AAAAvwAAAD8AAAC/AAAAvwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAC/AAAAvwAAAD8AAAC/AAAAvwAAAL8AAAC/AAAAPwAAAL8AAAC/AAAAPwAAAL8AAAA/AAAAvwAAAL8AAAA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAgD8AAIA/AAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAACAPwAAgD8AAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAIA/AACAPwAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAgD8AAIA/AAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAACAPwAAgD8AAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAIA/AACAPwAAAAAAAIA/AAABAAIAAAACAAMABAAFAAYABAAGAAcACAAJAAoACAAKAAsADAANAA4ADAAOAA8AEAARABIAEAASABMAFAAVABYAFAAWABcAAACAPwAAAL8AAAAAAACAPwAAAD8AAAAAXoNsPwAAAL8V78M+XoNsPwAAAD8V78M+8wQ1PwAAAL/zBDU/8wQ1PwAAAD/zBDU/Fe/DPgAAAL9eg2w/Fe/DPgAAAD9eg2w/MjGNJAAAAL8AAIA/MjGNJAAAAD8AAIA/Fe/DvgAAAL9eg2w/Fe/DvgAAAD9eg2w/8wQ1vwAAAL/zBDU/8wQ1vwAAAD/zBDU/XoNsvwAAAL8V78M+XoNsvwAAAD8V78M+AACAvwAAAL8yMQ0lAACAvwAAAD8yMQ0lXoNsvwAAAL8V78O+XoNsvwAAAD8V78O+8wQ1vwAAAL/zBDW/8wQ1vwAAAD/zBDW/Fe/DvgAAAL9eg2y/Fe/DvgAAAD9eg2y/yslTpQAAAL8AAIC/yslTpQAAAD8AAIC/Fe/DPgAAAL9eg2y/Fe/DPgAAAD9eg2y/8wQ1PwAAAL/zBDW/8wQ1PwAAAD/zBDW/XoNsPwAAAL8V78O+XoNsPwAAAD8V78O+AACAPwAAAL8yMY2lAACAPwAAAD8yMY2lAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAXoNsPwAAAAAV78M+XoNsPwAAAAAV78M+8wQ1PwAAAADzBDU/8wQ1PwAAAADzBDU/Fe/DPgAAAABeg2w/Fe/DPgAAAABeg2w/MjGNJAAAAAAAAIA/MjGNJAAAAAAAAIA/Fe/DvgAAAABeg2w/Fe/DvgAAAABeg2w/8wQ1vwAAAADzBDU/8wQ1vwAAAADzBDU/XoNsvwAAAAAV78M+XoNsvwAAAAAV78M+AACAvwAAAAAyMQ0lAACAvwAAAAAyMQ0lXoNsvwAAAAAV78O+XoNsvwAAAAAV78O+8wQ1vwAAAADzBDW/8wQ1vwAAAADzBDW/Fe/DvgAAAABeg2y/Fe/DvgAAAABeg2y/yslTpQAAAAAAAIC/yslTpQAAAAAAAIC/Fe/DPgAAAABeg2y/Fe/DPgAAAABeg2y/8wQ1PwAAAADzBDW/8wQ1PwAAAADzBDW/XoNsPwAAAAAV78O+XoNsPwAAAAAV78O+AACAPwAAAAAyMY2lAACAPwAAAAAyMY2lAAAAAAAAAAAAAAAAAACAPwAAgD0AAAAAAACAPQAAgD8AAAA+AAAAAAAAAD4AAIA/AABAPgAAAAAAAEA+AACAPwAAgD4AAAAAAACAPgAAgD8AAKA+AAAAAAAAoD4AAIA/AADAPgAAAAAAAMA+AACAPwAA4D4AAAAAAADgPgAAgD8AAAA/AAAAAAAAAD8AAIA/AAAQPwAAAAAAABA/AACAPwAAID8AAAAAAAAgPwAAgD8AADA/AAAAAAAAMD8AAIA/AABAPwAAAAAAAEA/AACAPwAAUD8AAAAAAABQPwAAgD8AAGA/AAAAAAAAYD8AAIA/AABwPwAAAAAAAHA/AACAPwAAgD8AAAAAAACAPwAAgD8AAAEAAgABAAMAAgACAAMABAADAAUABAAEAAUABgAFAAcABgAGAAcACAAHAAkACAAIAAkACgAJAAsACgAKAAsADAALAA0ADAAMAA0ADgANAA8ADgAOAA8AEAAPABEAEAAQABEAEgARABMAEgASABMAFAATABUAFAAUABUAFgAVABcAFgAWABcAGAAXABkAGAAYABkAGgAZABsAGgAaABsAHAAbAB0AHAAcAB0AHgAdAB8AHgAeAB8AIAAfACEAIAA=",
+      "byteLength": 2120
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 288,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 576,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 768,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 840,
+      "byteLength": 408,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1248,
+      "byteLength": 408,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1656,
+      "byteLength": 272,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1928,
+      "byteLength": 192,
+      "target": 34963
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.5,
+        -0.5,
+        -0.5
+      ],
+      "max": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 34,
+      "type": "VEC3",
+      "min": [
+        -1,
+        -0.5,
+        -1
+      ],
+      "max": [
+        1,
+        0.5,
+        1
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 34,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 34,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5123,
+      "count": 96,
+      "type": "SCALAR"
+    }
+  ],
+  "extras": {
+    "units": "meters",
+    "authority": "G1-visual-reference",
+    "notManufacturingGeometry": true
+  }
+}

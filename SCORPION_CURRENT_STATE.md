@@ -417,3 +417,19 @@ Validated V0.26 characteristics:
 - External material authority remains hard-locked to `development-reference`; no external library asset can silently become a production Scorpion material.
 - V0.35 adds no runtime dependency, Vercel/API function, database, polling loop, customer hotlink, or storefront payload.
 - The documentation-only state commit following this release uses `[skip ci]` because both the exact feature head and exact production/main SHA already passed the complete release gate.
+
+
+## V0.36 product-family 3D + procedural leather — CANDIDATE
+
+- Active branch: `feature/v036-family-3d-materials`, based on documentation-only V0.35 main `dc50d10fc397b381a532ee19a94360c27af83879`.
+- All 8 current Studio families now support lazy Interactive 3D.
+- Welding hood keeps its existing development twin; tool belt, tool pouch set, work harness, radio harness, carpenter pouch, thigh protector and cooler strap receive generated G1 visual-reference twins.
+- G1 twins are explicitly not manufacturing geometry. Photographed Scorpion products remain visual authority.
+- Added shared `StudioProductViewer` and family-specific semantic material slots, cameras and customization zones.
+- Added deterministic Fine Grain and Pebbled Grain PBR development structures, generating neutral base-color microvariation, tangent-space normal detail and roughness variation at runtime.
+- Added Natural Tan development dye and per-reference default material recipes for non-hood catalog products.
+- Material Lab reset now restores the selected product's complete reference recipe.
+- Three.js/model loading remains lazy behind the customer's Interactive 3D action.
+- No new API/Vercel function, database, polling loop, remote runtime texture dependency or eager 3D payload.
+- Added `docs/PRODUCT-FAMILY-3D-V036.md`, unit contract tests, and desktop/mobile browser coverage.
+- Promotion requires exact-head CI and artifact review.

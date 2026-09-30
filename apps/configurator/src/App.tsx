@@ -31,7 +31,7 @@ import {
   type StudioVariant,
 } from './studio-catalog'
 
-const WeldingHoodViewer = lazy(() => import('./WeldingHoodViewer'))
+const StudioProductViewer = lazy(() => import('./StudioProductViewer'))
 const OrderCapture = lazy(() => import('./OrderCapture'))
 
 const BUILD_STORAGE_KEY = 'scorpion-leather-studio:v004-build'
@@ -1025,7 +1025,7 @@ export function App() {
             aria-labelledby={family.supports3D ? `preview-tab-${viewerMode}` : undefined} tabIndex={0}>
           {family.supports3D && viewerMode === '3d' ? (
             <Suspense fallback={<div className="viewer-panel viewer-loading">Loading interactive 3D…</div>}>
-              <WeldingHoodViewer referenceId={reference.id} personalization={build.personalization} artwork={artwork} />
+              <StudioProductViewer familyId={family.id} referenceId={reference.id} personalization={build.personalization} artwork={artwork} />
             </Suspense>
           ) : (
             <ReferenceStage family={family} reference={reference} />

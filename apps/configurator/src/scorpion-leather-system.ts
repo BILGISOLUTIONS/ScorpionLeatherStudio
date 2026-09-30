@@ -51,6 +51,22 @@ export const scorpionLeatherStructures: readonly LeatherStructureDefinition[] = 
     description: 'Photographed catalog color/finish reference. Dye is intentionally locked.',
   },
   {
+    id: 'neutral-fine-grain',
+    label: 'Fine grain leather',
+    materialId: 'SCL-FINE-GRAIN-DEV',
+    compositionPolicy: 'tintable',
+    availability: 'development',
+    description: 'Deterministic PBR fine-grain development structure for product-family visual-reference twins.',
+  },
+  {
+    id: 'neutral-pebbled-grain',
+    label: 'Pebbled grain leather',
+    materialId: 'SCL-PEBBLED-GRAIN-DEV',
+    compositionPolicy: 'tintable',
+    availability: 'development',
+    description: 'Deterministic PBR pebbled-grain development structure for product-family visual-reference twins.',
+  },
+  {
     id: 'neutral-leather-study',
     label: 'Neutral leather study',
     materialId: 'SCL-NEUTRAL-DEV',
@@ -75,6 +91,15 @@ export const scorpionLeatherDyes: readonly LeatherDyeDefinition[] = [
     mode: 'tint',
     color: '#171513',
     tintStrength: 0.96,
+    roughnessMultiplier: 1.02,
+    availability: 'development',
+  },
+  {
+    id: 'tan',
+    label: 'Natural tan',
+    mode: 'tint',
+    color: '#b47a46',
+    tintStrength: 0.88,
     roughnessMultiplier: 1.02,
     availability: 'development',
   },
@@ -163,23 +188,36 @@ const structureById = new Map(scorpionLeatherStructures.map((entry) => [entry.id
 const dyeById = new Map(scorpionLeatherDyes.map((entry) => [entry.id, entry]))
 const finishById = new Map(scorpionLeatherFinishes.map((entry) => [entry.id, entry]))
 
-const referenceStructureMap: Readonly<Record<string, string>> = {
-  'hood-dark-yellow': 'catalog-dark-textured',
-  'hood-cognac': 'catalog-cognac-textured',
-  'hood-tan-smooth': 'catalog-tan-smooth',
-  'hood-tan-textured': 'catalog-tan-textured',
+const referenceRecipeMap: Readonly<Record<string, ScorpionLeatherLabSelection>> = {
+  'hood-dark-yellow': { structureId: 'catalog-dark-textured', dyeId: 'captured', finishId: 'captured' },
+  'hood-cognac': { structureId: 'catalog-cognac-textured', dyeId: 'captured', finishId: 'captured' },
+  'hood-tan-smooth': { structureId: 'catalog-tan-smooth', dyeId: 'captured', finishId: 'captured' },
+  'hood-tan-textured': { structureId: 'catalog-tan-textured', dyeId: 'captured', finishId: 'captured' },
+  'tool-belt-black': { structureId: 'neutral-fine-grain', dyeId: 'black', finishId: 'satin' },
+  'pouch-set-brown': { structureId: 'neutral-pebbled-grain', dyeId: 'cognac', finishId: 'satin' },
+  'harness-texas-back': { structureId: 'neutral-pebbled-grain', dyeId: 'cognac', finishId: 'satin' },
+  'harness-brown': { structureId: 'neutral-fine-grain', dyeId: 'cognac', finishId: 'satin' },
+  'harness-tan': { structureId: 'neutral-fine-grain', dyeId: 'tan', finishId: 'satin' },
+  'radio-alligator': { structureId: 'neutral-pebbled-grain', dyeId: 'black', finishId: 'satin' },
+  'radio-black': { structureId: 'neutral-fine-grain', dyeId: 'black', finishId: 'matte' },
+  'carpenter-green': { structureId: 'neutral-fine-grain', dyeId: 'emerald', finishId: 'satin' },
+  'carpenter-burgundy': { structureId: 'neutral-fine-grain', dyeId: 'oxblood', finishId: 'satin' },
+  'carpenter-white': { structureId: 'neutral-fine-grain', dyeId: 'captured', finishId: 'matte' },
+  'thigh-brown': { structureId: 'neutral-pebbled-grain', dyeId: 'cognac', finishId: 'satin' },
+  'cooler-strap-brown': { structureId: 'neutral-fine-grain', dyeId: 'cognac', finishId: 'satin' },
 }
 
 export function photographedStructureForReference(referenceId: string): string {
-  return referenceStructureMap[referenceId] ?? 'catalog-cognac-textured'
+  return referenceRecipeMap[referenceId]?.structureId ?? 'neutral-fine-grain'
 }
 
 export function defaultLeatherLabSelection(referenceId: string): ScorpionLeatherLabSelection {
-  return {
-    structureId: photographedStructureForReference(referenceId),
-    dyeId: 'captured',
-    finishId: 'captured',
+  const selection = referenceRecipeMap[referenceId] ?? {
+    structureId: 'neutral-fine-grain',
+    dyeId: 'cognac',
+    finishId: 'satin',
   }
+  return { ...selection }
 }
 
 export function composeScorpionLeather(

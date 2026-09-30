@@ -69,6 +69,29 @@ export function validateMaterialDefinition(material: ScorpionMaterialDefinition)
   if (!material.label.trim()) issue('label', 'Material label is required.')
   if (!/^#[0-9a-f]{6}$/iu.test(material.previewColor)) issue('previewColor', 'Preview color must be a six-digit hex color.')
 
+  const procedural = material.renderer.proceduralSurface
+  if (procedural) {
+    if (material.kind !== 'leather') issue('renderer.proceduralSurface', 'Procedural leather grain is only valid for leather materials.')
+    if (procedural.kind !== 'leather-grain') issue('renderer.proceduralSurface.kind', 'Unsupported procedural surface kind.')
+    if (!['fine', 'pebbled'].includes(procedural.pattern)) issue('renderer.proceduralSurface.pattern', 'Unsupported leather grain pattern.')
+    if (procedural.resolution !== undefined && ![128, 256, 512].includes(procedural.resolution)) {
+      issue('renderer.proceduralSurface.resolution', 'Procedural surface resolution must be 128, 256, or 512.')
+    }
+    if (!Number.isInteger(procedural.seed) || procedural.seed < 0) issue('renderer.proceduralSurface.seed', 'Procedural surface seed must be a non-negative integer.')
+    if (procedural.grainScale !== undefined && (!Number.isFinite(procedural.grainScale) || procedural.grainScale <= 0)) {
+      issue('renderer.proceduralSurface.grainScale', 'Procedural grain scale must be positive.')
+    }
+    if (procedural.amplitude !== undefined && (!Number.isFinite(procedural.amplitude) || procedural.amplitude <= 0 || procedural.amplitude > 4)) {
+      issue('renderer.proceduralSurface.amplitude', 'Procedural grain amplitude must be greater than 0 and no more than 4.')
+    }
+    if (
+      procedural.roughnessVariation !== undefined &&
+      (!Number.isFinite(procedural.roughnessVariation) || procedural.roughnessVariation < 0 || procedural.roughnessVariation > 1)
+    ) {
+      issue('renderer.proceduralSurface.roughnessVariation', 'Procedural roughness variation must be between 0 and 1.')
+    }
+  }
+
   if (material.lifecycle === 'production-approved') {
     if (material.provenance.source !== 'field-capture' && material.provenance.source !== 'supplier-reference') {
       issue('provenance.source', 'Production-approved materials must come from a field capture or supplier reference.')

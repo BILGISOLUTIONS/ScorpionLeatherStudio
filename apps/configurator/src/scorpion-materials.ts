@@ -99,6 +99,50 @@ export const scorpionMaterialDefinitions: readonly ScorpionMaterialDefinition[] 
   },
   {
     schemaVersion: 1,
+    id: 'SCL-FINE-GRAIN-DEV',
+    label: 'Fine Grain Development Leather',
+    kind: 'leather',
+    lifecycle: 'reference-only',
+    availability: 'unverified',
+    previewColor: '#d8d0c4',
+    physical: { materialType: 'Leather', grain: 'Fine grain procedural study', finish: 'Development-only tint base' },
+    provenance: {
+      source: 'synthetic-placeholder',
+      notes: 'Deterministic procedural PBR grain for G1 visual-reference twins. Development-only; replace or calibrate against approved Scorpion leather before any production material claim.',
+    },
+    renderer: {
+      roughness: 0.74, metalness: 0, sheen: 0.15, sheenRoughness: 0.72, normalScale: 0.88,
+      textureRepeat: [5.5, 5.5],
+      proceduralSurface: {
+        kind: 'leather-grain', pattern: 'fine', seed: 3641, resolution: 256,
+        grainScale: 28, amplitude: 0.82, roughnessVariation: 0.16,
+      },
+    },
+  },
+  {
+    schemaVersion: 1,
+    id: 'SCL-PEBBLED-GRAIN-DEV',
+    label: 'Pebbled Grain Development Leather',
+    kind: 'leather',
+    lifecycle: 'reference-only',
+    availability: 'unverified',
+    previewColor: '#d2c7b8',
+    physical: { materialType: 'Leather', grain: 'Pebbled grain procedural study', finish: 'Development-only tint base' },
+    provenance: {
+      source: 'synthetic-placeholder',
+      notes: 'Deterministic procedural PBR pebble structure for G1 visual-reference twins. Development-only; replace or calibrate against approved Scorpion leather before production use.',
+    },
+    renderer: {
+      roughness: 0.78, metalness: 0, sheen: 0.13, sheenRoughness: 0.76, normalScale: 1.08,
+      textureRepeat: [4.2, 4.2],
+      proceduralSurface: {
+        kind: 'leather-grain', pattern: 'pebbled', seed: 7717, resolution: 256,
+        grainScale: 14, amplitude: 1.22, roughnessVariation: 0.2,
+      },
+    },
+  },
+  {
+    schemaVersion: 1,
     id: 'SCL-NEUTRAL-DEV',
     label: 'Neutral Leather Development Base',
     kind: 'leather',

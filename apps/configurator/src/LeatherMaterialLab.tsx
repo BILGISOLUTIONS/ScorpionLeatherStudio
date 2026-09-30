@@ -9,13 +9,15 @@ import {
 export function LeatherMaterialLab({
   selection,
   composition,
+  defaultSelection,
   defaultStructureId,
   onChange,
   onClose,
 }: {
   selection: ScorpionLeatherLabSelection
   composition: LeatherCompositionResult
-  defaultStructureId: string
+  defaultSelection?: ScorpionLeatherLabSelection
+  defaultStructureId?: string
   onChange: (next: ScorpionLeatherLabSelection) => void
   onClose: () => void
 }) {
@@ -122,9 +124,9 @@ export function LeatherMaterialLab({
       <button
         type="button"
         className="material-lab__reset"
-        onClick={() => onChange({ structureId: defaultStructureId, dyeId: 'captured', finishId: 'captured' })}
+        onClick={() => onChange(defaultSelection ?? { structureId: defaultStructureId ?? 'neutral-fine-grain', dyeId: 'captured', finishId: 'captured' })}
       >
-        Reset to photographed reference
+        Reset to selected product reference
       </button>
     </section>
   )

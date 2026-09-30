@@ -173,6 +173,16 @@ export interface MaterialTextures {
   ambientOcclusion?: string
 }
 
+export interface ProceduralSurfaceDefinition {
+  kind: 'leather-grain'
+  pattern: 'fine' | 'pebbled'
+  seed: number
+  resolution?: 128 | 256 | 512
+  grainScale?: number
+  amplitude?: number
+  roughnessVariation?: number
+}
+
 export interface MaterialVariant {
   id: string
   label: string
@@ -189,6 +199,7 @@ export interface MaterialVariant {
   normalScale?: number
   textureRepeat?: [number, number]
   textures?: MaterialTextures
+  proceduralSurface?: ProceduralSurfaceDefinition
 }
 
 export interface ValidationIssue {
