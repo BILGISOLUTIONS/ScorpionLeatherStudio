@@ -2,6 +2,8 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows, Html, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import {
   validateAssetManifest,
@@ -39,6 +41,7 @@ export interface ThreeProductViewerProps {
   customizationLayers?: readonly ThreeCustomizationLayer[]
   cameraPreset?: string
   autoRotate?: boolean
+  ktx2TranscoderPath?: string
   onAssetIssues?: (issues: ValidationIssue[]) => void
 }
 
@@ -80,6 +83,10 @@ function createMaterial(variant: MaterialVariant): THREE.MeshPhysicalMaterial {
   })
 }
 
+export function isKtx2TextureUrl(url: string): boolean {
+  return /\.ktx2(?:$|[?#])/iu.test(url)
+}
+
 function configureTexture(
   texture: THREE.Texture,
   variant: MaterialVariant,
@@ -99,10 +106,21 @@ function hydrateMaterialTextures(
   variant: MaterialVariant,
   invalidate: () => void,
   maxAnisotropy: number,
+  renderer: THREE.WebGLRenderer,
+  ktx2TranscoderPath: string,
 ) {
   if (!variant.textures) return () => undefined
 
-  const loader = new THREE.TextureLoader()
+  THREE.Cache.enabled = true
+
+  const textureLoader = new THREE.TextureLoader()
+  const urls = Object.values(variant.textures).filter((url): url is string => Boolean(url))
+  const ktx2Loader = urls.some(isKtx2TextureUrl)
+    ? new KTX2Loader()
+        .setTranscoderPath(ktx2TranscoderPath.endsWith('/') ? ktx2TranscoderPath : `${ktx2TranscoderPath}/`)
+        .detectSupport(renderer)
+    : undefined
+
   const loaded: THREE.Texture[] = []
   let disposed = false
 
@@ -112,6 +130,9 @@ function hydrateMaterialTextures(
     colorTexture = false,
   ) => {
     if (!url) return
+    const loader = isKtx2TextureUrl(url) ? ktx2Loader : textureLoader
+    if (!loader) return
+
     loader.load(
       url,
       (texture) => {
@@ -142,6 +163,7 @@ function hydrateMaterialTextures(
 
   return () => {
     disposed = true
+    ktx2Loader?.dispose()
     for (const texture of loaded) texture.dispose()
   }
 }
@@ -558,8 +580,10 @@ function ProductModel({
   materialOverrides = EMPTY_SELECTION_MAP,
   componentOverrides = EMPTY_SELECTION_MAP,
   customizationLayers = EMPTY_CUSTOMIZATION_LAYERS,
+  ktx2TranscoderPath = '/basis/',
   onAssetIssues,
 }: ThreeProductViewerProps) {
+  const propsKtx2TranscoderPath = ktx2TranscoderPath
   const { invalidate, gl } = useThree()
   const gltf = useGLTF(manifest.model)
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene])
@@ -616,7 +640,14 @@ function ProductModel({
         material = createMaterial(variant)
         materialByVariant.set(variantId, material)
         createdMaterials.push(material)
-        textureCleanups.push(hydrateMaterialTextures(material, variant, invalidate, maxAnisotropy))
+        textureCleanups.push(hydrateMaterialTextures(
+          material,
+          variant,
+          invalidate,
+          maxAnisotropy,
+          gl,
+          propsKtx2TranscoderPath,
+        ))
       }
 
       for (const nodeName of nodeNames) {
@@ -649,6 +680,39 @@ function ProductModel({
       <CustomizationOverlays scene={scene} manifest={manifest} layers={customizationLayers} />
     </>
   )
+}
+
+function StudioPbrEnvironment() {
+  const { gl, scene, invalidate } = useThree()
+
+  useEffect(() => {
+    const previousEnvironment = scene.environment
+    const previousIntensity = scene.environmentIntensity
+    const pmrem = new THREE.PMREMGenerator(gl)
+    const room = new RoomEnvironment()
+    const environment = pmrem.fromScene(room, 0.04).texture
+
+    scene.environment = environment
+    scene.environmentIntensity = 0.88
+    invalidate()
+
+    return () => {
+      scene.environment = previousEnvironment
+      scene.environmentIntensity = previousIntensity
+      environment.dispose()
+      pmrem.dispose()
+      room.traverse((object) => {
+        if (object instanceof THREE.Mesh) {
+          object.geometry.dispose()
+          const materials = Array.isArray(object.material) ? object.material : [object.material]
+          materials.forEach((material) => material.dispose())
+        }
+      })
+      invalidate()
+    }
+  }, [gl, invalidate, scene])
+
+  return null
 }
 
 function CameraRig({
@@ -786,6 +850,8 @@ export function ThreeProductViewer(props: ThreeProductViewerProps) {
       <directionalLight color="#ffe7bf" position={[3.2, 4.2, 4.8]} intensity={2.65} castShadow />
       <directionalLight color="#dbe7f2" position={[-3, 1.8, -2]} intensity={0.92} />
       <directionalLight color="#d3aa67" position={[0, -1.2, 2.8]} intensity={0.38} />
+
+      <StudioPbrEnvironment />
 
       <Suspense fallback={<LoadingFallback />}>
         <ProductModel {...props} />

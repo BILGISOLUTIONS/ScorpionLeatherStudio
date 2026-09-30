@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p ../../tsconfig.json --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predev": "node ../../scripts/sync-three-basis.mjs",
+    "prebuild": "node ../../scripts/sync-three-basis.mjs"
   },
   "dependencies": {
     "@sls/configurator-core": "*",

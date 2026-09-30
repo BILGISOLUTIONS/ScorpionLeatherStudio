@@ -7,3 +7,6 @@ coverage/
 !.env.example
 .DS_Store
 *.log
+
+# Generated from the installed three package before dev/build.
+apps/configurator/public/basis/

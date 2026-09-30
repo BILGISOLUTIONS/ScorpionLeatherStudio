@@ -278,3 +278,38 @@ Customization is authored through manifest placement zones that declare:
 The origin/orientation follow the target mesh transform, but `sizeMeters` remains a physical world-space size. Runtime overlays must not inherit a target node's non-uniform authoring scale and thereby shrink/stretch the requested customization area. Production assets should still freeze/apply transforms; this rule keeps the placement contract physically meaningful while development/legacy assets are being corrected.
 
 This keeps material scale independent from personalization placement and lets Digital Twin QA visualize the intended usable area directly on the candidate model.
+
+
+## Production PBR delivery
+
+The customer renderer is not based on AI product images. Production appearance comes from the authored GLB plus calibrated PBR material maps.
+
+Minimum leather delivery:
+
+- base color / albedo;
+- tangent-space normal;
+- roughness;
+- optional ambient occlusion when it is physically useful and validated;
+- measured physical tile dimensions so grain scale remains stable across products.
+
+Runtime texture URLs may use ordinary browser image formats or GPU-transcoded `.ktx2` assets. KTX2 is preferred for production delivery when the offline texture pipeline has produced and visually validated the compressed derivative. The renderer detects `.ktx2` URLs and uses Three.js KTX2Loader; Basis transcoder binaries are copied locally from the installed Three.js package during dev/build, so the storefront does not depend on a third-party transcoder CDN.
+
+Do not use arbitrary per-product texture repeat to make exotic hides "look right." Physical material tile size and the model's real-world UV scale are the authority.
+
+The renderer now also creates a local PMREM studio environment for physically based reflections. This improves leather, lens and metal response without adding a network dependency. A captured/approved HDR environment may replace it later if visual QA shows a concrete need.
+
+### Real model creation
+
+PBR maps solve surface appearance; they do not create the product geometry.
+
+A production digital twin still requires:
+
+1. multi-angle real-product capture;
+2. measured envelope, visor/hardware and construction dimensions;
+3. Blender reconstruction or a validated scan/retopology workflow;
+4. real-world-scale UV0;
+5. explicit semantic meshes/material slots;
+6. GLB export;
+7. exact exported-asset QA.
+
+AI-generated concept renders are never acceptable geometry or texture authority for a Scorpion production asset.
