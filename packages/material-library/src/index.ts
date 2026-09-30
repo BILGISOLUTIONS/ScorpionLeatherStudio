@@ -183,3 +183,147 @@ export function createRendererMaterialMap(
 ): Record<string, MaterialVariant> {
   return Object.fromEntries(materials.map((material) => [material.id, toMaterialVariant(material, preferredMaxEdge)]))
 }
+
+
+export type LeatherCompositionPolicy = 'locked' | 'tintable'
+export type LeatherSurfaceAvailability = 'captured' | 'development'
+
+export interface LeatherStructureDefinition {
+  id: string
+  label: string
+  materialId: string
+  compositionPolicy: LeatherCompositionPolicy
+  availability: LeatherSurfaceAvailability
+  description?: string
+}
+
+export interface LeatherDyeDefinition {
+  id: string
+  label: string
+  mode: 'captured' | 'tint'
+  color: string
+  tintStrength: number
+  roughnessMultiplier?: number
+  availability: LeatherSurfaceAvailability
+}
+
+export interface LeatherFinishDefinition {
+  id: string
+  label: string
+  mode: 'captured' | 'finish'
+  roughnessMultiplier: number
+  sheenMultiplier: number
+  clearcoatAdd?: number
+  clearcoatRoughness?: number
+  normalScaleMultiplier?: number
+  availability: LeatherSurfaceAvailability
+}
+
+export interface LeatherCompositionSelection {
+  structureId: string
+  dyeId: string
+  finishId: string
+}
+
+export interface LeatherCompositionResult {
+  variant: MaterialVariant
+  structure: LeatherStructureDefinition
+  dye: LeatherDyeDefinition
+  finish: LeatherFinishDefinition
+  dyeApplied: boolean
+  finishApplied: boolean
+  developmentOnly: boolean
+  warnings: string[]
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function parseHex(value: string): [number, number, number] {
+  const normalized = value.replace('#', '')
+  if (!/^[0-9a-f]{6}$/iu.test(normalized)) throw new Error(`Invalid six-digit hex color: ${value}`)
+  return [
+    Number.parseInt(normalized.slice(0, 2), 16),
+    Number.parseInt(normalized.slice(2, 4), 16),
+    Number.parseInt(normalized.slice(4, 6), 16),
+  ]
+}
+
+function toHexChannel(value: number): string {
+  return Math.round(clamp(value, 0, 255)).toString(16).padStart(2, '0')
+}
+
+export function mixHexColor(from: string, to: string, amount: number): string {
+  const [fr, fg, fb] = parseHex(from)
+  const [tr, tg, tb] = parseHex(to)
+  const t = clamp(amount, 0, 1)
+  return `#${toHexChannel(fr + (tr - fr) * t)}${toHexChannel(fg + (tg - fg) * t)}${toHexChannel(fb + (tb - fb) * t)}`
+}
+
+export function composeLeatherMaterialVariant(args: {
+  structure: LeatherStructureDefinition
+  dye: LeatherDyeDefinition
+  finish: LeatherFinishDefinition
+  materials: Readonly<Record<string, ScorpionMaterialDefinition>>
+  preferredMaxEdge?: number
+}): LeatherCompositionResult {
+  const source = args.materials[args.structure.materialId]
+  if (!source) throw new Error(`Leather structure "${args.structure.id}" references missing material "${args.structure.materialId}".`)
+  if (source.kind !== 'leather') throw new Error(`Leather structure "${args.structure.id}" must reference a leather material.`)
+
+  const base = toMaterialVariant(source, args.preferredMaxEdge ?? 2048)
+  const tintable = args.structure.compositionPolicy === 'tintable'
+  const wantsDye = args.dye.mode === 'tint'
+  const wantsFinish = args.finish.mode === 'finish'
+  const dyeApplied = tintable && wantsDye
+  const finishApplied = tintable && wantsFinish
+  const warnings: string[] = []
+
+  if (wantsDye && !tintable) {
+    warnings.push('This captured structure keeps its photographed color. Select a tintable neutral capture to preview another dye.')
+  }
+  if (wantsFinish && !tintable) {
+    warnings.push('This captured structure keeps its photographed finish. Select a tintable neutral capture to preview another finish.')
+  }
+
+  const dyeRoughness = dyeApplied ? (args.dye.roughnessMultiplier ?? 1) : 1
+  const finishRoughness = finishApplied ? args.finish.roughnessMultiplier : 1
+  const finishSheen = finishApplied ? args.finish.sheenMultiplier : 1
+  const finishNormal = finishApplied ? (args.finish.normalScaleMultiplier ?? 1) : 1
+
+  const color = dyeApplied
+    ? mixHexColor('#ffffff', args.dye.color, clamp(args.dye.tintStrength, 0, 1))
+    : base.color
+
+  const variant: MaterialVariant = {
+    ...base,
+    id: `SLS-CMP-${args.structure.id}-${args.dye.id}-${args.finish.id}`,
+    label: [args.structure.label, dyeApplied ? args.dye.label : '', finishApplied ? args.finish.label : '']
+      .filter(Boolean)
+      .join(' · '),
+    color,
+    metalness: 0,
+    roughness: clamp(base.roughness * dyeRoughness * finishRoughness, 0.04, 1),
+    sheen: clamp((base.sheen ?? 0) * finishSheen, 0, 1),
+    clearcoat: clamp((base.clearcoat ?? 0) + (finishApplied ? (args.finish.clearcoatAdd ?? 0) : 0), 0, 1),
+    clearcoatRoughness: finishApplied && args.finish.clearcoatRoughness !== undefined
+      ? clamp(args.finish.clearcoatRoughness, 0, 1)
+      : base.clearcoatRoughness,
+    normalScale: clamp((base.normalScale ?? 1) * finishNormal, 0, 4),
+  }
+
+  return {
+    variant,
+    structure: args.structure,
+    dye: args.dye,
+    finish: args.finish,
+    dyeApplied,
+    finishApplied,
+    developmentOnly:
+      args.structure.availability === 'development' ||
+      (dyeApplied && args.dye.availability === 'development') ||
+      (finishApplied && args.finish.availability === 'development'),
+    warnings,
+  }
+}

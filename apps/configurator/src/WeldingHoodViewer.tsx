@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { createInitialConfiguration, setSelection } from '@sls/configurator-core'
 import { ThreeProductViewer } from '@sls/three-renderer'
 import type { StudioBuildDraft } from '@sls/order-engine'
@@ -7,6 +7,13 @@ import type { ArtworkAttachment } from './studio-types'
 import { buildCustomizationPreview } from './customization-preview'
 import { createRendererMaterialMap } from '@sls/material-library'
 import { sampleManifest, sampleProduct } from './sample-product'
+import { LeatherMaterialLab } from './LeatherMaterialLab'
+import {
+  composeScorpionLeather,
+  defaultLeatherLabSelection,
+  photographedStructureForReference,
+  type ScorpionLeatherLabSelection,
+} from './scorpion-leather-system'
 import {
   preferredMaterialTextureEdge,
   scorpionMaterialById,
@@ -50,6 +57,10 @@ function WeldingHoodViewerComponent({
   const [autoRotate, setAutoRotate] = useState(false)
   const [cameraPreset, setCameraPreset] = useState(sampleProduct.asset.defaultCameraPreset)
   const [assetIssues, setAssetIssues] = useState<ValidationIssue[]>([])
+  const [materialLabOpen, setMaterialLabOpen] = useState(false)
+  const [leatherSelection, setLeatherSelection] = useState<ScorpionLeatherLabSelection>(
+    () => defaultLeatherLabSelection(referenceId),
+  )
   const handleAssetIssues = useCallback((next: ValidationIssue[]) => {
     setAssetIssues((current) => {
       if (
@@ -61,18 +72,33 @@ function WeldingHoodViewerComponent({
       return next
     })
   }, [])
+
+  useEffect(() => {
+    setLeatherSelection(defaultLeatherLabSelection(referenceId))
+  }, [referenceId])
+
   const configuration = useMemo(() => resolveHoodConfiguration(referenceId), [referenceId])
-  const materials = useMemo(
+  const leatherComposition = useMemo(
+    () => composeScorpionLeather(leatherSelection),
+    [leatherSelection],
+  )
+  const baseMaterials = useMemo(
     () => createRendererMaterialMap(scorpionMaterialDefinitions, preferredMaterialTextureEdge()),
     [],
   )
+  const materials = useMemo(
+    () => ({ ...baseMaterials, [leatherComposition.variant.id]: leatherComposition.variant }),
+    [baseMaterials, leatherComposition.variant],
+  )
   const materialOverrides = useMemo<Record<string, string>>(() => {
-    const overrides: Record<string, string> = {}
+    const overrides: Record<string, string> = {
+      LeatherPrimary: leatherComposition.variant.id,
+    }
     const hardware = construction.hardware
     if (hardware === 'nickel') overrides.HardwarePrimary = 'SCH-001'
     if (hardware === 'antique-brass' || hardware === 'brass') overrides.HardwarePrimary = 'SCH-002'
     return overrides
-  }, [construction.hardware])
+  }, [construction.hardware, leatherComposition.variant.id])
 
   const customizationPreview = useMemo(
     () => buildCustomizationPreview(sampleManifest, personalization, artwork),
@@ -80,14 +106,8 @@ function WeldingHoodViewerComponent({
   )
   const animationStates = useMemo(() => ({ 'visor.open': visorOpen }), [visorOpen])
 
-  const activeLeatherMaterial = useMemo(() => {
-    const selectedBuild = sampleProduct.optionGroups
-      .find((group) => group.id === 'catalogBuild')
-      ?.values.find((value) => value.id === configuration.selections.catalogBuild)
-    return selectedBuild?.visual?.materialVariant
-      ? scorpionMaterialById.get(selectedBuild.visual.materialVariant)
-      : undefined
-  }, [configuration.selections.catalogBuild])
+  const activeLeatherMaterial = scorpionMaterialById.get(leatherComposition.structure.materialId)
+  const defaultStructureId = photographedStructureForReference(referenceId)
 
   return (
     <div className="viewer-panel" aria-label="Interactive 3D product viewer">
@@ -133,6 +153,15 @@ function WeldingHoodViewerComponent({
         <button type="button" aria-pressed={visorOpen} onClick={() => setVisorOpen((open) => !open)}>
           {visorOpen ? 'Close visor' : 'Open visor'}
         </button>
+        <button
+          type="button"
+          className={materialLabOpen ? 'is-active' : ''}
+          aria-pressed={materialLabOpen}
+          aria-controls="sls-material-lab"
+          onClick={() => setMaterialLabOpen((open) => !open)}
+        >
+          Materials
+        </button>
         {customizationPreview.renderable && customizationPreview.cameraPreset ? (
           <button
             type="button"
@@ -145,6 +174,18 @@ function WeldingHoodViewerComponent({
           </button>
         ) : null}
       </div>
+
+      {materialLabOpen ? (
+        <div id="sls-material-lab">
+          <LeatherMaterialLab
+            selection={leatherSelection}
+            composition={leatherComposition}
+            defaultStructureId={defaultStructureId}
+            onChange={setLeatherSelection}
+            onClose={() => setMaterialLabOpen(false)}
+          />
+        </div>
+      ) : null}
 
       {customizationPreview.active ? (
         <div
@@ -160,7 +201,8 @@ function WeldingHoodViewerComponent({
       <div className="viewer-caption">
         Development digital twin · photographed product is the visual authority
         {activeLeatherMaterial ? ` · ${activeLeatherMaterial.lifecycle}` : ''}
-        {Object.keys(materialOverrides).length ? ' · mapped hardware preview active' : ''}
+        {leatherComposition.developmentOnly ? ' · development material recipe' : ''}
+        {Object.keys(materialOverrides).length ? ' · material-slot preview active' : ''}
         {customizationPreview.renderable ? ' · zone-driven concept overlay active' : ''}
       </div>
       <div className={`asset-status ${assetIssues.length ? 'has-issues' : ''}`}>

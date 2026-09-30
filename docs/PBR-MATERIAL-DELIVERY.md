@@ -114,3 +114,49 @@ Approval requires:
 - compressed-vs-master comparison;
 - mobile memory/performance check;
 - real product GLB review at multiple camera angles.
+
+
+## Structure × Dye × Finish
+
+Scorpion Leather Studio treats three different concepts separately:
+
+1. **Structure** — the physical hide/grain response carried by calibrated base-color/detail, normal, roughness and optional AO maps.
+2. **Dye** — a controlled color multiplier that is permitted only when the structure was captured/prepared as a neutral tintable base.
+3. **Finish** — bounded changes to roughness, sheen, clearcoat and normal response.
+
+A photographed colored leather is **locked**. The renderer must not recolor it and imply that an arbitrary dye is physically accurate. A dye selection becomes eligible only on a neutral/tintable capture that has passed material QA.
+
+This lets one approved structural capture support multiple verified dye recipes later without storing redundant normal/roughness maps for every color.
+
+The development Material Lab intentionally distinguishes:
+- photographed/captured reference structures;
+- development-only neutral tint studies;
+- production-approved material recipes when those become available.
+
+The Material Lab is visual sandbox state and is not silently written into the customer's order request.
+
+## Automated KTX2 build
+
+Use the repository builder:
+
+```bash
+npm run material:ktx2 -- --manifest path/to/material.ktx2.json
+```
+
+Dry-run a build plan without requiring the KTX tools:
+
+```bash
+npm run material:ktx2 -- --manifest path/to/material.ktx2.json --dry-run
+```
+
+The build manifest format is demonstrated in `docs/examples/material-ktx2.example.json`.
+
+Current policy:
+- base color -> BasisLZ / ETC1S-compatible KTX2 in sRGB;
+- normals -> UASTC LDR 4x4, linear, normalized;
+- roughness/AO -> UASTC LDR 4x4, linear data;
+- mipmaps generated offline;
+- every output passes `ktx validate --gltf-basisu`;
+- successful builds emit byte size + SHA-256 provenance in a JSON build report.
+
+The script uses the modern Khronos `ktx` CLI and never shells through interpolated command strings.

@@ -220,6 +220,42 @@ test('V0.32 renders mapped welding-hood customization in the explicit 3D zone', 
 })
 
 
+test('V0.34 Material Lab composes a development leather recipe without mutating the order request', async ({ page }, testInfo) => {
+  const consoleErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+
+  await page.goto('/')
+  await page.getByRole('tab', { name: 'Interactive 3D' }).click()
+  const viewer = page.locator('.viewer-panel')
+  await expect(viewer.locator('canvas')).toBeVisible()
+
+  await viewer.getByRole('button', { name: 'Materials', exact: true }).click()
+  const lab = page.getByTestId('material-lab')
+  await expect(lab).toBeVisible()
+  await expect(lab.getByText('Structure × Dye × Finish')).toBeVisible()
+
+  await lab.getByRole('button', { name: /Neutral leather study/i }).click()
+  await lab.getByRole('button', { name: 'Oxblood', exact: true }).click()
+  await lab.getByRole('button', { name: 'Satin', exact: true }).click()
+
+  await expect(page.getByTestId('material-recipe-status')).toContainText('DEVELOPMENT MATERIAL RECIPE')
+  await expect(page.getByTestId('material-recipe-status')).toContainText('Oxblood')
+  await expect(page.getByTestId('material-recipe-status')).toContainText('Satin')
+
+  await viewer.screenshot({
+    path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'material-lab-v034-mobile.png' : 'material-lab-v034-desktop.png'}`,
+  })
+
+  await lab.getByRole('button', { name: 'Reset to photographed reference' }).click()
+  await expect(page.getByTestId('material-recipe-status')).toContainText('REFERENCE MATERIAL')
+
+  expect(consoleErrors, `V0.34 Material Lab console errors: ${consoleErrors.join('\n')}`).toEqual([])
+})
+
+
 test('Shopify embed deep link opens the requested real catalog product without loading 3D', async ({ page }) => {
   const scriptRequests: string[] = []
   page.on('request', (request) => {

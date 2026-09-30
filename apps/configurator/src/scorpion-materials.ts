@@ -99,6 +99,31 @@ export const scorpionMaterialDefinitions: readonly ScorpionMaterialDefinition[] 
   },
   {
     schemaVersion: 1,
+    id: 'SCL-NEUTRAL-DEV',
+    label: 'Neutral Leather Development Base',
+    kind: 'leather',
+    lifecycle: 'reference-only',
+    availability: 'unverified',
+    previewColor: '#d7cec1',
+    physical: {
+      materialType: 'Leather',
+      grain: 'Neutral authoring study',
+      finish: 'Development-only tint base',
+    },
+    provenance: {
+      source: 'synthetic-placeholder',
+      notes: 'Development-only neutral surface used to exercise Structure × Dye × Finish composition. Replace with a calibrated neutral leather capture before any production color claim.',
+    },
+    renderer: {
+      roughness: 0.74,
+      metalness: 0,
+      sheen: 0.14,
+      sheenRoughness: 0.72,
+      normalScale: 0.9,
+    },
+  },
+  {
+    schemaVersion: 1,
     id: 'SCH-001',
     label: 'Nickel Renderer Reference',
     kind: 'metal',

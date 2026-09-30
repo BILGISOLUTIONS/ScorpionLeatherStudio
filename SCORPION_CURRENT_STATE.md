@@ -277,3 +277,19 @@ Validated V0.26 characteristics:
 - Welding-hood development manifest advanced to v5. Placeholder geometry remains development-only and is expected to expose QA blockers until real reconstruction meets the new physical-UV/fidelity contract.
 - No new API function, backend/database dependency, polling loop, analytics SDK, or third-party 3D service. Shopify development theme remains unpublished.
 - Promotion requires exact-head CI plus desktop/mobile QA review.
+
+
+## SLS V0.34 composited leather system — CANDIDATE
+
+- Active branch: `feature/v034-composited-leather-system`, based on shipped V0.33 main `5327f6925a4c97c56227675dc7453c402e32c7c2`.
+- Goal: turn the PBR renderer into a disciplined Structure × Dye × Finish material system while preserving physical-scale texture authority and avoiding fake recoloring of photographed leather.
+- Material library now defines leather structures, dyes, finishes, composition selections/results and a deterministic compositor.
+- Photographed/captured colored structures are locked: non-captured dyes/finishes are not applied and generate warnings. Tint/finish composition is allowed only on explicitly tintable neutral bases.
+- Added a development-only neutral leather material base solely for testing the composition engine; it is clearly synthetic/reference-only and is not a production material claim.
+- Welding-hood 3D adds a premium Material Lab UI with surface structure, dye and finish controls, clear captured-vs-development states, and reset-to-photographed behavior. Material Lab state is visual-only and is not silently added to the order request.
+- Current dye concepts: Black, Cognac, Oxblood, Emerald and Midnight Navy. Current finish concepts: Matte, Satin and Polished. These remain development concepts until physical material capture/QA confirms actual availability and appearance.
+- Existing semantic material-slot architecture remains; the composed recipe is supplied through `LeatherPrimary` without reloading the GLB.
+- Added modern Khronos KTX2 build automation at `scripts/build-material-ktx2.mjs` with manifest validation, dry-run mode, safe spawn argument arrays, channel-specific compression profiles, `ktx validate --gltf-basisu`, SHA-256/byte-size reports, and CI self-test.
+- Added `docs/examples/material-ktx2.example.json` and expanded `docs/PBR-MATERIAL-DELIVERY.md`.
+- No new API function, database dependency, polling loop, analytics SDK, runtime third-party service, or Shopify publication.
+- Promotion requires exact-head CI and desktop/mobile browser QA review.

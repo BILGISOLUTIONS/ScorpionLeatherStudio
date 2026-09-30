@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "materialId": "SCL-EXAMPLE",
+  "report": "SCL-EXAMPLE.ktx2-build.json",
+  "jobs": [
+    {
+      "channel": "baseColor",
+      "input": "1k/basecolor.webp",
+      "output": "1k/basecolor.ktx2"
+    },
+    {
+      "channel": "normal",
+      "input": "1k/normal.png",
+      "output": "1k/normal.ktx2"
+    },
+    {
+      "channel": "roughness",
+      "input": "1k/roughness.png",
+      "output": "1k/roughness.ktx2"
+    }
+  ]
+}

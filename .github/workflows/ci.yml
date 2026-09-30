@@ -20,6 +20,8 @@ jobs:
       - run: npm run typecheck
       - name: Check Blender authoring script syntax
         run: python3 -m py_compile scripts/blender/sls_asset_preflight.py
+      - name: KTX2 material builder self-test
+        run: npm run material:ktx2:selftest
       - run: npm test
       - run: npm run build
       - run: npm run budget
