@@ -450,3 +450,11 @@ Validated V0.26 characteristics:
 - Corrected Material Lab reset to pass the full default selection directly.
 - Generic viewer now constructs explicit `Record<string,string>` and `Record<string,boolean>` maps without optional-undefined union keys.
 - Legacy hood viewer was brought forward to the new `defaultSelection` prop contract so the repository compiles even though the app no longer imports it.
+
+
+### V0.36 multi-family browser coverage
+
+- Added Playwright release coverage that iterates every non-hood leather family: tool belt, tool pouch set, work harness, radio harness, carpenter pouch, thigh protector and cooler strap.
+- For each family the test opens Interactive 3D, requires a visible WebGL canvas, requires `3D contract validated`, verifies G1/UV-PBR disclosure, opens Material Lab and confirms a development material recipe.
+- The test also captures dedicated V0.36 desktop/mobile screenshots using the forest-green carpenter pouch / emerald material recipe for manual artifact review.
+- Console/page errors are release-gating failures.
