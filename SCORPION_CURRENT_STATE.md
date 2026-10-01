@@ -476,3 +476,12 @@ Validated V0.26 characteristics:
 - Replaced the monolithic loop with seven independent Playwright cases, one per non-hood family. Each test starts from a fresh page/context, validates canvas + asset contract + G1 disclosure + UV/PBR disclosure + Material Lab development recipe, and checks console/page errors.
 - Carpenter Pouch remains the dedicated desktop/mobile screenshot representative and must show the Emerald development recipe.
 - This increases diagnostic precision and does not relax any family-level assertion.
+
+
+### V0.36 shared glTF binary repair
+
+- CI #694 plus its Playwright trace isolated the real shared failure: `development-product-families.gltf` declared a 648-byte geometry buffer but embedded only 636 bytes, leaving the 36-index accessor 12 bytes short.
+- The browser error was `Invalid typed array length: 36`; Three.js then dropped into the model-loading fallback and lost the WebGL context, which explained the apparently detached Material Lab controls.
+- Repaired the shared family glTF by replacing the truncated cube payload with the already-valid 648-byte UV-compatible cube payload used by the welding-hood development asset.
+- Added `scripts/validate-gltf-assets.mjs` plus `npm run gltf:validate` and a CI gate that checks every embedded configurator glTF for exact declared-vs-embedded buffer length, buffer-view bounds, and accessor bounds.
+- Welding-hood buffers were independently checked before reuse: its geometry buffer is exactly 648/648 bytes and its UV buffer is exactly 192/192 bytes.

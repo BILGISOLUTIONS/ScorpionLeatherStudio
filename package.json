@@ -19,7 +19,8 @@
     "material:ktx2": "node scripts/build-material-ktx2.mjs",
     "material:ktx2:selftest": "node scripts/build-material-ktx2.mjs --self-test",
     "material:source": "node scripts/ingest-material-source.mjs",
-    "material:source:selftest": "node scripts/ingest-material-source.mjs --self-test"
+    "material:source:selftest": "node scripts/ingest-material-source.mjs --self-test",
+    "gltf:validate": "node scripts/validate-gltf-assets.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

@@ -20,6 +20,8 @@ jobs:
       - run: npm run typecheck
       - name: Check Blender authoring script syntax
         run: python3 -m py_compile scripts/blender/sls_asset_preflight.py
+      - name: Validate embedded glTF binary contracts
+        run: npm run gltf:validate
       - name: KTX2 material builder self-test
         run: npm run material:ktx2:selftest
       - name: Material source ingestion self-test
