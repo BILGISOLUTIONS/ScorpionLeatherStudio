@@ -103,7 +103,7 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByTestId('base-price')).toHaveText('$700.00')
 
   await expect(page.getByText('ZAN CREW').first()).toBeVisible()
-  await expect(page.getByText('Western floral').last()).toBeVisible()
+  await expect(conceptSummary.getByText('Western floral', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Share build' }).click()
   await expect.poll(() => new URL(page.url()).searchParams.has('studio')).toBe(true)
