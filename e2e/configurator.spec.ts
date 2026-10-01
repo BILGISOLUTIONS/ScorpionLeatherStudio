@@ -864,7 +864,7 @@ test('Material QA renders processed maps and exports an explicit approval packet
 
 
 
-const v036Family3DCases = [
+const v037Family3DCases = [
   { id: 'tool-belt', label: 'Tool Belt', expectedRecipe: /Black|Fine grain development/i },
   { id: 'tool-pouch-set', label: 'Pouch Set', expectedRecipe: /Cognac|Worn grain development/i },
   { id: 'work-harness', label: 'Work Harness', expectedRecipe: /Cognac|Worn grain development/i },
@@ -874,9 +874,14 @@ const v036Family3DCases = [
   { id: 'cooler-strap', label: 'Cooler Strap', expectedRecipe: /Cognac|Fine grain development/i },
 ] as const
 
-for (const familyCase of v036Family3DCases) {
-  test(`V0.36 ${familyCase.label} exposes validated interactive 3D and Material Lab`, async ({ page }, testInfo) => {
+for (const familyCase of v037Family3DCases) {
+  test(`V0.37 ${familyCase.label} exposes validated G2 3D and Material Lab`, async ({ page }, testInfo) => {
     const consoleErrors: string[] = []
+    const modelRequests: string[] = []
+    page.on('request', (request) => {
+      const pathname = new URL(request.url()).pathname
+      if (pathname.endsWith('.gltf')) modelRequests.push(pathname)
+    })
     page.on('console', (message) => {
       if (message.type() === 'error') consoleErrors.push(message.text())
     })
@@ -890,7 +895,12 @@ for (const familyCase of v036Family3DCases) {
     const viewer = page.getByLabel('Interactive 3D product viewer')
     await expect(viewer.locator('canvas')).toBeVisible()
     await expect(viewer.locator('.asset-status')).toHaveText('3D contract validated', { timeout: 15_000 })
-    await expect(viewer.locator('.viewer-caption')).toContainText('G1 development digital twin')
+    await expect(viewer.locator('.viewer-caption')).toContainText('G2 development digital twin')
+    await expect.poll(() => modelRequests.filter((url) => url.includes('/development-g2-')).length).toBe(1)
+    expect(modelRequests.filter((url) => url.includes('/development-g2-'))).toEqual([
+      `/models/development-g2-${familyCase.id}.gltf`,
+    ])
+    expect(modelRequests).not.toContain('/models/development-product-families.gltf')
     await expect(viewer.locator('.viewer-caption')).toContainText('UV/PBR material preview active')
 
     const materialsButton = viewer.getByRole('button', { name: 'Materials', exact: true })
@@ -905,12 +915,12 @@ for (const familyCase of v036Family3DCases) {
     if (familyCase.id === 'carpenter-pouch') {
       await expect(lab.getByTestId('material-recipe-status')).toContainText('Emerald')
       await page.screenshot({
-        path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'multi-product-3d-v036-mobile.png' : 'multi-product-3d-v036-desktop.png'}`,
+        path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'multi-product-3d-v037-mobile.png' : 'multi-product-3d-v037-desktop.png'}`,
         fullPage: true,
       })
     }
 
-    expect(consoleErrors, `V0.36 ${familyCase.label} 3D console errors: ${consoleErrors.join('\n')}`).toEqual([])
+    expect(consoleErrors, `V0.37 ${familyCase.label} G2 3D console errors: ${consoleErrors.join('\n')}`).toEqual([])
   })
 }
 
