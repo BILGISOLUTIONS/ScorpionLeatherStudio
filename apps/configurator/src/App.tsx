@@ -288,7 +288,11 @@ function StudioDisclosure({
   className?: string
 }) {
   return (
-    <details className={`studio-disclosure ${className}`.trim()} open={open}>
+    <details
+      className={`studio-disclosure ${className}`.trim()}
+      open={open}
+      aria-label={`${step ? `${step}. ` : ''}${title}`}
+    >
       <summary>
         <span className="studio-disclosure__title">
           {step ? <span className="studio-disclosure__step" aria-hidden="true">{step}</span> : null}
@@ -842,7 +846,7 @@ function DeferredOrderCapture({
         setActive(true)
         observer.disconnect()
       },
-      { rootMargin: '600px 0px' },
+      { rootMargin: '120px 0px' },
     )
 
     observer.observe(node)
