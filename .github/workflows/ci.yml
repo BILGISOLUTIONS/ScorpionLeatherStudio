@@ -20,6 +20,10 @@ jobs:
       - run: npm run typecheck
       - name: Check Blender authoring script syntax
         run: python3 -m py_compile scripts/blender/sls_asset_preflight.py
+      - name: Generate deterministic G2 development twins
+        run: npm run twins:generate
+      - name: Verify deterministic G2 development twins
+        run: npm run twins:check
       - name: Validate embedded glTF binary contracts
         run: npm run gltf:validate
       - name: KTX2 material builder self-test
