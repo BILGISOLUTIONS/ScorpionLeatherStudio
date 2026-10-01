@@ -1,9 +1,19 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import fs from 'node:fs/promises'
 
 test.beforeAll(async () => {
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
 })
+
+async function openStudioDisclosure(page: Page, title: string) {
+  const disclosure = page.locator('details.studio-disclosure').filter({
+    has: page.getByText(title, { exact: true }),
+  }).first()
+  await expect(disclosure).toBeVisible()
+  if (await disclosure.getAttribute('open') === null) {
+    await disclosure.locator(':scope > summary').click()
+  }
+}
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/catalog-variant?*', async (route) => {
@@ -48,12 +58,15 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.getByRole('img', { name: /Alligator-print cowhide Scorpion/i })).toBeVisible()
   await expect(page.locator('canvas')).toHaveCount(0)
 
+  await openStudioDisclosure(page, 'Starting build')
   await page.getByRole('button', { name: /Cowhide Radio Harness - Black/i }).click()
+  await openStudioDisclosure(page, 'Size / variant')
   await page.getByRole('button', { name: /X-Large/i }).click()
   await expect(page.getByTestId('base-price')).toHaveText('$350.00')
   const buildSummary = page.getByRole('region', { name: 'Build summary' })
   await expect(buildSummary.getByText('SC-LRH-BLK-XL-002')).toBeVisible()
 
+  await openStudioDisclosure(page, 'Leather & construction')
   await page.getByLabel('Leather finish preference').selectOption('textured')
   await page.getByLabel('Leather color request').fill('Dark brown')
   await page.getByLabel('Stitching preference').selectOption('contrast')
@@ -61,10 +74,13 @@ test('multi-product studio builds and captures a customized order request', asyn
   await page.getByLabel('Edge / binding preference').selectOption('dark')
   await page.getByLabel('Construction notes').fill('Reinforce the shoulder strap junctions.')
 
+  await openStudioDisclosure(page, 'Leather tooling')
   await page.getByRole('button', { name: 'Western floral' }).click()
+  await openStudioDisclosure(page, 'Text / name / monogram')
   await page.getByRole('checkbox', { name: /Add text/i }).check()
   await page.getByPlaceholder('Name, initials, company, unit, etc.').fill('ZAN CREW')
   await page.getByRole('button', { name: 'Block', exact: true }).click()
+  await openStudioDisclosure(page, 'Placement')
   await page.getByLabel('Requested placement').selectOption({ label: 'Front chest panel' })
 
   const conceptSummary = page.getByRole('region', { name: 'Customization concept' })
@@ -74,6 +90,7 @@ test('multi-product studio builds and captures a customized order request', asyn
   await expect(page.locator('.photo-stage .tooling-concept')).toHaveCount(0)
   await expect(page.locator('.photo-stage .mock-personalization')).toHaveCount(0)
 
+  await openStudioDisclosure(page, 'Logo / artwork')
   const artworkInput = page.locator('input[type="file"]')
   await artworkInput.setInputFiles({
     name: 'crew-logo.png',
@@ -179,12 +196,16 @@ test('V0.32 renders mapped welding-hood customization in the explicit 3D zone', 
   page.on('pageerror', (error) => consoleErrors.push(error.message))
 
   await page.goto('/')
+  await openStudioDisclosure(page, 'Leather tooling')
   await page.getByRole('button', { name: 'Western floral' }).click()
+  await openStudioDisclosure(page, 'Text / name / monogram')
   await page.getByRole('checkbox', { name: /Add text/i }).check()
   await page.getByPlaceholder('Name, initials, company, unit, etc.').fill('SCORPION CREW')
   await page.getByRole('button', { name: 'Western', exact: true }).click()
+  await openStudioDisclosure(page, 'Placement')
   await page.getByLabel('Requested placement').selectOption({ label: 'Forehead panel' })
 
+  await openStudioDisclosure(page, 'Logo / artwork')
   await page.locator('input[type="file"]').setInputFiles({
     name: 'mark.png',
     mimeType: 'image/png',
@@ -351,7 +372,9 @@ test('V0.29 saves locally and shared links restore the build without customer da
   })
 
   await page.goto('/?product=cowhide-radio-harness-black')
+  await openStudioDisclosure(page, 'Leather tooling')
   await page.getByRole('button', { name: 'Western floral', exact: true }).click()
+  await openStudioDisclosure(page, 'Text / name / monogram')
   await page.getByRole('checkbox', { name: /Add text \/ name \/ monogram/i }).check()
   await page.getByLabel('Personalization text').fill('CROSS DEVICE')
   await page.getByRole('spinbutton', { name: 'Quantity' }).fill('3')
