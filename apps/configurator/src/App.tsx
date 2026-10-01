@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   createDefaultPersonalization,
   createStudioBuildId,
@@ -282,7 +282,7 @@ function StudioDisclosure({
 }: {
   title: string
   summary: string
-  children: React.ReactNode
+  children: ReactNode
   step?: string
   open?: boolean
   className?: string
