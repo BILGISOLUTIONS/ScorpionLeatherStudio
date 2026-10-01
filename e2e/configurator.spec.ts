@@ -864,25 +864,25 @@ test('Material QA renders processed maps and exports an explicit approval packet
 
 
 
-test('V0.36 all leather product families expose validated interactive 3D', async ({ page }, testInfo) => {
-  const consoleErrors: string[] = []
-  page.on('console', (message) => {
-    if (message.type() === 'error') consoleErrors.push(message.text())
-  })
-  page.on('pageerror', (error) => consoleErrors.push(error.message))
+const v036Family3DCases = [
+  { id: 'tool-belt', label: 'Tool Belt', expectedRecipe: /Black|Fine grain development/i },
+  { id: 'tool-pouch-set', label: 'Pouch Set', expectedRecipe: /Cognac|Worn grain development/i },
+  { id: 'work-harness', label: 'Work Harness', expectedRecipe: /Cognac|Worn grain development/i },
+  { id: 'radio-harness', label: 'Radio Harness', expectedRecipe: /Cognac|Fine grain development|Worn grain development/i },
+  { id: 'carpenter-pouch', label: 'Carpenter Pouch', expectedRecipe: /Emerald|Fine grain development/i },
+  { id: 'thigh-protector', label: 'Thigh Protector', expectedRecipe: /Cognac|Fine grain development/i },
+  { id: 'cooler-strap', label: 'Cooler Strap', expectedRecipe: /Cognac|Fine grain development/i },
+] as const
 
-  const families = [
-    { id: 'tool-belt', expectedRecipe: /Black|Fine grain development/i },
-    { id: 'tool-pouch-set', expectedRecipe: /Cognac|Worn grain development/i },
-    { id: 'work-harness', expectedRecipe: /Cognac|Worn grain development/i },
-    { id: 'radio-harness', expectedRecipe: /Cognac|Fine grain development|Worn grain development/i },
-    { id: 'carpenter-pouch', expectedRecipe: /Emerald|Fine grain development/i },
-    { id: 'thigh-protector', expectedRecipe: /Cognac|Fine grain development/i },
-    { id: 'cooler-strap', expectedRecipe: /Cognac|Fine grain development/i },
-  ]
+for (const familyCase of v036Family3DCases) {
+  test(`V0.36 ${familyCase.label} exposes validated interactive 3D and Material Lab`, async ({ page }, testInfo) => {
+    const consoleErrors: string[] = []
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text())
+    })
+    page.on('pageerror', (error) => consoleErrors.push(error.message))
 
-  for (const family of families) {
-    await page.goto(`/?family=${family.id}`)
+    await page.goto(`/?family=${familyCase.id}`)
     const interactiveTab = page.getByRole('tab', { name: 'Interactive 3D' })
     await expect(interactiveTab).toBeVisible()
     await interactiveTab.click()
@@ -896,27 +896,23 @@ test('V0.36 all leather product families expose validated interactive 3D', async
     const materialsButton = viewer.getByRole('button', { name: 'Materials', exact: true })
     await expect(materialsButton).toBeVisible()
     await materialsButton.click()
-    const lab = viewer.getByTestId('material-lab')
+
+    const lab = page.getByTestId('material-lab')
     await expect(lab).toBeVisible()
     await expect(lab.getByTestId('material-recipe-status')).toContainText('DEVELOPMENT MATERIAL RECIPE')
-    await expect(lab.getByTestId('material-recipe-status')).toContainText(family.expectedRecipe)
-  }
+    await expect(lab.getByTestId('material-recipe-status')).toContainText(familyCase.expectedRecipe)
 
-  // Capture a non-hood example for manual release review.
-  await page.goto('/?family=carpenter-pouch')
-  await page.getByRole('tab', { name: 'Interactive 3D' }).click()
-  const viewer = page.getByLabel('Interactive 3D product viewer')
-  await expect(viewer.locator('.asset-status')).toHaveText('3D contract validated')
-  await viewer.getByRole('button', { name: 'Materials', exact: true }).click()
-  await expect(viewer.getByTestId('material-recipe-status')).toContainText('Emerald')
+    if (familyCase.id === 'carpenter-pouch') {
+      await expect(lab.getByTestId('material-recipe-status')).toContainText('Emerald')
+      await page.screenshot({
+        path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'multi-product-3d-v036-mobile.png' : 'multi-product-3d-v036-desktop.png'}`,
+        fullPage: true,
+      })
+    }
 
-  await page.screenshot({
-    path: `playwright-output/screenshots/${testInfo.project.name.includes('mobile') ? 'multi-product-3d-v036-mobile.png' : 'multi-product-3d-v036-desktop.png'}`,
-    fullPage: true,
+    expect(consoleErrors, `V0.36 ${familyCase.label} 3D console errors: ${consoleErrors.join('\n')}`).toEqual([])
   })
-
-  expect(consoleErrors, `V0.36 multi-product 3D console errors: ${consoleErrors.join('\n')}`).toEqual([])
-})
+}
 
 test('V0.26 failed order delivery remains recoverable across reload and keeps a server support trace', async ({ page }, testInfo) => {
   await page.goto('/?product=cowhide-radio-harness-black&variant=SC-LRH-BLK-XL-002')

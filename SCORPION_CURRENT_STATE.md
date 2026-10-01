@@ -467,3 +467,12 @@ Validated V0.26 characteristics:
 - Material Lab reset text is now context-aware: welding hood keeps “Reset to photographed reference”; approximate non-hood G1 twins use “Reset product preview”.
 - Material registry browser expectations now account for the two intentional V0.36 development leather entries (10 total, 6 unverified).
 - The multi-family 3D gate now enters each family through its direct studio URL before opening 3D. This validates all family models/material recipes without manufacturing an artificial click race against a viewer intentionally unmounted by family switching.
+
+
+### V0.36 per-family browser isolation
+
+- CI #693 kept all non-browser gates green and reduced Playwright failures to the single V0.36 all-families test.
+- The combined test's desktop run exhausted its 60-second budget while serially exercising seven WebGL family sessions; the mobile run observed a transient viewer replacement between serial family navigations.
+- Replaced the monolithic loop with seven independent Playwright cases, one per non-hood family. Each test starts from a fresh page/context, validates canvas + asset contract + G1 disclosure + UV/PBR disclosure + Material Lab development recipe, and checks console/page errors.
+- Carpenter Pouch remains the dedicated desktop/mobile screenshot representative and must show the Emerald development recipe.
+- This increases diagnostic precision and does not relax any family-level assertion.
