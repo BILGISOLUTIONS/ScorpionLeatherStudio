@@ -4,7 +4,7 @@ import type { StudioFamilyKind } from './studio-catalog'
 export interface Family3DAsset {
   product: ProductDefinition
   manifest: AssetManifest
-  authority: 'G1-development-twin'
+  authority: 'G1-development-twin' | 'G2-development-twin'
 }
 
 function developmentProduct(familyId: StudioFamilyKind, name: string, model: string): ProductDefinition {
@@ -39,15 +39,19 @@ const hardwareProfile = {
   tangents: 'optional' as const,
 }
 const allPurposes = ['tooling', 'text', 'logo', 'artwork'] as const
-const sharedComponents: AssetManifest['components'] = {
-      'family.tool-belt': ['Family_ToolBelt'],
-      'family.tool-pouch-set': ['Family_ToolPouchSet'],
-      'family.work-harness': ['Family_WorkHarness'],
-      'family.radio-harness': ['Family_RadioHarness'],
-      'family.carpenter-pouch': ['Family_CarpenterPouch'],
-      'family.thigh-protector': ['Family_ThighProtector'],
-      'family.cooler-strap': ['Family_CoolerStrap'],
-    }
+const familyRootById: Readonly<Record<Exclude<StudioFamilyKind, 'welding-hood'>, string>> = {
+  'tool-belt': 'Family_ToolBelt',
+  'tool-pouch-set': 'Family_ToolPouchSet',
+  'work-harness': 'Family_WorkHarness',
+  'radio-harness': 'Family_RadioHarness',
+  'carpenter-pouch': 'Family_CarpenterPouch',
+  'thigh-protector': 'Family_ThighProtector',
+  'cooler-strap': 'Family_CoolerStrap',
+}
+
+function familyModel(familyId: Exclude<StudioFamilyKind, 'welding-hood'>): string {
+  return `/models/development-g2-${familyId}.gltf`
+}
 
 function manifest(args: {
   assetId: string
@@ -68,11 +72,11 @@ function manifest(args: {
     defaults.HardwarePrimary = 'SCH-002'
   }
   return {
-    schemaVersion:1, assetId:args.assetId, model:'/models/development-product-families.gltf',
+    schemaVersion:1, assetId:args.assetId, model:familyModel(args.familyId),
     units:'meters', upAxis:'Y', frontAxis:'-Z', rootNode:'SLS_ProductRoot',
     materialSlots:slots, materialSlotProfiles:profiles, defaultMaterialVariants:defaults,
     customizationZones:{ primary: args.zone },
-    components:sharedComponents, animations:{},
+    components:{ [`family.${args.familyId}`]: [familyRootById[args.familyId]] }, animations:{},
     cameraPresets:{
       hero:{label:'Hero',target:args.camera.target,position:args.camera.hero,fov:35},
       front:{label:'Front',target:args.camera.target,position:args.camera.front ?? [0,args.camera.target[1],1.08],fov:34},
@@ -82,9 +86,9 @@ function manifest(args: {
   }
 }
 
-const zone=(label:string,node:string,placements:string[],size:[number,number]) => ({
+const zone=(label:string,node:string,placements:string[],size:[number,number],surfaceZ=0.01) => ({
   label,node,purposes:[...allPurposes],placementLabels:placements,cameraPreset:'front',
-  origin:[0,0,0.51] as [number,number,number],normal:[0,0,1] as [number,number,number],up:[0,1,0] as [number,number,number],
+  origin:[0,0,surfaceZ] as [number,number,number],normal:[0,0,1] as [number,number,number],up:[0,1,0] as [number,number,number],
   sizeMeters:size,safeInsetMeters:Math.min(size[0],size[1])*0.06,
 })
 
@@ -118,52 +122,52 @@ export const family3DAssets: Readonly<Record<StudioFamilyKind, Family3DAsset>> =
     },
   },
   'tool-belt': {
-    product:developmentProduct('tool-belt','Leather Tool Belt Rig','/models/development-product-families.gltf'),authority:'G1-development-twin',
-    manifest:manifest({assetId:'development-tool-belt-v1',familyId:'tool-belt',
+    product:developmentProduct('tool-belt','Leather Tool Belt Rig',familyModel('tool-belt')),authority:'G2-development-twin',
+    manifest:manifest({assetId:'development-tool-belt-v2',familyId:'tool-belt',
       leatherNodes:['Belt_Main','Pouch_Left','Pouch_Center','Pouch_Right'],hardwareNodes:['Hardware_Left','Hardware_Right'],
-      zone:zone('Primary pouch face','Pouch_Left',['Primary pouch face'],[0.18,0.20]),
+      zone:zone('Primary pouch face','Pouch_Left',['Primary pouch face'],[0.18,0.20],0.106),
       camera:{target:[0,-0.03,0.02],hero:[0.78,0.38,1.12]},groundY:-0.24,shadowScale:1.55}),
   },
   'tool-pouch-set': {
-    product:developmentProduct('tool-pouch-set','Leather Tool Pouch Set','/models/development-product-families.gltf'),authority:'G1-development-twin',
-    manifest:manifest({assetId:'development-tool-pouch-set-v1',familyId:'tool-pouch-set',
+    product:developmentProduct('tool-pouch-set','Leather Tool Pouch Set',familyModel('tool-pouch-set')),authority:'G2-development-twin',
+    manifest:manifest({assetId:'development-tool-pouch-set-v2',familyId:'tool-pouch-set',
       leatherNodes:['Large_Pouch','Large_Flap','Small_Pouch','Small_Flap','Belt_Loops'],hardwareNodes:['Hardware_Rivets'],
-      zone:zone('Large pouch face','Large_Pouch',['Large pouch face'],[0.24,0.28]),
+      zone:zone('Large pouch face','Large_Pouch',['Large pouch face'],[0.24,0.28],0.127),
       camera:{target:[0,0,0.02],hero:[0.62,0.42,0.92]},groundY:-0.28}),
   },
   'work-harness': {
-    product:developmentProduct('work-harness','Leather Work Harness','/models/development-product-families.gltf'),authority:'G1-development-twin',
-    manifest:manifest({assetId:'development-work-harness-v1',familyId:'work-harness',
+    product:developmentProduct('work-harness','Leather Work Harness',familyModel('work-harness')),authority:'G2-development-twin',
+    manifest:manifest({assetId:'development-work-harness-v2',familyId:'work-harness',
       leatherNodes:['Back_Panel','Shoulder_Left','Shoulder_Right','Lower_Panel','Carry_Left','Carry_Right'],hardwareNodes:['Hardware_Buckles'],
-      zone:zone('Back panel','Back_Panel',['Back panel'],[0.24,0.25]),
+      zone:zone('Back panel','Back_Panel',['Back panel'],[0.24,0.25],0.005),
       camera:{target:[0,0.05,0],hero:[0.72,0.48,1.05]},groundY:-0.40,shadowScale:1.45}),
   },
   'radio-harness': {
-    product:developmentProduct('radio-harness','Leather Radio Harness','/models/development-product-families.gltf'),authority:'G1-development-twin',
-    manifest:manifest({assetId:'development-radio-harness-v1',familyId:'radio-harness',
+    product:developmentProduct('radio-harness','Leather Radio Harness',familyModel('radio-harness')),authority:'G2-development-twin',
+    manifest:manifest({assetId:'development-radio-harness-v2',familyId:'radio-harness',
       leatherNodes:['Chest_Panel','Strap_Left','Strap_Right','Radio_Pocket_Left','Radio_Pocket_Right','Pocket_Flaps'],hardwareNodes:['Hardware_Buckles_Radio'],
-      zone:zone('Front chest panel','Chest_Panel',['Front chest panel'],[0.21,0.20]),
+      zone:zone('Front chest panel','Chest_Panel',['Front chest panel'],[0.21,0.20],0.005),
       camera:{target:[0,0.04,0],hero:[0.70,0.48,1.0]},groundY:-0.40,shadowScale:1.4}),
   },
   'carpenter-pouch': {
-    product:developmentProduct('carpenter-pouch','Carpenter Tool Pouch','/models/development-product-families.gltf'),authority:'G1-development-twin',
-    manifest:manifest({assetId:'development-carpenter-pouch-v1',familyId:'carpenter-pouch',
+    product:developmentProduct('carpenter-pouch','Carpenter Tool Pouch',familyModel('carpenter-pouch')),authority:'G2-development-twin',
+    manifest:manifest({assetId:'development-carpenter-pouch-v2',familyId:'carpenter-pouch',
       leatherNodes:['Main_Pouch','Upper_Panel','Pocket_Flap','Belt_Loop'],hardwareNodes:['Hardware_Rivets_Carpenter'],
-      zone:zone('Front pouch face','Main_Pouch',['Front pouch face'],[0.29,0.31]),
+      zone:zone('Front pouch face','Main_Pouch',['Front pouch face'],[0.29,0.31],0.145),
       camera:{target:[0,0,0.03],hero:[0.56,0.40,0.84]},groundY:-0.31}),
   },
   'thigh-protector': {
-    product:developmentProduct('thigh-protector','Leather Thigh Protector','/models/development-product-families.gltf'),authority:'G1-development-twin',
-    manifest:manifest({assetId:'development-thigh-protector-v1',familyId:'thigh-protector',
+    product:developmentProduct('thigh-protector','Leather Thigh Protector',familyModel('thigh-protector')),authority:'G2-development-twin',
+    manifest:manifest({assetId:'development-thigh-protector-v2',familyId:'thigh-protector',
       leatherNodes:['Main_Panel','Upper_Strap','Lower_Panel_Thigh'],hardwareNodes:['Buckle'],
-      zone:zone('Main leather panel','Main_Panel',['Main leather panel'],[0.27,0.40]),
+      zone:zone('Main leather panel','Main_Panel',['Main leather panel'],[0.27,0.40],0.005),
       camera:{target:[0,0,0],hero:[0.55,0.40,0.88]},groundY:-0.33}),
   },
   'cooler-strap': {
-    product:developmentProduct('cooler-strap','Cow Leather Cooler Strap','/models/development-product-families.gltf'),authority:'G1-development-twin',
-    manifest:manifest({assetId:'development-cooler-strap-v1',familyId:'cooler-strap',
+    product:developmentProduct('cooler-strap','Cow Leather Cooler Strap',familyModel('cooler-strap')),authority:'G2-development-twin',
+    manifest:manifest({assetId:'development-cooler-strap-v2',familyId:'cooler-strap',
       leatherNodes:['Center_Strap','Shoulder_Pad','Buckle_End_Left','Buckle_End_Right'],hardwareNodes:['Hardware_Buckles_Cooler'],
-      zone:zone('Center strap','Shoulder_Pad',['Center strap'],[0.25,0.10]),
+      zone:zone('Center strap','Shoulder_Pad',['Center strap'],[0.25,0.10],0.007),
       camera:{target:[0,0,0],hero:[0.42,0.48,1.30],front:[0,0.08,1.38],rear:[0,0.08,-1.38]},groundY:-0.11,shadowScale:1.9}),
   },
 }
