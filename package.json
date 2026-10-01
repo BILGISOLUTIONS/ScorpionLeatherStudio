@@ -7,7 +7,9 @@
     "packages/*"
   ],
   "scripts": {
+    "predev": "npm run twins:generate",
     "dev": "npm run dev -w @sls/configurator",
+    "prebuild": "npm run twins:generate",
     "build": "npm run build -w @sls/configurator",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run packages api server apps/configurator/src",
@@ -20,7 +22,9 @@
     "material:ktx2:selftest": "node scripts/build-material-ktx2.mjs --self-test",
     "material:source": "node scripts/ingest-material-source.mjs",
     "material:source:selftest": "node scripts/ingest-material-source.mjs --self-test",
-    "gltf:validate": "node scripts/validate-gltf-assets.mjs"
+    "gltf:validate": "node scripts/validate-gltf-assets.mjs",
+    "twins:generate": "node scripts/generate-development-product-twins.mjs",
+    "twins:check": "node scripts/generate-development-product-twins.mjs --check"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
