@@ -65,6 +65,7 @@ function ProductFamilyViewerComponent({ familyId, referenceId, personalization, 
     return states
   },[familyId,visorOpen])
   const activeLeatherMaterial=scorpionMaterialById.get(leatherComposition.structure.materialId)
+  const twinLabel=asset.authority==='G2-development-twin'?'G2 development digital twin':'G1 development digital twin'
 
   return <div className={materialLabOpen?'viewer-panel is-material-lab-open':'viewer-panel'} aria-label="Interactive 3D product viewer">
     <ThreeProductViewer product={asset.product} manifest={asset.manifest} materials={materials} selections={{}}
@@ -100,7 +101,7 @@ function ProductFamilyViewerComponent({ familyId, referenceId, personalization, 
       data-testid="customization-preview-status" role="status" aria-live="polite">{customizationPreview.message}</div>:null}
 
     <div className="viewer-caption">
-      G1 development digital twin · photographed product remains visual authority
+      {twinLabel} · photographed product remains visual authority
       {activeLeatherMaterial?` · ${activeLeatherMaterial.lifecycle}`:''}
       {leatherComposition.developmentOnly?' · development material recipe':''}
       {' · UV/PBR material preview active'}
