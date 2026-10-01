@@ -5,6 +5,14 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/catalog-variant?*', (route) => route.fulfill({ json: { ok: false } }))
 })
 
+async function openDisclosure(page: import('@playwright/test').Page, name: string) {
+  const disclosure = page.getByRole('group', { name, exact: true })
+  await expect(disclosure).toBeVisible()
+  if (await disclosure.getAttribute('open') === null) {
+    await disclosure.locator(':scope > summary').click()
+  }
+}
+
 test('keyboard preview uses manual activation and exposes product selection', async ({ page }) => {
   const scripts: string[] = []
   page.on('request', (request) => { if (request.resourceType() === 'script') scripts.push(request.url()) })
@@ -37,7 +45,8 @@ test('keyboard preview uses manual activation and exposes product selection', as
   const harness = page.getByRole('navigation', { name: 'Customizable products' }).getByRole('button', { name: /Radio Harness/i })
   await harness.click()
   await expect(harness).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByRole('group', { name: /1. Starting build/ })).toBeVisible()
+  await expect(page.getByRole('group', { name: '1. Starting build', exact: true })).toBeVisible()
+  await openDisclosure(page, 'Leather tooling')
   await page.getByRole('button', { name: 'Western floral', exact: true }).click()
   await expect(page.getByRole('textbox', { name: 'Tooling notes' })).toBeVisible()
 })
@@ -60,7 +69,8 @@ test('lazy order tools remain keyboard reachable without intersection observatio
 
 test('order validation and prepared packet manage focus without reload focus theft', async ({ page }, testInfo) => {
   await page.goto('/')
-  await page.getByRole('region', { name: 'Custom order request', exact: true }).scrollIntoViewIfNeeded()
+  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }))
+  await expect(page.getByRole('button', { name: 'Create Order Request', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Create Order Request', exact: true }).click()
   const name = page.getByRole('textbox', { name: /Name/ })
   await expect(name).toBeFocused()
@@ -93,6 +103,7 @@ test('order validation and prepared packet manage focus without reload focus the
 test('reduced motion and visible form focus preserve desktop and mobile layout', async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
+  await openDisclosure(page, 'Leather & construction')
   const field = page.getByLabel('Leather finish preference')
   await field.focus()
   expect(await field.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('solid')
