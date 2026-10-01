@@ -272,6 +272,38 @@ function ReferenceStage({
   )
 }
 
+function StudioDisclosure({
+  title,
+  summary,
+  children,
+  step,
+  open = false,
+  className = '',
+}: {
+  title: string
+  summary: string
+  children: React.ReactNode
+  step?: string
+  open?: boolean
+  className?: string
+}) {
+  return (
+    <details className={`studio-disclosure ${className}`.trim()} open={open}>
+      <summary>
+        <span className="studio-disclosure__title">
+          {step ? <span className="studio-disclosure__step" aria-hidden="true">{step}</span> : null}
+          <span>
+            <strong>{title}</strong>
+            <small>{summary}</small>
+          </span>
+        </span>
+        <span className="studio-disclosure__action" aria-hidden="true">Edit</span>
+      </summary>
+      <div className="studio-disclosure__body">{children}</div>
+    </details>
+  )
+}
+
 function ConceptSummary({
   build,
   artwork,
@@ -347,7 +379,9 @@ const ProductFamilyRail = memo(function ProductFamilyRail({
           <img src={storefrontImage(family.references[0].image, 160)} alt="" loading="lazy" decoding="async" />
           <span>
             <strong>{family.shortTitle}</strong>
-            <small>{family.references.length} starting build{family.references.length === 1 ? '' : 's'}</small>
+            {selectedId === family.id ? (
+              <small>{family.references.length} starting build{family.references.length === 1 ? '' : 's'}</small>
+            ) : null}
           </span>
         </button>
       ))}
@@ -364,27 +398,54 @@ const ReferencePicker = memo(function ReferencePicker({
   selectedId: string
   onSelect: (reference: StudioReference) => void
 }) {
+  const selectedReference = family.references.find((item) => item.id === selectedId) ?? family.references[0]
+
+  if (family.references.length === 1) {
+    return (
+      <section className="studio-section compact-selection" aria-label="Starting build">
+        <div className="compact-selection__label">
+          <span>BASE PRODUCT</span>
+          <small>Scorpion catalog reference</small>
+        </div>
+        <div className="compact-selection__value">
+          <img src={storefrontImage(selectedReference.image, 180)} alt="" loading="lazy" decoding="async" />
+          <span>
+            <strong>{selectedReference.title}</strong>
+            <small>{selectedReference.priceStatus === 'quote' ? 'Custom quote' : `Base ${formatMoney(selectedReference.basePriceMinor)}`}</small>
+          </span>
+          <span className="compact-selection__status">Selected</span>
+        </div>
+      </section>
+    )
+  }
+
   return (
-    <fieldset className="studio-section">
-      <legend className="section-title-row"><strong>1. Starting build</strong><span>{family.references.length} Scorpion catalog reference{family.references.length === 1 ? '' : 's'}</span></legend>
-      <div className="reference-grid">
-        {family.references.map((reference) => (
-          <button
-            type="button"
-            key={reference.id}
-            className={selectedId === reference.id ? 'reference-choice is-selected' : 'reference-choice'}
-            onClick={() => onSelect(reference)}
-            aria-pressed={selectedId === reference.id}
-          >
-            <img src={storefrontImage(reference.image, 480)} alt="" loading="lazy" decoding="async" />
-            <span>
-              <strong>{reference.title}</strong>
-              <small>{reference.priceStatus === 'quote' ? 'Custom quote' : `Base ${formatMoney(reference.basePriceMinor)}`}</small>
-            </span>
-          </button>
-        ))}
-      </div>
-    </fieldset>
+    <section className="studio-section">
+      <StudioDisclosure
+        step="1"
+        title="Starting build"
+        summary={selectedReference.title}
+        className="base-product-disclosure"
+      >
+        <div className="reference-grid">
+          {family.references.map((reference) => (
+            <button
+              type="button"
+              key={reference.id}
+              className={selectedId === reference.id ? 'reference-choice is-selected' : 'reference-choice'}
+              onClick={() => onSelect(reference)}
+              aria-pressed={selectedId === reference.id}
+            >
+              <img src={storefrontImage(reference.image, 480)} alt="" loading="lazy" decoding="async" />
+              <span>
+                <strong>{reference.title}</strong>
+                <small>{reference.priceStatus === 'quote' ? 'Custom quote' : `Base ${formatMoney(reference.basePriceMinor)}`}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      </StudioDisclosure>
+    </section>
   )
 })
 
@@ -403,29 +464,37 @@ const VariantPicker = memo(function VariantPicker({
 
   if (!meaningfulVariants) return null
 
+  const selectedVariant = reference.variants.find((item) => item.id === selectedId) ?? reference.variants[0]
+
   return (
-    <fieldset className="studio-section">
-      <legend className="section-title-row"><strong>2. Size / variant</strong><span>Live catalog identity</span></legend>
-      <div className="variant-grid">
-        {reference.variants.map((variant) => (
-          <button
-            type="button"
-            key={variant.id}
-            className={selectedId === variant.id ? 'variant-choice is-selected' : 'variant-choice'}
-            onClick={() => onSelect(variant)}
-            aria-pressed={selectedId === variant.id}
-          >
-            <strong>{variant.title}</strong>
-            <small>
-              {variant.sku}
-              {reference.priceStatus === 'catalog' && variant.inventoryQuantity !== null
-                ? ` · ${variant.inventoryQuantity} listed`
-                : ''}
-            </small>
-          </button>
-        ))}
-      </div>
-    </fieldset>
+    <section className="studio-section">
+      <StudioDisclosure
+        step="2"
+        title="Size / variant"
+        summary={`${selectedVariant.title} · ${selectedVariant.sku}`}
+        className="variant-disclosure"
+      >
+        <div className="variant-grid">
+          {reference.variants.map((variant) => (
+            <button
+              type="button"
+              key={variant.id}
+              className={selectedId === variant.id ? 'variant-choice is-selected' : 'variant-choice'}
+              onClick={() => onSelect(variant)}
+              aria-pressed={selectedId === variant.id}
+            >
+              <strong>{variant.title}</strong>
+              <small>
+                {variant.sku}
+                {reference.priceStatus === 'catalog' && variant.inventoryQuantity !== null
+                  ? ` · ${variant.inventoryQuantity} listed`
+                  : ''}
+              </small>
+            </button>
+          ))}
+        </div>
+      </StudioDisclosure>
+    </section>
   )
 })
 
@@ -449,12 +518,26 @@ function PersonalizationEditor({
   const updateConstruction = (patch: Partial<StudioBuildDraft['personalization']['construction']>) => {
     update({ construction: { ...p.construction, ...patch } })
   }
+  const constructionRequested =
+    p.construction.leatherFinish !== 'as-photographed' ||
+    Boolean(p.construction.leatherColor.trim()) ||
+    p.construction.stitching !== 'as-photographed' ||
+    p.construction.hardware !== 'as-photographed' ||
+    p.construction.edgeTreatment !== 'as-photographed' ||
+    Boolean(p.construction.notes.trim())
+  const customPlacement = !/shop recommendation/i.test(p.placement)
 
   return (
     <fieldset className="studio-section personalization-section">
-      <legend className="section-title-row"><strong>3. Construction & personalization</strong><span>Preferences are reviewed before production</span></legend>
+      <legend className="section-title-row"><strong>Personalize</strong><span>Open only the details you want to change</span></legend>
 
-      <div className="personalization-block construction-block">
+      <StudioDisclosure
+        title="Leather & construction"
+        summary={constructionRequested ? 'Custom construction request' : 'As photographed'}
+        open={constructionRequested}
+        className="personalization-disclosure"
+      >
+        <div className="personalization-block construction-block">
         <div className="field-heading">
           <strong>Construction preferences</strong>
           <small>These are requests, not guaranteed material inventory. Scorpion confirms feasibility, availability, and final price.</small>
@@ -529,10 +612,17 @@ function PersonalizationEditor({
             maxLength={700}
           />
         </label>
-      </div>
+        </div>
+      </StudioDisclosure>
 
       {family.personalization.tooling ? (
-        <div className="personalization-block">
+        <StudioDisclosure
+          title="Leather tooling"
+          summary={toolingLabels[p.toolingStyle]}
+          open={p.toolingStyle !== 'none'}
+          className="personalization-disclosure"
+        >
+          <div className="personalization-block">
           <div className="field-heading">
             <strong>Leather tooling request</strong>
             <small>Choose a direction. Scorpion confirms feasibility and price.</small>
@@ -560,11 +650,18 @@ function PersonalizationEditor({
               maxLength={500}
             />
           ) : null}
-        </div>
+          </div>
+        </StudioDisclosure>
       ) : null}
 
       {family.personalization.text ? (
-        <div className="personalization-block">
+        <StudioDisclosure
+          title="Text / name / monogram"
+          summary={p.textEnabled ? (p.text.trim() || 'Text enabled') : 'Not added'}
+          open={p.textEnabled}
+          className="personalization-disclosure"
+        >
+          <div className="personalization-block">
           <label className="toggle-row">
             <input
               type="checkbox"
@@ -605,10 +702,17 @@ function PersonalizationEditor({
               </div>
             </>
           ) : null}
-        </div>
+          </div>
+        </StudioDisclosure>
       ) : null}
 
-      <div className="personalization-block">
+      <StudioDisclosure
+        title="Placement"
+        summary={p.placement}
+        open={customPlacement}
+        className="personalization-disclosure"
+      >
+        <div className="personalization-block">
         <label className="field-label">
           Requested placement
           <select value={p.placement} onChange={(event) => update({ placement: event.target.value })}>
@@ -617,10 +721,17 @@ function PersonalizationEditor({
             ))}
           </select>
         </label>
-      </div>
+        </div>
+      </StudioDisclosure>
 
       {family.personalization.artwork ? (
-        <div className="personalization-block">
+        <StudioDisclosure
+          title="Logo / artwork"
+          summary={artwork ? artwork.name : p.artworkNotes.trim() ? 'Instructions added' : 'Not added'}
+          open={Boolean(artwork || p.artworkNotes.trim())}
+          className="personalization-disclosure"
+        >
+          <div className="personalization-block">
           <div className="field-heading">
             <strong>Logo / artwork</strong>
             <small>Attach a PNG, JPG, WEBP, or PDF up to 2 MB. The file is sent only with the order request and is not embedded in share links.</small>
@@ -665,10 +776,17 @@ function PersonalizationEditor({
               maxLength={700}
             />
           </label>
-        </div>
+          </div>
+        </StudioDisclosure>
       ) : null}
 
-      <div className="personalization-block">
+      <StudioDisclosure
+        title="Additional notes"
+        summary={p.additionalNotes.trim() ? 'Notes added' : 'None'}
+        open={Boolean(p.additionalNotes.trim())}
+        className="personalization-disclosure"
+      >
+        <div className="personalization-block">
         <label className="field-label">
           Build notes
           <textarea
@@ -678,7 +796,8 @@ function PersonalizationEditor({
             maxLength={1000}
           />
         </label>
-      </div>
+        </div>
+      </StudioDisclosure>
     </fieldset>
   )
 }
@@ -1054,6 +1173,17 @@ export function App() {
         </div>
 
         <aside id="studio-customization" className="controls-panel multi-controls" tabIndex={-1} aria-label="Customize your build">
+          <section className="studio-guidance" aria-label="Guided build">
+            <div>
+              <span>GUIDED BUILD</span>
+              <strong>Change what matters. Leave the rest as photographed.</strong>
+            </div>
+            <ol aria-label="Build stages">
+              <li><span>1</span>Product</li>
+              <li><span>2</span>Personalize</li>
+              <li><span>3</span>Review</li>
+            </ol>
+          </section>
           <div className="product-heading">
             <div className="product-kicker">
               <p className="eyebrow">CUSTOMIZE</p>
@@ -1083,7 +1213,7 @@ export function App() {
           />
 
           <fieldset className="studio-section quantity-section">
-            <legend className="section-title-row"><strong>4. Quantity</strong><span>1–99 pieces</span></legend>
+            <legend className="section-title-row"><strong>Quantity</strong><span>1–99 pieces</span></legend>
             <div className="quantity-control">
               <button
                 type="button"
@@ -1136,19 +1266,27 @@ export function App() {
                   ? `Requested quantity exceeds the currently listed inventory of ${effectiveVariant.inventoryQuantity}. Scorpion must confirm availability before accepting the order.`
                   : 'Current catalog base subtotal shown. Any custom tooling, text, artwork, material changes, or shop modifications require a separate quote.'}
             </div>
-            <div className="summary-spec">
+            <div className="summary-spec summary-spec-core">
               <div><span>SKU</span><strong>{effectiveVariant.sku}</strong></div>
               <div><span>Qty</span><strong>{build.quantity}</strong></div>
               {reference.priceStatus === 'catalog' && effectiveVariant.inventoryQuantity !== null ? (
                 <div><span>Listed stock</span><strong>{effectiveVariant.inventoryQuantity}</strong></div>
               ) : null}
-              <div><span>Leather</span><strong>{leatherFinishLabels[construction.leatherFinish]}{construction.leatherColor.trim() ? ` · ${construction.leatherColor.trim()}` : ''}</strong></div>
-              <div><span>Stitching</span><strong>{stitchingLabels[construction.stitching]}</strong></div>
-              <div><span>Hardware</span><strong>{hardwareLabels[construction.hardware]}</strong></div>
-              <div><span>Tooling</span><strong>{toolingLabels[build.personalization.toolingStyle]}</strong></div>
-              <div><span>Text</span><strong>{build.personalization.textEnabled ? build.personalization.text || 'Pending' : 'None'}</strong></div>
-              <div><span>Placement</span><strong>{build.personalization.placement}</strong></div>
             </div>
+            <StudioDisclosure
+              title="Build specifications"
+              summary={customWorkRequested ? 'Custom selections included' : 'As photographed'}
+              className="summary-disclosure"
+            >
+              <div className="summary-spec summary-spec-details">
+                <div><span>Leather</span><strong>{leatherFinishLabels[construction.leatherFinish]}{construction.leatherColor.trim() ? ` · ${construction.leatherColor.trim()}` : ''}</strong></div>
+                <div><span>Stitching</span><strong>{stitchingLabels[construction.stitching]}</strong></div>
+                <div><span>Hardware</span><strong>{hardwareLabels[construction.hardware]}</strong></div>
+                <div><span>Tooling</span><strong>{toolingLabels[build.personalization.toolingStyle]}</strong></div>
+                <div><span>Text</span><strong>{build.personalization.textEnabled ? build.personalization.text || 'Pending' : 'None'}</strong></div>
+                <div><span>Placement</span><strong>{build.personalization.placement}</strong></div>
+              </div>
+            </StudioDisclosure>
             <div
               className="build-continuity"
               data-testid="build-continuity"
