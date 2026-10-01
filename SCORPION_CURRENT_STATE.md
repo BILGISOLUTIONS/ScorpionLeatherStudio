@@ -485,3 +485,25 @@ Validated V0.26 characteristics:
 - Repaired the shared family glTF by replacing the truncated cube payload with the already-valid 648-byte UV-compatible cube payload used by the welding-hood development asset.
 - Added `scripts/validate-gltf-assets.mjs` plus `npm run gltf:validate` and a CI gate that checks every embedded configurator glTF for exact declared-vs-embedded buffer length, buffer-view bounds, and accessor bounds.
 - Welding-hood buffers were independently checked before reuse: its geometry buffer is exactly 648/648 bytes and its UV buffer is exactly 192/192 bytes.
+
+
+## V0.36 release closure — 2026-10-01
+
+- Exact production feature SHA: `ea1b12f636892564101bf962fc4d42766e92fa60`.
+- Feature branch: `feature/v036-multi-product-3d`.
+- Final feature-branch CI: #695 / run `36817263236` — PASS.
+- Final feature-branch browser QA artifact: `11141494851`, digest `sha256:0ce2469b8a2c046473e6b734db21b0c680baad56d191214afb448bcddf54e4cd`.
+- Exact-main CI: #696 / run `36825960673` — PASS.
+- Exact-main browser QA artifact: `11145212958`, digest `sha256:f6b950d94fa5c54109e7588d216920a74bb69434d1d81a6d39c935cb7b6c0858`.
+- Vercel commit status on the exact production SHA: SUCCESS.
+- Promotion was a non-forced fast-forward from V0.35 shipped-state main `dc50d10fc397b381a532ee19a94360c27af83879`; the V0.36 branch was 7 commits ahead / 0 behind at promotion.
+- V0.36 expands Interactive 3D from the welding hood to all eight current leather product families: welding hood, tool belt, tool pouch set, work harness, radio harness, carpenter pouch, thigh protector and cooler strap.
+- Non-hood products use resource-efficient G1 development twins in one shared UV-mapped glTF with family-specific semantic roots, leather/hardware slots, camera framing and customization-zone contracts. These are customer-preview development models, not manufacturing geometry or dimension authority.
+- The welding-hood development glTF now includes UV0 while retaining its visor/component hierarchy.
+- The shared Structure × Dye × Finish compositor now renders on UV-mapped development surfaces using deterministic local fine-grain and worn-grain BaseColor/Normal/Roughness maps. Family/reference defaults include appropriate Black, Cognac, Oxblood and Emerald development recipes while photographed/captured materials remain authoritative where locked.
+- Material Lab reset behavior is context-aware: photographed hood references return to the photographed reference; G1 non-hood twins return to their product-specific development preview.
+- Customization-zone authority remains conservative: only the placement actually represented by a G1 zone is mapped. Unmodeled side/rear/alternate placements remain explicitly order-only/unmapped.
+- Browser QA manually reviewed the dedicated V0.36 desktop/mobile carpenter-pouch screenshots. The forest-green G1 twin renders textured leather in the customer Studio, the photographed catalog references remain visible as product authority, Material Lab remains usable, and the responsive layout remains intact.
+- Release debugging uncovered and repaired a real shared glTF binary defect: the initial family asset declared 648 geometry bytes while embedding 636. The final asset uses a valid 648-byte payload and CI now runs `npm run gltf:validate` to enforce buffer-length, buffer-view and accessor bounds for embedded configurator glTF assets.
+- V0.36 adds no database, API function, polling loop or runtime third-party service. Procedural development PBR maps are generated locally in-browser, and the shared model strategy minimizes repeated geometry/network cost.
+- The documentation-only state commit following this closure uses `[skip ci]` because both the exact feature head and exact production/main SHA already passed the complete release gate.
