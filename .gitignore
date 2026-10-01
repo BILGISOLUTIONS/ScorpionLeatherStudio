@@ -11,3 +11,6 @@ coverage/
 # Generated from the installed three package before dev/build.
 apps/configurator/public/basis/
 .sls-material-sources/
+
+# Deterministic V0.37 G2 development twins generated before dev/build.
+apps/configurator/public/models/development-g2-*.gltf
