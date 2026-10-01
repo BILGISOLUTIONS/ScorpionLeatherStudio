@@ -494,7 +494,7 @@ test('Material Lab inspects the registry without loading customer 3D runtime', a
   await page.goto('/materials.html')
 
   await expect(page.getByRole('heading', { name: 'Material Lab' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(8)
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(10)
   await expect(page.getByText('SCL-COGNAC')).toBeVisible()
   await expect(page.getByText('SCL-NEUTRAL-DEV')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Neutral Leather Development Base' })).toBeVisible()
@@ -508,14 +508,14 @@ test('Material Lab inspects the registry without loading customer 3D runtime', a
 
   await page.getByRole('searchbox', { name: 'Search materials' }).fill('')
   await page.getByRole('combobox', { name: 'Filter materials' }).selectOption('unverified')
-  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(4)
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(6)
 
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
   expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
   expect(consoleErrors, `Material Lab console errors: ${consoleErrors.join('\n')}`).toEqual([])
 
   await page.getByRole('combobox', { name: 'Filter materials' }).selectOption('all')
-  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(8)
+  await expect(page.getByRole('region', { name: 'Material registry' }).locator('.material-card')).toHaveCount(10)
 
   const screenshotName = testInfo.project.name.includes('mobile')
     ? 'material-lab-mobile.png'
@@ -871,22 +871,18 @@ test('V0.36 all leather product families expose validated interactive 3D', async
   })
   page.on('pageerror', (error) => consoleErrors.push(error.message))
 
-  await page.goto('/')
-
   const families = [
-    { label: 'Tool Belt', expectedRecipe: /Black|Fine grain development/i },
-    { label: 'Pouch Set', expectedRecipe: /Cognac|Worn grain development/i },
-    { label: 'Work Harness', expectedRecipe: /Cognac|Worn grain development/i },
-    { label: 'Radio Harness', expectedRecipe: /Cognac|Fine grain development|Worn grain development/i },
-    { label: 'Carpenter Pouch', expectedRecipe: /Emerald|Fine grain development/i },
-    { label: 'Thigh Protector', expectedRecipe: /Cognac|Fine grain development/i },
-    { label: 'Cooler Strap', expectedRecipe: /Cognac|Fine grain development/i },
+    { id: 'tool-belt', expectedRecipe: /Black|Fine grain development/i },
+    { id: 'tool-pouch-set', expectedRecipe: /Cognac|Worn grain development/i },
+    { id: 'work-harness', expectedRecipe: /Cognac|Worn grain development/i },
+    { id: 'radio-harness', expectedRecipe: /Cognac|Fine grain development|Worn grain development/i },
+    { id: 'carpenter-pouch', expectedRecipe: /Emerald|Fine grain development/i },
+    { id: 'thigh-protector', expectedRecipe: /Cognac|Fine grain development/i },
+    { id: 'cooler-strap', expectedRecipe: /Cognac|Fine grain development/i },
   ]
 
-  const rail = page.getByRole('navigation', { name: 'Customizable products' })
-
   for (const family of families) {
-    await rail.getByRole('button', { name: new RegExp(family.label, 'i') }).click()
+    await page.goto(`/?family=${family.id}`)
     const interactiveTab = page.getByRole('tab', { name: 'Interactive 3D' })
     await expect(interactiveTab).toBeVisible()
     await interactiveTab.click()
@@ -897,17 +893,17 @@ test('V0.36 all leather product families expose validated interactive 3D', async
     await expect(viewer.locator('.viewer-caption')).toContainText('G1 development digital twin')
     await expect(viewer.locator('.viewer-caption')).toContainText('UV/PBR material preview active')
 
-    await viewer.getByRole('button', { name: 'Materials', exact: true }).click()
+    const materialsButton = viewer.getByRole('button', { name: 'Materials', exact: true })
+    await expect(materialsButton).toBeVisible()
+    await materialsButton.click()
     const lab = viewer.getByTestId('material-lab')
     await expect(lab).toBeVisible()
     await expect(lab.getByTestId('material-recipe-status')).toContainText('DEVELOPMENT MATERIAL RECIPE')
     await expect(lab.getByTestId('material-recipe-status')).toContainText(family.expectedRecipe)
-    await lab.getByRole('button', { name: 'Close material lab' }).click()
-    await expect(lab).toBeHidden()
   }
 
   // Capture a non-hood example for manual release review.
-  await rail.getByRole('button', { name: /Carpenter Pouch/i }).click()
+  await page.goto('/?family=carpenter-pouch')
   await page.getByRole('tab', { name: 'Interactive 3D' }).click()
   const viewer = page.getByLabel('Interactive 3D product viewer')
   await expect(viewer.locator('.asset-status')).toHaveText('3D contract validated')

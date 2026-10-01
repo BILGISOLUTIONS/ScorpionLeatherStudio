@@ -10,12 +10,14 @@ export function LeatherMaterialLab({
   selection,
   composition,
   defaultSelection,
+  resetLabel = 'Reset product preview',
   onChange,
   onClose,
 }: {
   selection: ScorpionLeatherLabSelection
   composition: LeatherCompositionResult
   defaultSelection: ScorpionLeatherLabSelection
+  resetLabel?: string
   onChange: (next: ScorpionLeatherLabSelection) => void
   onClose: () => void
 }) {
@@ -124,7 +126,7 @@ export function LeatherMaterialLab({
         className="material-lab__reset"
         onClick={() => onChange(defaultSelection)}
       >
-        Reset product preview
+        {resetLabel}
       </button>
     </section>
   )

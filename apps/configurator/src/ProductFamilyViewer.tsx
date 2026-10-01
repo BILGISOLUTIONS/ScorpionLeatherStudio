@@ -92,7 +92,9 @@ function ProductFamilyViewerComponent({ familyId, referenceId, personalization, 
     </div>
 
     {materialLabOpen?<div id="sls-material-lab"><LeatherMaterialLab selection={leatherSelection} composition={leatherComposition}
-      defaultSelection={defaultSelection} onChange={setLeatherSelection} onClose={()=>setMaterialLabOpen(false)}/></div>:null}
+      defaultSelection={defaultSelection}
+      resetLabel={familyId === 'welding-hood' ? 'Reset to photographed reference' : 'Reset product preview'}
+      onChange={setLeatherSelection} onClose={()=>setMaterialLabOpen(false)}/></div>:null}
 
     {customizationPreview.active?<div className={`customization-preview-status ${customizationPreview.renderable?'is-ready':'is-unmapped'}`}
       data-testid="customization-preview-status" role="status" aria-live="polite">{customizationPreview.message}</div>:null}

@@ -458,3 +458,12 @@ Validated V0.26 characteristics:
 - For each family the test opens Interactive 3D, requires a visible WebGL canvas, requires `3D contract validated`, verifies G1/UV-PBR disclosure, opens Material Lab and confirms a development material recipe.
 - The test also captures dedicated V0.36 desktop/mobile screenshots using the forest-green carpenter pouch / emerald material recipe for manual artifact review.
 - Console/page errors are release-gating failures.
+
+
+### V0.36 browser gate correction after CI #692
+
+- CI #692 passed TypeScript, authoring/source self-tests, unit tests, production build, bundle/function budgets and Shopify smoke; Playwright finished 60/68 with four assertion classes repeated on desktop/mobile.
+- Restored customization-zone authority: each current G1 zone now maps only the placement it actually represents. Welding hood retains only the verified Forehead panel mapping; side/rear placements remain explicitly unmapped until separate geometry/zones exist.
+- Material Lab reset text is now context-aware: welding hood keeps “Reset to photographed reference”; approximate non-hood G1 twins use “Reset product preview”.
+- Material registry browser expectations now account for the two intentional V0.36 development leather entries (10 total, 6 unverified).
+- The multi-family 3D gate now enters each family through its direct studio URL before opening 3D. This validates all family models/material recipes without manufacturing an artificial click race against a viewer intentionally unmounted by family switching.
