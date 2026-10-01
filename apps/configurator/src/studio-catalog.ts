@@ -119,7 +119,7 @@ export const studioFamilies: StudioProductFamily[] = [
     title: 'Leather Tool Belt Rig',
     shortTitle: 'Tool Belt',
     description: 'Configure Scorpion’s multi-pouch work rig and submit tooling, name, company, or artwork requests for shop review.',
-    supports3D: false,
+    supports3D: true,
     personalization: {
       tooling: true,
       text: true,
@@ -146,7 +146,7 @@ export const studioFamilies: StudioProductFamily[] = [
     title: 'Leather Tool Pouch Set',
     shortTitle: 'Pouch Set',
     description: 'Start from the matched textured pouch set and specify tooling, lettering, logo/artwork direction, and placement preferences.',
-    supports3D: false,
+    supports3D: true,
     personalization: {
       tooling: true,
       text: true,
@@ -173,7 +173,7 @@ export const studioFamilies: StudioProductFamily[] = [
     title: 'Leather Work Harness',
     shortTitle: 'Work Harness',
     description: 'Choose a Scorpion work-harness starting point, then request text, tooling, or artwork placement before the shop confirms the build.',
-    supports3D: false,
+    supports3D: true,
     personalization: {
       tooling: true,
       text: true,
@@ -228,7 +228,7 @@ export const studioFamilies: StudioProductFamily[] = [
     title: 'Leather Radio Harness',
     shortTitle: 'Radio Harness',
     description: 'Choose the harness finish and size, then layer in custom text, tooling, or artwork requests for a quote-ready build.',
-    supports3D: false,
+    supports3D: true,
     personalization: {
       tooling: true,
       text: true,
@@ -274,7 +274,7 @@ export const studioFamilies: StudioProductFamily[] = [
     title: 'Carpenter Tool Pouch',
     shortTitle: 'Carpenter Pouch',
     description: 'Choose a stocked Scorpion pouch color and turn it into a custom-order request with lettering or tooling instructions.',
-    supports3D: false,
+    supports3D: true,
     personalization: {
       tooling: true,
       text: true,
@@ -331,7 +331,7 @@ export const studioFamilies: StudioProductFamily[] = [
     title: 'Leather Thigh Protector',
     shortTitle: 'Thigh Protector',
     description: 'Start from Scorpion’s stocked brown leather thigh protector and submit text, tooling, logo, or construction-change requests for shop review.',
-    supports3D: false,
+    supports3D: true,
     personalization: {
       tooling: true,
       text: true,
@@ -360,7 +360,7 @@ export const studioFamilies: StudioProductFamily[] = [
     title: 'Cow Leather Cooler Strap',
     shortTitle: 'Cooler Strap',
     description: 'Start from Scorpion’s brown cow-leather Engel-style cooler strap and request lettering, tooling, logo treatment, or other leatherwork changes for review.',
-    supports3D: false,
+    supports3D: true,
     personalization: {
       tooling: true,
       text: true,

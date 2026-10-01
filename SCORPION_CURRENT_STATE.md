@@ -429,3 +429,15 @@ Validated V0.26 characteristics:
 - Material Lab reset now restores the product/reference-specific starting recipe instead of assuming every product is a photographed welding-hood material.
 - These materials remain development/reference only and must not be interpreted as Scorpion production material authority.
 - Next V0.36 commit adds UV-mapped G1 development glTF models/manifests for every current leather product family and replaces the hood-only viewer with the shared family viewer.
+
+
+### V0.36 generated multi-product G1 twins
+
+- All eight current SLS leather product families are now 3D-capable in the app.
+- Replaced the app's hood-only lazy viewer path with shared `ProductFamilyViewer.tsx`.
+- Added `family-3d-assets.ts` with G1 development product/manifest contracts per family, including semantic leather/hardware slots, product-specific camera framing, presentation settings and mapped customization zones.
+- Added one resource-efficient shared UV-mapped glTF containing separate semantic G1 twins for tool belt, pouch set, work harness, radio harness, carpenter pouch, thigh protector and cooler strap. Only the selected family root is visible at runtime.
+- Upgraded the welding-hood placeholder glTF with UV0 coordinates while preserving its visor/component hierarchy.
+- Shared family geometry uses one mesh primitive to minimize model bytes and GPU geometry duplication while preserving per-product node identity.
+- Product-family material defaults now render through the same Structure × Dye × Finish compositor and UV/PBR renderer.
+- All generated non-hood geometry remains G1 approximate visual-preview geometry; catalog photography remains product authority and manufacturing dimensions must still be captured/validated separately.
