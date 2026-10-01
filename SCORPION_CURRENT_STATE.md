@@ -417,3 +417,15 @@ Validated V0.26 characteristics:
 - External material authority remains hard-locked to `development-reference`; no external library asset can silently become a production Scorpion material.
 - V0.35 adds no runtime dependency, Vercel/API function, database, polling loop, customer hotlink, or storefront payload.
 - The documentation-only state commit following this release uses `[skip ci]` because both the exact feature head and exact production/main SHA already passed the complete release gate.
+
+
+## V0.36 multi-product 3D material foundation — IN PROGRESS 2026-09-30
+
+- Active branch: `feature/v036-multi-product-3d`, based on V0.35 shipped-state main `dc50d10fc397b381a532ee19a94360c27af83879`.
+- Renderer now supports deterministic local `sls-procedural://` development texture URLs for leather BaseColor, OpenGL-style Normal and Roughness maps.
+- Procedural maps are generated as small `THREE.DataTexture` resources in-browser: no new network request, package dependency, API function, database or runtime third-party service.
+- Added `SCL-FINE-DEV` and `SCL-WORN-DEV` tintable development structures with repeat-scaled UV texture behavior.
+- Non-hood catalog references now receive family-aware default development material recipes (black/cognac/oxblood/emerald/light neutral plus matte/satin/polished as appropriate).
+- Material Lab reset now restores the product/reference-specific starting recipe instead of assuming every product is a photographed welding-hood material.
+- These materials remain development/reference only and must not be interpreted as Scorpion production material authority.
+- Next V0.36 commit adds UV-mapped G1 development glTF models/manifests for every current leather product family and replaces the hood-only viewer with the shared family viewer.

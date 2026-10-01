@@ -87,6 +87,68 @@ export function isKtx2TextureUrl(url: string): boolean {
   return /\.ktx2(?:$|[?#])/iu.test(url)
 }
 
+export function isProceduralTextureUrl(url: string): boolean {
+  return /^sls-procedural:\/\/(fine|worn)\/(baseColor|normal|roughness)$/u.test(url)
+}
+
+function proceduralLeatherHeight(kind: 'fine' | 'worn', x: number, y: number, size: number): number {
+  const u = (x / size) * Math.PI * 2
+  const v = (y / size) * Math.PI * 2
+  const micro =
+    Math.sin(u * 7 + v * 5) * 0.28 +
+    Math.sin(u * 17 - v * 13) * 0.14 +
+    Math.sin(u * 31 + v * 29) * 0.07
+  if (kind === 'fine') return micro
+  return micro * 0.72 + Math.sin(u * 2 - v) * 0.34 + Math.sin(u * 5 + v * 4) * 0.18
+}
+
+function createProceduralLeatherTexture(url: string): THREE.DataTexture | undefined {
+  const match = url.match(/^sls-procedural:\/\/(fine|worn)\/(baseColor|normal|roughness)$/u)
+  if (!match) return undefined
+  const kind = match[1] as 'fine' | 'worn'
+  const channel = match[2] as 'baseColor' | 'normal' | 'roughness'
+  const size = 192
+  const data = new Uint8Array(size * size * 4)
+  const strength = kind === 'fine' ? 2.4 : 3.2
+
+  const sample = (x: number, y: number) =>
+    proceduralLeatherHeight(kind, (x + size) % size, (y + size) % size, size)
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const offset = (y * size + x) * 4
+      const height = sample(x, y)
+
+      if (channel === 'normal') {
+        const dx = (sample(x + 1, y) - sample(x - 1, y)) * strength
+        const dy = (sample(x, y + 1) - sample(x, y - 1)) * strength
+        const length = Math.hypot(dx, dy, 1) || 1
+        data[offset] = Math.round(((-dx / length) * 0.5 + 0.5) * 255)
+        data[offset + 1] = Math.round(((-dy / length) * 0.5 + 0.5) * 255)
+        data[offset + 2] = Math.round(((1 / length) * 0.5 + 0.5) * 255)
+      } else if (channel === 'roughness') {
+        const value = THREE.MathUtils.clamp((kind === 'fine' ? 0.72 : 0.8) + height * 0.11, 0.42, 0.96)
+        const byte = Math.round(value * 255)
+        data[offset] = byte
+        data[offset + 1] = byte
+        data[offset + 2] = byte
+      } else {
+        const value = THREE.MathUtils.clamp(0.82 + height * (kind === 'fine' ? 0.055 : 0.085), 0.62, 0.94)
+        data[offset] = Math.round(value * 255)
+        data[offset + 1] = Math.round(value * 249)
+        data[offset + 2] = Math.round(value * 240)
+      }
+      data[offset + 3] = 255
+    }
+  }
+
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat)
+  texture.needsUpdate = true
+  texture.flipY = false
+  texture.name = `SLS procedural leather · ${kind} · ${channel}`
+  return texture
+}
+
 function configureTexture(
   texture: THREE.Texture,
   variant: MaterialVariant,
@@ -130,6 +192,17 @@ function hydrateMaterialTextures(
     colorTexture = false,
   ) => {
     if (!url) return
+    if (isProceduralTextureUrl(url)) {
+      const texture = createProceduralLeatherTexture(url)
+      if (!texture) return
+      configureTexture(texture, variant, maxAnisotropy, colorTexture)
+      loaded.push(texture)
+      assign(texture)
+      material.needsUpdate = true
+      invalidate()
+      return
+    }
+
     const loader = isKtx2TextureUrl(url) ? ktx2Loader : textureLoader
     if (!loader) return
 

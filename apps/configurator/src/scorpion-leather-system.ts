@@ -58,6 +58,22 @@ export const scorpionLeatherStructures: readonly LeatherStructureDefinition[] = 
     availability: 'development',
     description: 'Development-only neutral base for testing dye/finish composition until a calibrated neutral capture is available.',
   },
+  {
+    id: 'development-fine-grain',
+    label: 'Fine grain development',
+    materialId: 'SCL-FINE-DEV',
+    compositionPolicy: 'tintable',
+    availability: 'development',
+    description: 'UV-mapped local PBR grain used to preview dyes and finishes across product families.',
+  },
+  {
+    id: 'development-worn-grain',
+    label: 'Worn grain development',
+    materialId: 'SCL-WORN-DEV',
+    compositionPolicy: 'tintable',
+    availability: 'development',
+    description: 'UV-mapped local PBR surface with larger creases and wear for development previews.',
+  },
 ]
 
 export const scorpionLeatherDyes: readonly LeatherDyeDefinition[] = [
@@ -171,10 +187,27 @@ const referenceStructureMap: Readonly<Record<string, string>> = {
 }
 
 export function photographedStructureForReference(referenceId: string): string {
-  return referenceStructureMap[referenceId] ?? 'catalog-cognac-textured'
+  return referenceStructureMap[referenceId] ?? 'development-fine-grain'
+}
+
+const referenceDevelopmentSelection: Readonly<Record<string, ScorpionLeatherLabSelection>> = {
+  'tool-belt-black': { structureId: 'development-fine-grain', dyeId: 'black', finishId: 'satin' },
+  'pouch-set-brown': { structureId: 'development-worn-grain', dyeId: 'cognac', finishId: 'matte' },
+  'harness-texas-back': { structureId: 'development-worn-grain', dyeId: 'cognac', finishId: 'satin' },
+  'harness-brown': { structureId: 'development-worn-grain', dyeId: 'cognac', finishId: 'satin' },
+  'harness-tan': { structureId: 'development-fine-grain', dyeId: 'cognac', finishId: 'satin' },
+  'radio-alligator': { structureId: 'development-worn-grain', dyeId: 'cognac', finishId: 'polished' },
+  'radio-black': { structureId: 'development-fine-grain', dyeId: 'black', finishId: 'satin' },
+  'carpenter-green': { structureId: 'development-fine-grain', dyeId: 'emerald', finishId: 'satin' },
+  'carpenter-burgundy': { structureId: 'development-fine-grain', dyeId: 'oxblood', finishId: 'satin' },
+  'carpenter-white': { structureId: 'development-fine-grain', dyeId: 'captured', finishId: 'matte' },
+  'thigh-brown': { structureId: 'development-fine-grain', dyeId: 'cognac', finishId: 'satin' },
+  'cooler-strap-brown': { structureId: 'development-fine-grain', dyeId: 'cognac', finishId: 'satin' },
 }
 
 export function defaultLeatherLabSelection(referenceId: string): ScorpionLeatherLabSelection {
+  const development = referenceDevelopmentSelection[referenceId]
+  if (development) return development
   return {
     structureId: photographedStructureForReference(referenceId),
     dyeId: 'captured',
