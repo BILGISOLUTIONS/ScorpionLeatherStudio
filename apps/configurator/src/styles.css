@@ -3071,6 +3071,12 @@ legend.section-title-row { width: 100%; }
   background: rgba(194, 151, 76, .035);
 }
 
+.studio-disclosure > summary:focus-visible {
+  outline: 2px solid var(--gold-strong);
+  outline-offset: -2px;
+  background: rgba(194, 151, 76, .055);
+}
+
 .studio-disclosure__title {
   min-width: 0;
   display: grid;
