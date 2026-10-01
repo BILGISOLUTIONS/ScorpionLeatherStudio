@@ -107,7 +107,7 @@ function WeldingHoodViewerComponent({
   const animationStates = useMemo(() => ({ 'visor.open': visorOpen }), [visorOpen])
 
   const activeLeatherMaterial = scorpionMaterialById.get(leatherComposition.structure.materialId)
-  const defaultStructureId = photographedStructureForReference(referenceId)
+  const defaultSelection = defaultLeatherLabSelection(referenceId)
 
   return (
     <div
@@ -183,7 +183,7 @@ function WeldingHoodViewerComponent({
           <LeatherMaterialLab
             selection={leatherSelection}
             composition={leatherComposition}
-            defaultStructureId={defaultStructureId}
+            defaultSelection={defaultSelection}
             onChange={setLeatherSelection}
             onClose={() => setMaterialLabOpen(false)}
           />

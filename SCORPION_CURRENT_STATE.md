@@ -441,3 +441,12 @@ Validated V0.26 characteristics:
 - Shared family geometry uses one mesh primitive to minimize model bytes and GPU geometry duplication while preserving per-product node identity.
 - Product-family material defaults now render through the same Structure × Dye × Finish compositor and UV/PBR renderer.
 - All generated non-hood geometry remains G1 approximate visual-preview geometry; catalog photography remains product authority and manufacturing dimensions must still be captured/validated separately.
+
+
+### V0.36 TypeScript integration correction
+
+- CI #690 stopped at TypeScript before any later release gates.
+- Root causes were integration-only: Material Lab reset used the full selection object as a structure id after the API change; generic component/animation maps inferred optional undefined keys; legacy `WeldingHoodViewer.tsx` still compiled against the old Material Lab prop.
+- Corrected Material Lab reset to pass the full default selection directly.
+- Generic viewer now constructs explicit `Record<string,string>` and `Record<string,boolean>` maps without optional-undefined union keys.
+- Legacy hood viewer was brought forward to the new `defaultSelection` prop contract so the repository compiles even though the app no longer imports it.

@@ -51,12 +51,19 @@ function ProductFamilyViewerComponent({ familyId, referenceId, personalization, 
     return overrides
   },[personalization.construction.hardware,leatherComposition.variant.id])
 
-  const componentOverrides=useMemo<Record<string,string>>(()=>familyId==='welding-hood'
-    ? {neckGuard:'standard'}
-    : {family:familyId},[familyId])
+  const componentOverrides=useMemo<Record<string,string>>(() => {
+    const overrides: Record<string,string> = {}
+    if (familyId === 'welding-hood') overrides.neckGuard = 'standard'
+    else overrides.family = familyId
+    return overrides
+  },[familyId])
 
   const customizationPreview=useMemo(()=>buildCustomizationPreview(asset.manifest,personalization,artwork),[asset.manifest,personalization,artwork])
-  const animationStates=useMemo(()=>familyId==='welding-hood'?{'visor.open':visorOpen}:{},[familyId,visorOpen])
+  const animationStates=useMemo<Record<string,boolean>>(() => {
+    const states: Record<string,boolean> = {}
+    if (familyId === 'welding-hood') states['visor.open'] = visorOpen
+    return states
+  },[familyId,visorOpen])
   const activeLeatherMaterial=scorpionMaterialById.get(leatherComposition.structure.materialId)
 
   return <div className={materialLabOpen?'viewer-panel is-material-lab-open':'viewer-panel'} aria-label="Interactive 3D product viewer">

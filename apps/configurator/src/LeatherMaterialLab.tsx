@@ -122,7 +122,7 @@ export function LeatherMaterialLab({
       <button
         type="button"
         className="material-lab__reset"
-        onClick={() => onChange({ structureId: defaultSelection, dyeId: 'captured', finishId: 'captured' })}
+        onClick={() => onChange(defaultSelection)}
       >
         Reset product preview
       </button>
