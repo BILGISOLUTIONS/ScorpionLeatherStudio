@@ -54,6 +54,21 @@ test('V0.39 builds a traceable provider-agnostic reconstruction handoff', async 
   await expect(page.locator('.execution-env span').filter({ hasText: 'MESHY_API_KEY' })).toBeVisible()
   await expect(page.getByText(/meshy_multi_image\.mjs/)).toBeVisible()
 
+  const jobText = await page.locator('.job-ready').locator('strong').first().textContent()
+  expect(jobText).toMatch(/^SLS-RECON-/u)
+  await page.getByLabel('Provider result metadata JSON').setInputFiles({
+    name: 'provider-result.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({
+      schemaVersion: 1,
+      provider: 'meshy',
+      jobId: jobText,
+      taskId: 'meshy-task-e2e',
+      status: 'SUCCEEDED',
+    })),
+  })
+  await expect(page.getByPlaceholder('Task ID, model ID, or URL (no secret tokens)')).toHaveValue('meshy-task-e2e')
+
   await page.getByLabel('Reconstruction candidate model').setInputFiles({
     name: 'welding-hood-raw.glb',
     mimeType: 'model/gltf-binary',
