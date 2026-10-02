@@ -199,3 +199,47 @@ export function buildProviderExecutionRecipe(job: ReconstructionJobForAdapter): 
     ],
   }
 }
+
+
+export interface ProviderResultMetadata {
+  schemaVersion: 1
+  provider: 'trellis2' | 'meshy'
+  jobId: string
+  outputFile?: string
+  taskId?: string
+  status?: string
+  [key: string]: unknown
+}
+
+export function parseProviderResultMetadata(
+  input: unknown,
+  job: Pick<ReconstructionJobForAdapter, 'jobId' | 'provider'>,
+): ProviderResultMetadata {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new Error('Provider metadata must be a JSON object.')
+  }
+  const record = input as Record<string, unknown>
+  if (record.schemaVersion !== 1) throw new Error('Unsupported provider metadata schema version.')
+  if (record.provider !== 'trellis2' && record.provider !== 'meshy') {
+    throw new Error('Provider metadata does not identify a supported automated reconstruction provider.')
+  }
+  if (record.provider !== job.provider.id) {
+    throw new Error('Provider metadata does not match the active reconstruction job provider.')
+  }
+  if (record.jobId !== job.jobId) {
+    throw new Error('Provider metadata job ID does not match the active reconstruction job.')
+  }
+  if (record.provider === 'meshy' && (typeof record.taskId !== 'string' || !record.taskId.trim())) {
+    throw new Error('Meshy provider metadata requires a task ID.')
+  }
+  return input as ProviderResultMetadata
+}
+
+export function providerResultReference(metadata: ProviderResultMetadata): string {
+  if (metadata.provider === 'meshy') return metadata.taskId?.trim() || ''
+  return [
+    metadata.provider,
+    metadata.jobId,
+    typeof metadata.outputFile === 'string' ? metadata.outputFile : '',
+  ].filter(Boolean).join(':')
+}
