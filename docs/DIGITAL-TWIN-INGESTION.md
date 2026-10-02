@@ -155,7 +155,7 @@ Default SLS production-candidate settings:
 - sparse structure: guidance 7.5 / rescale 0.7 / 12 steps / rescale T 5
 - shape: guidance 7.5 / rescale 0.5 / 12 steps / rescale T 3
 - material: guidance 1 / rescale 0 / 12 steps / rescale T 3
-- extraction face target: SLS web triangle target, clamped to the hosted TRELLIS.2 extraction range
+- extraction face target: SLS web triangle target, clamped to the current hosted TRELLIS.2 100,000-500,000 extraction range
 - texture: current SLS texture target, normalized to 1024 / 2048 / 4096
 
 Install once:
