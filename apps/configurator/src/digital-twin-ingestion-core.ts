@@ -296,6 +296,12 @@ export function recommendedReconstructionSourceKeys(
     return preferred ? [preferred] : fallback.slice(0, 1)
   }
 
+  if (providerId === 'meshy') {
+    // Meshy 7.1 treats the first source as the primary/front view.
+    const primaryFirst = ['front', 'rear', 'left', 'right', ...threeQuarter, ...fallback]
+    return [...new Set(primaryFirst.filter((key) => available.has(key)))].slice(0, profile.recommendedImageCount)
+  }
+
   const candidates = [...threeQuarter, ...cardinal, ...fallback]
   const unique = [...new Set(candidates)]
   return unique.slice(0, profile.recommendedImageCount)
