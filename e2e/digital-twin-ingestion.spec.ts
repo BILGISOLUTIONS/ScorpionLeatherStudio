@@ -38,7 +38,7 @@ test('V0.39 builds a traceable provider-agnostic reconstruction handoff', async 
   await expect(page.getByText('PHYSICAL PROVENANCE LOADED')).toBeVisible()
   await page.getByLabel('Reconstruction provider').selectOption('meshy')
 
-  for (const key of ['frontLeft45', 'rearRight45', 'frontRight45', 'rearLeft45']) {
+  for (const key of ['front', 'rear', 'left', 'right']) {
     await page.getByLabel(key + ' prepared image').setInputFiles({
       name: key + '-prepared.png',
       mimeType: 'image/png',
