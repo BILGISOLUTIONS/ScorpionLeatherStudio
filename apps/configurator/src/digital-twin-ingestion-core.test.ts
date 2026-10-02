@@ -70,10 +70,10 @@ describe('digital twin ingestion', () => {
     const packet = construction()
     expect(recommendedReconstructionSourceKeys(packet, 'trellis2')).toEqual(['frontLeft45'])
     expect(recommendedReconstructionSourceKeys(packet, 'meshy')).toEqual([
-      'frontLeft45',
-      'rearRight45',
-      'frontRight45',
-      'rearLeft45',
+      'front',
+      'rear',
+      'left',
+      'right',
     ])
   })
 
