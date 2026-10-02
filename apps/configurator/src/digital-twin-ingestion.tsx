@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { ProductConstructionPacket } from '@sls/product-capture'
-import { buildProviderExecutionRecipe } from './reconstruction-provider-adapters'
+import {
+  buildProviderExecutionRecipe,
+  parseProviderResultMetadata,
+  providerResultReference,
+} from './reconstruction-provider-adapters'
 import {
   buildDigitalTwinCandidatePacket,
   buildReconstructionJobPacket,
@@ -190,6 +194,18 @@ function DigitalTwinIngestionApp() {
       setStatus('Provider runner command copied. Credentials remain environment-only.')
     } catch {
       setStatus('Clipboard access was unavailable. Use the visible runner command instead.')
+    }
+  }
+
+  async function loadProviderMetadata(file: File | undefined) {
+    if (!file || !job) return
+    try {
+      const metadata = parseProviderResultMetadata(JSON.parse(await file.text()), job)
+      setResultReference(providerResultReference(metadata))
+      setCandidate(null)
+      setStatus('Provider result metadata matched to this reconstruction job.')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Provider result metadata could not be loaded.')
     }
   }
 
@@ -472,10 +488,26 @@ function DigitalTwinIngestionApp() {
             <strong>{modelFile?.name ?? 'Select provider output'}</strong>
             <small>{modelFile ? formatBytes(modelFile.size) : 'GLB preferred; GLTF / OBJ / FBX / PLY can enter cleanup before final GLB export.'}</small>
           </label>
-          <label>
-            Provider result / task reference
-            <input value={resultReference} disabled={!job} onChange={(event) => { setResultReference(event.target.value); setCandidate(null) }} placeholder="Task ID, model ID, or URL (no secret tokens)" />
-          </label>
+          <div className="provider-result-fields">
+            <label>
+              Provider result / task reference
+              <input value={resultReference} disabled={!job} onChange={(event) => { setResultReference(event.target.value); setCandidate(null) }} placeholder="Task ID, model ID, or URL (no secret tokens)" />
+            </label>
+            <label className="provider-result-import">
+              <input
+                aria-label="Provider result metadata JSON"
+                type="file"
+                accept=".json,application/json"
+                disabled={!job}
+                onChange={(event) => {
+                  void loadProviderMetadata(event.target.files?.[0])
+                  event.target.value = ''
+                }}
+              />
+              <span>Import runner metadata JSON</span>
+              <small>Matches provider + job ID before filling the result reference.</small>
+            </label>
+          </div>
         </div>
 
         <div className="rights-grid">
