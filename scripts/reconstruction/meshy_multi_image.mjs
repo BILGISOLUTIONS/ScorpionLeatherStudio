@@ -115,6 +115,7 @@ async function main() {
       geometry_resolution: geometryResolution,
       should_texture: true,
       enable_pbr: true,
+      remove_lighting: true,
       target_formats: ['glb'],
     }),
   })
