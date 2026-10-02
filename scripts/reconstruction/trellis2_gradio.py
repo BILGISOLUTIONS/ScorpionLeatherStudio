@@ -86,7 +86,7 @@ def main() -> int:
     resolution = args.resolution or (512 if intent == "draft" else 1536 if intent == "source-master" else 1024)
     requested = job.get("outputRequest") or {}
     faces = args.faces or int(requested.get("targetWebTriangles") or 150000)
-    faces = max(100000, min(1000000, int(round(faces / 10000) * 10000)))
+    faces = max(100000, min(500000, int(round(faces / 10000) * 10000)))
     texture = args.texture or int(requested.get("targetTextureEdge") or 2048)
     texture = 1024 if texture <= 1024 else 4096 if texture >= 4096 else 2048
     seed = args.seed if args.seed is not None else stable_seed(str(job["jobId"]))
