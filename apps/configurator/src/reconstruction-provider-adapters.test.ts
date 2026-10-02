@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildProviderExecutionRecipe, type ReconstructionJobForAdapter } from './reconstruction-provider-adapters'
+import {
+  buildProviderExecutionRecipe,
+  parseProviderResultMetadata,
+  providerResultReference,
+  type ReconstructionJobForAdapter,
+} from './reconstruction-provider-adapters'
 
 function job(providerId: ReconstructionJobForAdapter['provider']['id'], intent: ReconstructionJobForAdapter['intent'] = 'production-candidate'): ReconstructionJobForAdapter {
   return {
@@ -50,5 +55,23 @@ describe('reconstruction provider execution recipes', () => {
     const recipe = buildProviderExecutionRecipe(job('other'))
     expect(recipe.automation).toBe('manual')
     expect(recipe.command).toBeUndefined()
+  })
+
+  it('accepts provider metadata only for the exact active job', () => {
+    const active = job('meshy')
+    const metadata = parseProviderResultMetadata({
+      schemaVersion: 1,
+      provider: 'meshy',
+      jobId: active.jobId,
+      taskId: 'task-123',
+      status: 'SUCCEEDED',
+    }, active)
+    expect(providerResultReference(metadata)).toBe('task-123')
+    expect(() => parseProviderResultMetadata({
+      schemaVersion: 1,
+      provider: 'meshy',
+      jobId: 'wrong-job',
+      taskId: 'task-123',
+    }, active)).toThrow(/job ID/u)
   })
 })
