@@ -156,3 +156,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .pipeline-rail>div span{grid-row:1}
   .pipeline-rail>div strong{grid-column:2;grid-row:1}
 }
+
+.provider-result-fields{display:grid;gap:7px}
+.provider-result-fields>label:first-child{display:grid;gap:6px;color:#c9c0b1;font-size:.66rem;font-weight:700}
+.provider-result-import{position:relative;display:grid;gap:3px;padding:9px;border:1px dashed #42392d;background:#0c0c0a;color:#cbbfa9;cursor:pointer}
+.provider-result-import:hover{border-color:#79613b}
+.provider-result-import input{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none}
+.provider-result-import span{font-size:.64rem}
+.provider-result-import small{color:#7f786d;font-size:.59rem;line-height:1.4}
+@media(max-width:700px){
+  .provider-result-fields>label:first-child,.provider-result-import span{font-size:.73rem}
+  .provider-result-import small{font-size:.68rem}
+}
