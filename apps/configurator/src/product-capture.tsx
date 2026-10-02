@@ -246,6 +246,7 @@ function ProductCaptureAssistant() {
           <a href="/">Customer Studio</a>
           <a href="/capture.html">Material Capture</a>
           <a href="/materials.html">Material Lab</a>
+          <a href="/digital-twin-ingestion.html">3D Ingestion</a>
           <a href="/material-qa.html">Material QA</a>
         </nav>
       </header>

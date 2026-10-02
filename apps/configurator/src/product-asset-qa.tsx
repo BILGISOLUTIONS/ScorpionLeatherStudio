@@ -190,6 +190,7 @@ function AssetQaApp() {
         <nav aria-label="Studio tools">
           <a href="/">Customer Studio</a>
           <a href="/product-capture.html">Product Capture</a>
+          <a href="/digital-twin-ingestion.html">3D Ingestion</a>
           <a href="/material-qa.html">Material QA</a>
           <a href="/promote.html">Material Promotion</a>
         </nav>

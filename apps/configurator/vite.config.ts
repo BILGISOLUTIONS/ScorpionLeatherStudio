@@ -20,6 +20,7 @@ export default defineConfig({
         promote: fileURLToPath(new URL('./promote.html', import.meta.url)),
         productCapture: fileURLToPath(new URL('./product-capture.html', import.meta.url)),
         productAssetQa: fileURLToPath(new URL('./product-asset-qa.html', import.meta.url)),
+        digitalTwinIngestion: fileURLToPath(new URL('./digital-twin-ingestion.html', import.meta.url)),
       },
     },
   },

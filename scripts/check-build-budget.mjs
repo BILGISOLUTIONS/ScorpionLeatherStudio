@@ -74,6 +74,7 @@ const materialQaGraph = collectEntryGraph(findEntry('material-qa.html'))
 const promotionGraph = collectEntryGraph(findEntry('promote.html'))
 const productCaptureGraph = collectEntryGraph(findEntry('product-capture.html'))
 const productAssetQaGraph = collectEntryGraph(findEntry('product-asset-qa.html'))
+const digitalTwinIngestionGraph = collectEntryGraph(findEntry('digital-twin-ingestion.html'))
 const materialQaViewerGraph = collectEntryGraph(findChunk('src/MaterialQaViewer.tsx'))
 const productAssetQaViewerGraph = collectEntryGraph(findChunk('src/ProductAssetQaViewer.tsx'))
 
@@ -120,6 +121,11 @@ const PRODUCT_ASSET_QA_3D_RAW_LIMIT = 1100 * 1024
 const PRODUCT_ASSET_QA_3D_GZIP_LIMIT = 300 * 1024
 const PRODUCT_ASSET_QA_CSS_RAW_LIMIT = 38 * 1024
 const PRODUCT_ASSET_QA_CSS_GZIP_LIMIT = 12 * 1024
+
+const DIGITAL_TWIN_INGESTION_JS_RAW_LIMIT = 330 * 1024
+const DIGITAL_TWIN_INGESTION_JS_GZIP_LIMIT = 105 * 1024
+const DIGITAL_TWIN_INGESTION_CSS_RAW_LIMIT = 36 * 1024
+const DIGITAL_TWIN_INGESTION_CSS_GZIP_LIMIT = 12 * 1024
 
 const LAZY_CHUNK_RAW_LIMIT = 1100 * 1024
 const LAZY_CHUNK_GZIP_LIMIT = 300 * 1024
@@ -187,6 +193,11 @@ enforce('Product Asset QA CSS graph (gzip)', sumAssetSet(productAssetQaGraph.css
 enforce('Product Asset QA lazy 3D graph (raw)', sumAssetSet(productAssetQaViewerGraph.js, bytes), PRODUCT_ASSET_QA_3D_RAW_LIMIT)
 enforce('Product Asset QA lazy 3D graph (gzip)', sumAssetSet(productAssetQaViewerGraph.js, gzipBytes), PRODUCT_ASSET_QA_3D_GZIP_LIMIT)
 
+enforce('Digital Twin Ingestion initial JS graph (raw)', sumAssetSet(digitalTwinIngestionGraph.js, bytes), DIGITAL_TWIN_INGESTION_JS_RAW_LIMIT)
+enforce('Digital Twin Ingestion initial JS graph (gzip)', sumAssetSet(digitalTwinIngestionGraph.js, gzipBytes), DIGITAL_TWIN_INGESTION_JS_GZIP_LIMIT)
+enforce('Digital Twin Ingestion CSS graph (raw)', sumAssetSet(digitalTwinIngestionGraph.css, bytes), DIGITAL_TWIN_INGESTION_CSS_RAW_LIMIT)
+enforce('Digital Twin Ingestion CSS graph (gzip)', sumAssetSet(digitalTwinIngestionGraph.css, gzipBytes), DIGITAL_TWIN_INGESTION_CSS_GZIP_LIMIT)
+
 const jsFiles = files.filter((file) => file.endsWith('.js'))
 for (const file of jsFiles) {
   const path = join(assetDir, file)
@@ -237,6 +248,7 @@ console.log(`Material QA lazy 3D files: ${[...materialQaViewerGraph.js].join(', 
 console.log(`Material Promotion initial JS files: ${[...promotionGraph.js].join(', ')}`)
 console.log(`Product Capture initial JS files: ${[...productCaptureGraph.js].join(', ')}`)
 console.log(`Product Asset QA initial JS files: ${[...productAssetQaGraph.js].join(', ')}`)
+console.log(`Digital Twin Ingestion initial JS files: ${[...digitalTwinIngestionGraph.js].join(', ')}`)
 console.log(`Product Asset QA lazy 3D files: ${[...productAssetQaViewerGraph.js].join(', ')}`)
 console.log(`Emitted JS chunks: ${jsFiles.length}`)
 console.log('Performance budgets passed.')
