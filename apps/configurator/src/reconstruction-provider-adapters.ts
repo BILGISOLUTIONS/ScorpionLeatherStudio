@@ -49,7 +49,7 @@ function q(value: string): string {
 
 function boundedFaceTarget(value: number): number {
   if (!Number.isFinite(value)) return 150_000
-  return Math.max(100_000, Math.min(1_000_000, Math.round(value / 10_000) * 10_000))
+  return Math.max(100_000, Math.min(500_000, Math.round(value / 10_000) * 10_000))
 }
 
 function boundedTextureTarget(value: number): number {
@@ -169,6 +169,7 @@ export function buildProviderExecutionRecipe(job: ReconstructionJobForAdapter): 
         geometryResolution,
         shouldTexture: true,
         enablePbr: true,
+        removeLighting: true,
         targetFormat: 'glb',
       },
     }
