@@ -130,3 +130,79 @@ Use the leather welding hood first. It already has the deepest SLS contract cove
 - hardware/lens slots
 - customization-zone projection
 - mobile web performance
+
+
+## V0.40 executable provider adapters
+
+V0.40 keeps reconstruction execution off the customer runtime but makes two upstream provider paths reproducible from the exported SLS reconstruction job.
+
+### TRELLIS.2 runner
+
+Runner:
+
+\`scripts/reconstruction/trellis2_gradio.py\`
+
+The runner uses the same stateful Gradio client session for:
+
+1. \`/image_to_3d\`
+2. \`/extract_glb\`
+
+It consumes exactly one prepared source image from a \`provider.id=trellis2\` SLS job.
+
+Default SLS production-candidate settings:
+
+- resolution: 1024
+- sparse structure: guidance 7.5 / rescale 0.7 / 12 steps / rescale T 5
+- shape: guidance 7.5 / rescale 0.5 / 12 steps / rescale T 3
+- material: guidance 1 / rescale 0 / 12 steps / rescale T 3
+- extraction face target: SLS web triangle target, clamped to the hosted TRELLIS.2 extraction range
+- texture: current SLS texture target, normalized to 1024 / 2048 / 4096
+
+Install once:
+
+\`python -m pip install --upgrade gradio_client\`
+
+An optional \`HF_TOKEN\` environment variable can be used. It is never placed in the SLS job JSON.
+
+### Meshy Multi-Image runner
+
+Runner:
+
+\`scripts/reconstruction/meshy_multi_image.mjs\`
+
+The runner:
+
+1. reads the exact prepared images named by the SLS job;
+2. converts them locally to data URIs;
+3. creates \`POST /openapi/v1/multi-image-to-3d\`;
+4. polls \`GET /openapi/v1/multi-image-to-3d/:id\`;
+5. downloads \`model_urls.glb\` after \`SUCCEEDED\`;
+6. writes a sibling provider metadata JSON containing the task ID, status, timing and credit metadata.
+
+The API key is read only from \`MESHY_API_KEY\`.
+
+Default production-candidate settings:
+
+- \`ai_model: meshy-7.1\`
+- \`geometry_resolution: 2k\`
+- \`should_texture: true\`
+- \`enable_pbr: true\`
+- \`target_formats: ["glb"]\`
+
+Draft jobs default to \`standard\` geometry resolution to conserve provider cost.
+
+### Execution recipe
+
+After SLS creates a reconstruction job, Digital Twin Ingestion now renders and can export a provider execution recipe. The recipe records:
+
+- runner path
+- exact job filename
+- expected source filenames
+- expected output filename
+- one-time install commands
+- required/optional environment variables
+- provider settings
+- safe runner command
+- explicit assurance that credentials are not stored in the job
+
+Unvetted providers remain manual. SLS does not invent an API contract simply because a provider is listed.

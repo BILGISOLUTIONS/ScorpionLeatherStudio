@@ -20,6 +20,10 @@ jobs:
       - run: npm run typecheck
       - name: Check Blender authoring script syntax
         run: python3 -m py_compile scripts/blender/sls_asset_preflight.py
+      - name: Check reconstruction runner syntax
+        run: |
+          python3 -m py_compile scripts/reconstruction/trellis2_gradio.py
+          node --check scripts/reconstruction/meshy_multi_image.mjs
       - name: Generate deterministic G2 development twins
         run: npm run twins:generate
       - name: Verify deterministic G2 development twins

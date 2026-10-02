@@ -110,3 +110,49 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .pipeline-rail,.provenance-grid,.job-ready,.rights-grid,.handoff-flow{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+
+/* V0.40 — provider execution recipes + field/mobile readability */
+.execution-card{margin-top:9px;padding:12px;border:1px solid #3a3329;background:linear-gradient(115deg,rgba(154,111,49,.07),transparent 54%),#0b0b09}
+.execution-card.is-automated{border-color:#4d4937}
+.execution-card__heading{display:flex;align-items:start;justify-content:space-between;gap:16px}
+.execution-card__heading>div{display:grid;gap:3px;min-width:0}
+.execution-card__heading span{color:#b38f52;font-size:.55rem;font-weight:900;letter-spacing:.09em}
+.execution-card__heading strong{font-size:.78rem}
+.execution-card__heading small{color:#8e8679;font-size:.63rem;line-height:1.4}
+.execution-card__heading em{flex:0 0 auto;color:#8da07d;font-size:.58rem;font-style:normal}
+.execution-prereqs{display:grid;gap:5px;margin-top:9px}
+.execution-prereqs>span{color:#756d61;font-size:.55rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.execution-prereqs code,.execution-card pre{border:1px solid #2f2b24;background:#080808;color:#d5c7ad}
+.execution-prereqs code{display:block;padding:7px 8px;font-size:.62rem;overflow-wrap:anywhere}
+.execution-env{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.execution-env span{padding:5px 7px;border:1px solid #373127;background:#0e0d0b;color:#a29888;font-size:.58rem}
+.execution-env b{color:#c8ad78;font-weight:800}
+.execution-card pre{margin:9px 0 0;padding:9px;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.62rem;line-height:1.45}
+.execution-card ul{margin:8px 0 0;padding-left:18px;color:#8c8477;font-size:.62rem;line-height:1.45}
+.compact-actions{margin-top:8px}
+
+@media(max-width:700px){
+  .ingestion-header p:not(.eyebrow){font-size:.82rem}
+  .ingestion-header a,.button-link{min-height:44px;font-size:.76rem}
+  .authority-note{align-items:start;font-size:.75rem}
+  .pipeline-rail>div{min-height:58px}
+  .pipeline-rail strong{font-size:.75rem}
+  .section-heading h2{font-size:1.22rem}
+  .section-heading p{font-size:.75rem;line-height:1.5}
+  .drop-card>strong{font-size:.88rem}
+  .drop-card>small,.provider-card small,.provider-card ul,.source-toggle small,.prepared-file small,.not-used,.attestation small,.candidate-state span,.candidate-state small,.handoff-flow small,.execution-card__heading small,.execution-card ul{font-size:.68rem}
+  .job-controls label,.candidate-grid>label:not(.drop-card),.notes-field,.source-toggle strong,.prepared-file span,.rights-grid label,.attestation strong,.handoff-flow strong{font-size:.73rem}
+  .provenance-grid strong,.job-ready strong{font-size:.72rem}
+  .action-row button{min-height:44px;font-size:.73rem}
+  .execution-card__heading{display:grid;gap:6px}
+  .execution-card__heading em{justify-self:start}
+  .execution-prereqs code,.execution-card pre{font-size:.68rem}
+  .execution-env span{font-size:.64rem}
+}
+@media(max-width:520px){
+  .pipeline-rail{grid-template-columns:1fr}
+  .pipeline-rail>div{grid-template-columns:28px 1fr;align-items:center;min-height:48px}
+  .pipeline-rail>div span{grid-row:1}
+  .pipeline-rail>div strong{grid-column:2;grid-row:1}
+}

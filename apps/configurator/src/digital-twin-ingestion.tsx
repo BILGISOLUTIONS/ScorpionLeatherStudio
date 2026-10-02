@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { ProductConstructionPacket } from '@sls/product-capture'
+import { buildProviderExecutionRecipe } from './reconstruction-provider-adapters'
 import {
   buildDigitalTwinCandidatePacket,
   buildReconstructionJobPacket,
@@ -107,6 +108,10 @@ function DigitalTwinIngestionApp() {
     () => job && candidate ? evaluateDigitalTwinCandidate(job, candidate) : [],
     [job, candidate],
   )
+  const executionRecipe = useMemo(
+    () => job ? buildProviderExecutionRecipe(job) : null,
+    [job],
+  )
 
   async function loadConstruction(file: File | undefined) {
     if (!file) return
@@ -178,6 +183,16 @@ function DigitalTwinIngestionApp() {
     }
   }
 
+  async function copyRunnerCommand() {
+    if (!executionRecipe?.command) return
+    try {
+      await navigator.clipboard.writeText(executionRecipe.command)
+      setStatus('Provider runner command copied. Credentials remain environment-only.')
+    } catch {
+      setStatus('Clipboard access was unavailable. Use the visible runner command instead.')
+    }
+  }
+
   function createCandidate() {
     if (!job || !modelFile) return
     try {
@@ -218,7 +233,7 @@ function DigitalTwinIngestionApp() {
     <main className="ingestion-shell">
       <header className="ingestion-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.39</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.40</p>
           <h1>Digital Twin Ingestion</h1>
           <p>
             Turn controlled product photography into a traceable reconstruction candidate, then hand it to the
@@ -388,12 +403,46 @@ function DigitalTwinIngestionApp() {
         </div>
 
         {job ? (
-          <div className="job-ready">
-            <div><span>Job</span><strong>{job.jobId}</strong></div>
-            <div><span>Provider</span><strong>{job.provider.label}</strong></div>
-            <div><span>Inputs</span><strong>{job.sourceImages.length}</strong></div>
-            <div><span>Requested output</span><strong>GLB · ≤ {job.outputRequest.targetWebTriangles.toLocaleString()} web triangles after processing</strong></div>
-          </div>
+          <>
+            <div className="job-ready">
+              <div><span>Job</span><strong>{job.jobId}</strong></div>
+              <div><span>Provider</span><strong>{job.provider.label}</strong></div>
+              <div><span>Inputs</span><strong>{job.sourceImages.length}</strong></div>
+              <div><span>Requested output</span><strong>GLB · ≤ {job.outputRequest.targetWebTriangles.toLocaleString()} web triangles after processing</strong></div>
+            </div>
+            {executionRecipe ? (
+              <section className={executionRecipe.automation === 'automated' ? 'execution-card is-automated' : 'execution-card'} aria-label="Provider execution recipe">
+                <div className="execution-card__heading">
+                  <div>
+                    <span>{executionRecipe.automation === 'automated' ? 'LOCAL AUTOMATION READY' : 'MANUAL PROVIDER STEP'}</span>
+                    <strong>{executionRecipe.label}</strong>
+                    <small>{executionRecipe.summary}</small>
+                  </div>
+                  <em>{executionRecipe.credentialsStoredInJob ? 'Credential risk' : 'No credentials in job JSON'}</em>
+                </div>
+                {executionRecipe.installCommands.length ? (
+                  <div className="execution-prereqs">
+                    <span>One-time setup</span>
+                    {executionRecipe.installCommands.map((command) => <code key={command}>{command}</code>)}
+                  </div>
+                ) : null}
+                {executionRecipe.requiredEnvironment.length || executionRecipe.optionalEnvironment.length ? (
+                  <div className="execution-env">
+                    {executionRecipe.requiredEnvironment.map((name) => <span key={name}><b>Required env</b> {name}</span>)}
+                    {executionRecipe.optionalEnvironment.map((name) => <span key={name}><b>Optional env</b> {name}</span>)}
+                  </div>
+                ) : null}
+                {executionRecipe.command ? <pre><code>{executionRecipe.command}</code></pre> : null}
+                <ul>
+                  {executionRecipe.notes.map((note) => <li key={note}>{note}</li>)}
+                </ul>
+                <div className="action-row compact-actions">
+                  <button type="button" onClick={() => downloadJson(job.jobId.toLowerCase() + '-execution.json', executionRecipe)}>Download execution recipe</button>
+                  {executionRecipe.command ? <button type="button" onClick={() => void copyRunnerCommand()}>Copy runner command</button> : null}
+                </div>
+              </section>
+            ) : null}
+          </>
         ) : null}
       </section>
 

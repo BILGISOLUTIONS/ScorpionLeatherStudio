@@ -50,6 +50,9 @@ test('V0.39 builds a traceable provider-agnostic reconstruction handoff', async 
   await page.getByRole('button', { name: 'Create reconstruction job' }).click()
   await expect(page.getByText(/SLS-RECON-/)).toBeVisible()
   await expect(page.getByText('Meshy').last()).toBeVisible()
+  await expect(page.getByText('Meshy Multi-Image REST runner')).toBeVisible()
+  await expect(page.getByText('MESHY_API_KEY')).toBeVisible()
+  await expect(page.getByText(/meshy_multi_image\.mjs/)).toBeVisible()
 
   await page.getByLabel('Reconstruction candidate model').setInputFiles({
     name: 'welding-hood-raw.glb',
