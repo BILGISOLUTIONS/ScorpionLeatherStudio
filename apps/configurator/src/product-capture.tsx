@@ -845,6 +845,12 @@ function ProductCaptureAssistant() {
                       <small className="hash-line">
                         SHA-256 · {isSha256Hex(selected.sha256) ? selected.sha256.slice(0, 16) + '…' : 'legacy metadata — fingerprint on reattach'}
                       </small>
+                      <small className="quality-line">
+                        {selected.imageWidthPx && selected.imageHeightPx
+                          ? selected.imageWidthPx + '×' + selected.imageHeightPx + ' px · ' + ((selected.imageWidthPx * selected.imageHeightPx) / 1_000_000).toFixed(1) + ' MP'
+                          : 'Resolution not inspected yet'}
+                        {' · '}{selected.type || 'unknown format'}
+                      </small>
                     </>
                   ) : null}
                 </div>
