@@ -41,7 +41,7 @@ function completeSession(): ProductCaptureSession {
         size: 2_000_000,
         type: 'image/jpeg',
         lastModified: 2,
-        kind: 'required-view',
+        kind: 'supplemental-reference',
       },
     ],
     dimensions: weldingHoodCapturePlan.dimensionRequirements.map((requirement) => ({
@@ -101,7 +101,7 @@ describe('product capture validation', () => {
       size: 0,
       type: '',
       lastModified: 1,
-      kind: 'required-view',
+      kind: 'supplemental-reference',
     }]
     const paths = validateProductCapture(session, weldingHoodCapturePlan).map((entry) => entry.path)
     expect(paths).toContain('supplementalReferences.0.name')
