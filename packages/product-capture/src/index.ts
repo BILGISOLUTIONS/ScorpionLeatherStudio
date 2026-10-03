@@ -379,7 +379,7 @@ export function buildProductConstructionPacket(args: {
       kind: frame.kind,
       size: frame.size,
       lastModified: frame.lastModified,
-      sha256: frame.sha256,
+      ...(frame.sha256 ? { sha256: frame.sha256 } : {}),
     }))
     .sort((a, b) => a.key.localeCompare(b.key))
 
@@ -388,7 +388,7 @@ export function buildProductConstructionPacket(args: {
     size: frame.size,
     type: frame.type,
     lastModified: frame.lastModified,
-    sha256: frame.sha256,
+    ...(frame.sha256 ? { sha256: frame.sha256 } : {}),
   }))
 
   return {
