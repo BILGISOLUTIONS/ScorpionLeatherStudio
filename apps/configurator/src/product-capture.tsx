@@ -643,7 +643,7 @@ function ProductCaptureAssistant() {
     <main className="product-capture-shell">
       <header className="product-capture-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.45</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.46</p>
           <h1>Product Capture</h1>
           <p>
             Convert a real Scorpion product into a measured, evidence-backed construction specification before any
@@ -660,7 +660,7 @@ function ProductCaptureAssistant() {
       </header>
 
       <p className="local-note">
-        Local-first capture: selected photographs are never uploaded by this tool. SHA-256 fingerprints are computed locally and stored with draft metadata.
+        Local-first capture: selected photographs are never uploaded by this tool. SHA-256 fingerprints and image dimensions are inspected locally and stored with draft metadata.
         Source-photo bytes remain attached only for the current page session; after reload, the original files must be reattached and must match their saved fingerprints before export.
       </p>
 
