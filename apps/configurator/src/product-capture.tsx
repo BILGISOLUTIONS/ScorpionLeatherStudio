@@ -8,6 +8,13 @@ import {
   type CapturedReferenceFrame,
   type ProductCaptureSession,
 } from '@sls/product-capture'
+import {
+  hashFilesSequentially,
+  isSha256Hex,
+  reconcileReattachedReferenceSet,
+  sha256Hex,
+  verifyReattachedReference,
+} from './capture-integrity'
 import './product-capture.css'
 
 const STORAGE_KEY = 'scorpion-product-capture:v1'
@@ -143,6 +150,7 @@ function ProductCaptureAssistant() {
   const [session, setSession] = useState<ProductCaptureSession>(loadSession)
   const [referenceFiles, setReferenceFiles] = useState<Record<string, File>>({})
   const [supplementalFiles, setSupplementalFiles] = useState<File[]>([])
+  const [hashBusy, setHashBusy] = useState(false)
   const [bundleBusy, setBundleBusy] = useState(false)
   const [status, setStatus] = useState('Draft metadata stored locally. Source photo bytes remain attached only for this browser session.')
 
@@ -161,8 +169,12 @@ function ProductCaptureAssistant() {
   const selectedReferenceKeys = Object.keys(session.references)
   const attachedSelectedReferences = selectedReferenceKeys.filter((key) => Boolean(referenceFiles[key])).length
   const supplementalMetadataCount = session.supplementalReferences?.length ?? 0
+  const hashedSelectedReferences = selectedReferenceKeys.filter((key) => isSha256Hex(session.references[key]?.sha256)).length
+  const hashedSupplementalReferences = (session.supplementalReferences ?? []).filter((frame) => isSha256Hex(frame.sha256)).length
   const evidenceFilesAttached = attachedSelectedReferences === selectedReferenceKeys.length
     && supplementalFiles.length === supplementalMetadataCount
+  const evidenceFingerprintsComplete = hashedSelectedReferences === selectedReferenceKeys.length
+    && hashedSupplementalReferences === supplementalMetadataCount
   const requiredDimensions = weldingHoodCapturePlan.dimensionRequirements.filter((requirement) => requirement.required)
   const completeDimensions = requiredDimensions.filter((requirement) => {
     const value = session.dimensions.find((dimension) => dimension.id === requirement.id)?.valueMm
@@ -205,9 +217,9 @@ function ProductCaptureAssistant() {
       ready: confirmedMaterialSlots === requiredMaterialSlots.length,
     },
     {
-      label: 'Local source files attached',
-      detail: attachedRequiredReferences + ' / ' + requiredReferences.length + ' required files attached now · ' + supplementalFiles.length + ' supplemental.',
-      ready: attachedRequiredReferences === requiredReferences.length && evidenceFilesAttached,
+      label: 'Local source files verified',
+      detail: attachedRequiredReferences + ' / ' + requiredReferences.length + ' required files attached · ' + (hashedSelectedReferences + hashedSupplementalReferences) + ' fingerprints recorded.',
+      ready: attachedRequiredReferences === requiredReferences.length && evidenceFilesAttached && evidenceFingerprintsComplete,
     },
   ]
   const pilotReady = pilotSteps.every((step) => step.ready)
