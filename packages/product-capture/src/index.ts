@@ -5,6 +5,7 @@ export type ReferenceKind =
   | 'mechanical-state'
   | 'construction-detail'
   | 'measurement-reference'
+  | 'supplemental-reference'
 
 export interface ProductReferenceRequirement {
   key: string
