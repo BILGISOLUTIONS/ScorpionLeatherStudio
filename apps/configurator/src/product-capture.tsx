@@ -36,6 +36,7 @@ function defaultSession(): ProductCaptureSession {
     capturedAt: localDateTimeValue(),
     singlePhysicalUnitConfirmed: false,
     references: {},
+    supplementalReferences: [],
     dimensions: weldingHoodCapturePlan.dimensionRequirements.map((requirement) => ({
       id: requirement.id,
       label: requirement.label,
@@ -75,6 +76,7 @@ function normalizeSession(input: Partial<ProductCaptureSession>): ProductCapture
     schemaVersion: 1,
     capturePlanId: weldingHoodCapturePlan.id,
     references: input.references ?? {},
+    supplementalReferences: input.supplementalReferences ?? [],
     dimensions: weldingHoodCapturePlan.dimensionRequirements.map((requirement) => ({
       id: requirement.id,
       label: requirement.label,
@@ -112,8 +114,7 @@ function loadSession(): ProductCaptureSession {
   }
 }
 
-function downloadJson(filename: string, value: unknown) {
-  const blob = new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json' })
+function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
@@ -124,6 +125,15 @@ function downloadJson(filename: string, value: unknown) {
   URL.revokeObjectURL(url)
 }
 
+function downloadJson(filename: string, value: unknown) {
+  downloadBlob(filename, new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json' }))
+}
+
+function fileExtension(name: string) {
+  const match = name.toLowerCase().match(/(\.[a-z0-9]{1,8})$/u)
+  return match?.[1] ?? '.bin'
+}
+
 function safeFilePart(value: string, fallback: string) {
   const normalized = value.trim().replace(/[^a-z0-9-_]+/giu, '-').replace(/^-+|-+$/gu, '')
   return normalized || fallback
@@ -131,7 +141,10 @@ function safeFilePart(value: string, fallback: string) {
 
 function ProductCaptureAssistant() {
   const [session, setSession] = useState<ProductCaptureSession>(loadSession)
-  const [status, setStatus] = useState('Draft stored locally in this browser.')
+  const [referenceFiles, setReferenceFiles] = useState<Record<string, File>>({})
+  const [supplementalFiles, setSupplementalFiles] = useState<File[]>([])
+  const [bundleBusy, setBundleBusy] = useState(false)
+  const [status, setStatus] = useState('Draft metadata stored locally. Source photo bytes remain attached only for this browser session.')
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
@@ -144,6 +157,12 @@ function ProductCaptureAssistant() {
 
   const requiredReferences = weldingHoodCapturePlan.referenceRequirements.filter((requirement) => requirement.required)
   const capturedRequiredReferences = requiredReferences.filter((requirement) => Boolean(session.references[requirement.key])).length
+  const attachedRequiredReferences = requiredReferences.filter((requirement) => Boolean(referenceFiles[requirement.key])).length
+  const selectedReferenceKeys = Object.keys(session.references)
+  const attachedSelectedReferences = selectedReferenceKeys.filter((key) => Boolean(referenceFiles[key])).length
+  const supplementalMetadataCount = session.supplementalReferences?.length ?? 0
+  const evidenceFilesAttached = attachedSelectedReferences === selectedReferenceKeys.length
+    && supplementalFiles.length === supplementalMetadataCount
   const requiredDimensions = weldingHoodCapturePlan.dimensionRequirements.filter((requirement) => requirement.required)
   const completeDimensions = requiredDimensions.filter((requirement) => {
     const value = session.dimensions.find((dimension) => dimension.id === requirement.id)?.valueMm
@@ -184,6 +203,11 @@ function ProductCaptureAssistant() {
       label: 'Material surface contract',
       detail: requiredMaterialSlots.length + ' required material slots confirmed.',
       ready: confirmedMaterialSlots === requiredMaterialSlots.length,
+    },
+    {
+      label: 'Local source files attached',
+      detail: attachedRequiredReferences + ' / ' + requiredReferences.length + ' required files attached now · ' + supplementalFiles.length + ' supplemental.',
+      ready: attachedRequiredReferences === requiredReferences.length && evidenceFilesAttached,
     },
   ]
   const pilotReady = pilotSteps.every((step) => step.ready)
