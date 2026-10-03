@@ -148,6 +148,12 @@ describe('product capture validation', () => {
       assetId: 'sc-wh-001-v1',
       model: 'model.glb',
       rootNode: 'SLS_ProductRoot',
+      assetAuthority: {
+        lifecycle: 'production-candidate',
+        source: 'physical-capture',
+        sourceCaptureSessionId: 'SC-PROD-20260922-0001',
+        capturePlanId: 'scorpion-welding-hood-v1',
+      },
       materialSlotProfiles: {
         LeatherPrimary: { kind: 'leather', mapping: 'uv0', requiresUv0: true, metersPerUvUnit: 1 },
       },
