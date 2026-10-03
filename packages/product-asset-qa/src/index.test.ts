@@ -5,9 +5,11 @@ import {
   buildProductAssetQaApproval,
   defaultProductAssetQaPolicy,
   evaluateProductAssetQa,
+  parseProductAssetPreparationReport,
   productAssetReviewLabels,
   promoteProductAsset,
   type ProductAssetHumanReview,
+  type ProductAssetPreparationReport,
   type ProductAssetInspection,
 } from './index'
 
@@ -117,6 +119,51 @@ const lifecycles = {
   'SGL-001': 'production-approved',
 } as const
 
+
+const preparation: ProductAssetPreparationReport = {
+  schemaVersion: 1,
+  stage: 'raw-reconstruction-preparation',
+  candidateId: 'SLS-CAND-20261003-TEST01',
+  jobId: 'SLS-RECON-20261003-TEST01',
+  assetId: manifest.assetId,
+  productId: construction.productId,
+  sourceCaptureSessionId: construction.sourceCaptureSessionId,
+  sourceModelFile: 'sc-wh-001-v1-meshy.glb',
+  normalizedModelFile: inspection.modelFile.name,
+  productionApproved: false,
+  requiresDigitalTwinQa: true,
+  status: 'manual-authoring-required',
+  authority: {
+    uniformScaleOnly: true,
+    nonUniformGeometryCorrectionApplied: false,
+    realProductRemainsGeometryAuthority: true,
+    providerMaterialsRemainReferenceOnly: true,
+  },
+  physicalEnvelope: {
+    targetMeters: { width: 0.36, height: 0.67, depth: 0.325 },
+    beforeMeters: { width: 0.33, height: 0.64, depth: 0.31 },
+    afterMeters: { width: 0.36, height: 0.698, depth: 0.338 },
+    uniformScale: 1.09,
+    deviationRatios: { width: 0, height: 0.0418, depth: 0.04 },
+    toleranceRatio: 0.08,
+  },
+  geometry: {
+    trianglesBefore: 220000,
+    trianglesAfter: 84000,
+    targetTriangles: 150000,
+    meshCount: 12,
+  },
+  blockers: [],
+  authoringRequirements: [
+    { code: 'semantic_authoring_required', message: 'Semantic nodes required manual authoring.' },
+  ],
+  warnings: [
+    { code: 'automatic_decimation_applied', message: 'Conservative decimation applied.' },
+  ],
+  outputBytes: inspection.modelFile.sizeBytes,
+}
+
+
 function review(): ProductAssetHumanReview {
   return {
     reviewer: 'Asset Reviewer',
@@ -217,6 +264,41 @@ describe('product asset QA', () => {
     expect(issues.filter((entry) => entry.severity === 'error').length).toBeGreaterThanOrEqual(3)
   })
 
+  it('parses and links a valid V0.41 preparation report without treating historical authoring work as a current blocker', () => {
+    const parsed = parseProductAssetPreparationReport(JSON.parse(JSON.stringify(preparation)))
+    const issues = evaluateProductAssetQa({
+      construction,
+      manifest,
+      inspection,
+      preparationReport: parsed,
+      materialLifecycleById: lifecycles,
+    })
+
+    expect(issues.filter((entry) => entry.severity === 'error')).toEqual([])
+    expect(issues.some((entry) => entry.path === 'preparation.authoringRequirements' && entry.severity === 'warning')).toBe(true)
+  })
+
+  it('blocks preparation provenance from another capture lineage', () => {
+    const issues = evaluateProductAssetQa({
+      construction,
+      manifest,
+      inspection,
+      preparationReport: {
+        ...preparation,
+        sourceCaptureSessionId: 'SC-PROD-WRONG',
+      },
+      materialLifecycleById: lifecycles,
+    })
+    expect(issues.some((entry) => entry.path === 'preparation.sourceCaptureSessionId' && entry.severity === 'error')).toBe(true)
+  })
+
+  it('rejects a preparation report that claims production authority', () => {
+    expect(() => parseProductAssetPreparationReport({
+      ...preparation,
+      productionApproved: true,
+    })).toThrow(/must not claim production approval/u)
+  })
+
   it('requires every human QA check before approval', () => {
     const incomplete = review()
     incomplete.checks.mobilePerformance = false
@@ -258,5 +340,39 @@ describe('product asset QA', () => {
     expect(promoted.record.automaticRegistryMutation).toBe(false)
     expect(promoted.record.manifest.model).toBe('/assets/products/SC-WH-001/sc-wh-001-v1/model.glb')
     expect(promoted.assetPlacement.files).toHaveLength(4)
+  })
+
+  it('carries reconstruction preparation provenance through approval and production placement', () => {
+    const approval = buildProductAssetQaApproval({
+      construction,
+      manifest,
+      inspection,
+      preparationReport: preparation,
+      preparationReportFile: 'sc-wh-001-v1-normalized.prep.json',
+      review: review(),
+      materialLifecycleById: lifecycles,
+    })
+
+    expect(approval.preparation).toMatchObject({
+      candidateId: preparation.candidateId,
+      jobId: preparation.jobId,
+      reportFile: 'sc-wh-001-v1-normalized.prep.json',
+      authoringRequirementsReported: 1,
+    })
+
+    const promoted = promoteProductAsset({
+      construction,
+      manifest,
+      inspection,
+      approval,
+      promotedAt: '2026-09-24T09:30:00.000Z',
+    })
+
+    expect(promoted.record.reconstructionPreparation?.candidateId).toBe(preparation.candidateId)
+    expect(promoted.assetPlacement.files).toContainEqual({
+      kind: 'reconstruction-preparation',
+      source: 'sc-wh-001-v1-normalized.prep.json',
+      destination: '/assets/products/SC-WH-001/sc-wh-001-v1/reconstruction-preparation.json',
+    })
   })
 })
