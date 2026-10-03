@@ -174,3 +174,47 @@ The production hood asset is accepted only when:
 - visual performance remains smooth on a normal smartphone
 
 The current block model in V0.1/V0.2 is not a visual target. It exists only to exercise this contract.
+
+## V0.43 production-pilot authority gate
+
+The first real welding-hood onboarding now has an explicit lifecycle distinction between development geometry and a capture-derived production candidate.
+
+### Development placeholder
+
+The current built-in welding-hood model is explicitly tagged:
+
+- lifecycle: `development-placeholder`
+- authority source: `development-scaffold`
+
+It remains useful for renderer, material, customization-zone and interaction development, but Digital Twin QA now blocks it from production promotion regardless of how cleanly it renders.
+
+### Physical-capture candidate
+
+A manifest scaffold exported from Product Capture is explicitly tagged:
+
+- lifecycle: `production-candidate`
+- authority source: `physical-capture`
+- exact Product Capture session ID
+- exact capture-plan ID
+
+Digital Twin QA cross-checks those IDs against the loaded construction packet. A candidate from another hood/capture session cannot be silently combined with the current physical evidence.
+
+### One-unit capture attestation
+
+Product Capture now requires the operator to confirm that every measurement and photograph in the session belongs to one exact physical production hood. The exported construction packet records that attestation.
+
+This is intentionally stricter than merely having enough photographs. Mixing front photos from one hood with rear/interior/measurement evidence from another hood can create a plausible-looking but false digital twin.
+
+### Pilot readiness
+
+The Product Capture screen exposes five concrete readiness groups for the first hood:
+
+1. one exact physical production hood identified and attested;
+2. all required capture views/states/references present;
+3. all authoritative dimensions recorded;
+4. required semantic construction nodes confirmed;
+5. required material surface slots confirmed.
+
+Only after those are complete should the operator export the construction packet and production-candidate manifest, proceed through Digital Twin Ingestion/reconstruction, run V0.41 preparation, author/correct the final Blender asset, and submit the final GLB to Digital Twin QA.
+
+On successful QA promotion, the production manifest lifecycle is rewritten to `production-approved`. Development-scaffold authority can never be rewritten into production authority.
