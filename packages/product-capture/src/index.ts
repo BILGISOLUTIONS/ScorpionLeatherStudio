@@ -189,6 +189,30 @@ function validTimestamp(value: string): boolean {
   return nonEmpty(value) && Number.isFinite(Date.parse(value))
 }
 
+function validSha256(value: string): boolean {
+  return /^[a-f0-9]{64}$/u.test(value)
+}
+
+function validateReferenceMetadata(frame: CapturedReferenceFrame, prefix: string): ProductCaptureIssue[] {
+  const issues: ProductCaptureIssue[] = []
+  if (frame.sha256 !== undefined && !validSha256(frame.sha256)) {
+    issues.push(issue(prefix + '.sha256', 'SHA-256 fingerprint must be 64 lowercase hexadecimal characters.'))
+  }
+  const hasWidth = frame.imageWidthPx !== undefined
+  const hasHeight = frame.imageHeightPx !== undefined
+  if (hasWidth !== hasHeight) {
+    issues.push(issue(prefix + '.imageDimensions', 'Image width and height must be recorded together.'))
+  } else if (hasWidth && hasHeight && (
+    !Number.isFinite(frame.imageWidthPx)
+    || !Number.isFinite(frame.imageHeightPx)
+    || (frame.imageWidthPx ?? 0) <= 0
+    || (frame.imageHeightPx ?? 0) <= 0
+  )) {
+    issues.push(issue(prefix + '.imageDimensions', 'Image dimensions must be positive finite pixel values.'))
+  }
+  return issues
+}
+
 function duplicateValues(values: string[]): string[] {
   const seen = new Set<string>()
   const duplicates = new Set<string>()
@@ -241,6 +265,7 @@ export function validateProductCapture(
       if (frame.kind !== requirement.kind) {
         issues.push(issue(`references.${requirement.key}.kind`, 'Reference kind does not match the capture plan.'))
       }
+      issues.push(...validateReferenceMetadata(frame, `references.${requirement.key}`))
     }
   }
   for (const key of Object.keys(session.references)) {
@@ -260,6 +285,7 @@ export function validateProductCapture(
     if (!nonEmpty(frame.type)) {
       issues.push(issue(`${prefix}.type`, 'Supplemental reference media type is required.'))
     }
+    issues.push(...validateReferenceMetadata(frame, prefix))
   }
 
   const dimensionsById = new Map(session.dimensions.map((dimension) => [dimension.id, dimension]))
