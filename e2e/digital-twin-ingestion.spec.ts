@@ -87,6 +87,10 @@ test('V0.39 builds a traceable provider-agnostic reconstruction handoff', async 
   await page.getByRole('button', { name: 'Accept raw candidate' }).click()
   await expect(page.getByText('Raw reconstruction candidate recorded')).toBeVisible()
   await expect(page.getByText(/not production authority/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Raw reconstruction preparation' })).toBeVisible()
+  await expect(page.getByText(/sls_reconstruction_prepare\.py/)).toBeVisible()
+  await expect(page.getByText('sc-wh-001-v1-normalized.glb')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Copy Blender prep command' })).toBeVisible()
 
   const handoffDownload = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download Blender / QA handoff' }).click()

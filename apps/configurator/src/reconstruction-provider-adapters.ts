@@ -169,7 +169,11 @@ export function buildProviderExecutionRecipe(job: ReconstructionJobForAdapter): 
         geometryResolution,
         shouldTexture: true,
         enablePbr: true,
+        textureResolution: '2k',
+        imageEnhancement: false,
         removeLighting: true,
+        shouldRemesh: job.intent !== 'source-master',
+        targetPolycount: job.intent !== 'source-master' ? Math.max(100, Math.min(300000, job.outputRequest.targetWebTriangles)) : 0,
         targetFormat: 'glb',
       },
     }

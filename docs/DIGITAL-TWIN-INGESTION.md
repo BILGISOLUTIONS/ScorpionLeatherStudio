@@ -206,3 +206,40 @@ After SLS creates a reconstruction job, Digital Twin Ingestion now renders and c
 - explicit assurance that credentials are not stored in the job
 
 Unvetted providers remain manual. SLS does not invent an API contract simply because a provider is listed.
+
+
+## V0.41 raw reconstruction preparation
+
+Provider generation and SLS production QA are separated by a conservative preparation stage.
+
+Runner: scripts/blender/sls_reconstruction_prepare.py
+Planning policy: scripts/reconstruction/prep_policy.py
+
+The browser emits a deterministic Blender command after raw-candidate intake. It consumes the exact raw provider model plus the downloaded SLS processing handoff.
+
+### Automatic operations
+
+- import GLB/glTF/FBX/OBJ/PLY into a clean Blender scene;
+- remove imported cameras/lights that are not product geometry;
+- measure the world-space product envelope;
+- calculate one uniform physical scale against Product Capture dimensions;
+- center the product horizontally and place its lowest point on Blender ground;
+- create an identity SLS_ProductRoot;
+- apply conservative triangle decimation when the reduction ratio is not extreme;
+- preserve provider UV/material data as reconstruction reference;
+- export a normalized GLB and optionally save an editable Blender file;
+- emit a machine-readable preparation JSON report.
+
+### Operations that remain human-authoritative
+
+The batch step does not non-uniformly stretch the product to force a dimensional match. It does not guess semantic mesh names, material-slot ownership, hinge pivots, mechanical motion, tooling/text/logo zones, or Scorpion production materials.
+
+If uniform scaling cannot match the physical envelope within the SLS tolerance, the report marks manual geometry correction required. If reaching the triangle target would retain less than 8 percent of the raw triangles, automatic destructive decimation is skipped and manual retopology is required.
+
+The report records physical envelope before/after, uniform scale, per-axis deviation, triangle counts, mesh/UV/material/texture diagnostics, missing semantic nodes, unresolved material slots, web-budget violations, blockers, manual authoring requirements, and warnings. It always states productionApproved false and requiresDigitalTwinQa true.
+
+The normalized GLB must still pass the existing Blender asset preflight, Digital Twin QA automated gate, diagnostic views, and named human fidelity review.
+
+### Meshy production-candidate refinement
+
+Meshy production candidates and drafts now ask the provider to remesh to the SLS requested web target, clamped to the current 100-300,000 target-polycount range. Source-master intent keeps provider remeshing off. Texture resolution is 2K, image enhancement is disabled because SLS inputs are already controlled prepared captures, and lighting removal remains enabled. SLS still measures the actual returned model because provider target counts are not guarantees.

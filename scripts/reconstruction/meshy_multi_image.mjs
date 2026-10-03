@@ -77,6 +77,8 @@ async function main() {
   if (sources.length < 1 || sources.length > 4) throw new Error('Meshy Multi-Image runner requires 1-4 prepared source images.')
 
   const geometryResolution = args.geometryResolution || (job.intent === 'draft' ? 'standard' : '2k')
+  const targetPolycount = Math.max(100, Math.min(300000, Math.round(Number(job?.outputRequest?.targetWebTriangles || 150000))))
+  const shouldRemesh = job.intent !== 'source-master'
   const sourcePaths = sources.map((source) => resolve(args.inputDir, source.preparedFileName))
   const plan = {
     endpoint: API_ROOT,
@@ -86,6 +88,10 @@ async function main() {
     geometryResolution,
     shouldTexture: true,
     enablePbr: true,
+    shouldRemesh,
+    targetPolycount: shouldRemesh ? targetPolycount : null,
+    textureResolution: '2k',
+    imageEnhancement: false,
     targetFormats: ['glb'],
     output: resolve(args.output),
     apiKeyConfigured: Boolean(process.env.MESHY_API_KEY),
@@ -115,7 +121,12 @@ async function main() {
       geometry_resolution: geometryResolution,
       should_texture: true,
       enable_pbr: true,
+      texture_resolution: '2k',
+      image_enhancement: false,
       remove_lighting: true,
+      should_remesh: shouldRemesh,
+      topology: 'triangle',
+      ...(shouldRemesh ? { target_polycount: targetPolycount } : {}),
       target_formats: ['glb'],
     }),
   })
@@ -161,6 +172,10 @@ async function main() {
     finishedAt: task.finished_at,
     expiresAt: task.expires_at,
     geometryResolution,
+    shouldRemesh,
+    targetPolycount: shouldRemesh ? targetPolycount : null,
+    textureResolution: '2k',
+    imageEnhancement: false,
     outputFile: basename(output),
   }
   await writeFile(metadataPath, JSON.stringify(metadata, null, 2) + '\n', 'utf8')

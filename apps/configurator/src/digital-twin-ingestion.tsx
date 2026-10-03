@@ -6,6 +6,7 @@ import {
   parseProviderResultMetadata,
   providerResultReference,
 } from './reconstruction-provider-adapters'
+import { buildReconstructionPrepRecipe } from './reconstruction-prep-recipe'
 import {
   buildDigitalTwinCandidatePacket,
   buildReconstructionJobPacket,
@@ -116,6 +117,10 @@ function DigitalTwinIngestionApp() {
     () => job ? buildProviderExecutionRecipe(job) : null,
     [job],
   )
+  const prepRecipe = useMemo(
+    () => candidate ? buildReconstructionPrepRecipe(candidate) : null,
+    [candidate],
+  )
 
   async function loadConstruction(file: File | undefined) {
     if (!file) return
@@ -209,6 +214,16 @@ function DigitalTwinIngestionApp() {
     }
   }
 
+  async function copyPrepCommand() {
+    if (!prepRecipe) return
+    try {
+      await navigator.clipboard.writeText(prepRecipe.command)
+      setStatus('Blender reconstruction-preparation command copied.')
+    } catch {
+      setStatus('Clipboard access was unavailable. Use the visible preparation command instead.')
+    }
+  }
+
   function createCandidate() {
     if (!job || !modelFile) return
     try {
@@ -249,7 +264,7 @@ function DigitalTwinIngestionApp() {
     <main className="ingestion-shell">
       <header className="ingestion-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.40</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.41</p>
           <h1>Digital Twin Ingestion</h1>
           <p>
             Turn controlled product photography into a traceable reconstruction candidate, then hand it to the
@@ -577,6 +592,30 @@ function DigitalTwinIngestionApp() {
           <button type="button" disabled={!candidate} onClick={downloadHandoff}>Download Blender / QA handoff</button>
           <a className={candidate ? 'button-link is-ready' : 'button-link is-disabled'} href={candidate ? '/product-asset-qa.html' : undefined}>Open Digital Twin QA</a>
         </div>
+        {prepRecipe ? (
+          <section className="prep-card" aria-label="Raw reconstruction preparation">
+            <div className="prep-card__heading">
+              <div>
+                <span>V0.41 · NORMALIZE BEFORE AUTHORING</span>
+                <strong>Raw reconstruction preparation</strong>
+                <small>Uniform physical scale, origin cleanup, bounded geometry reduction, and blocker reporting. No semantic parts or product construction are guessed.</small>
+              </div>
+              <em>Not production approval</em>
+            </div>
+            <div className="prep-files">
+              <div><span>Input</span><strong>{prepRecipe.sourceModelFile}</strong></div>
+              <div><span>Handoff</span><strong>{prepRecipe.handoffFile}</strong></div>
+              <div><span>Normalized GLB</span><strong>{prepRecipe.normalizedModelFile}</strong></div>
+              <div><span>Editable source</span><strong>{prepRecipe.blenderFile}</strong></div>
+            </div>
+            <pre><code>{prepRecipe.command}</code></pre>
+            <ul>{prepRecipe.notes.map((note) => <li key={note}>{note}</li>)}</ul>
+            <div className="action-row compact-actions">
+              <button type="button" onClick={() => downloadJson(prepRecipe.assetId + '-prep-recipe.json', prepRecipe)}>Download prep recipe</button>
+              <button type="button" onClick={() => void copyPrepCommand()}>Copy Blender prep command</button>
+            </div>
+          </section>
+        ) : null}
       </section>
 
       <p className="status-line" role="status">{status}</p>
