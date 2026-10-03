@@ -474,6 +474,8 @@ function ProductCaptureAssistant() {
         type: string
         lastModified: number
         sha256: string
+        imageWidthPx?: number
+        imageHeightPx?: number
       }> = []
       const supplementalIndex: Array<{
         archivePath: string
