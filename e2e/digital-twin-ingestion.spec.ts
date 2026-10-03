@@ -26,7 +26,7 @@ const construction = {
   ],
 }
 
-test('V0.39 builds a traceable provider-agnostic reconstruction handoff', async ({ page }, testInfo) => {
+test('V0.41 builds a traceable provider-agnostic reconstruction and preparation handoff', async ({ page }, testInfo) => {
   await page.goto('/digital-twin-ingestion.html')
 
   await page.getByLabel('Construction packet JSON').setInputFiles({
@@ -89,7 +89,7 @@ test('V0.39 builds a traceable provider-agnostic reconstruction handoff', async 
   await expect(page.getByText(/not production authority/)).toBeVisible()
   await expect(page.getByRole('region', { name: 'Raw reconstruction preparation' })).toBeVisible()
   await expect(page.getByText(/sls_reconstruction_prepare\.py/)).toBeVisible()
-  await expect(page.getByText('sc-wh-001-v1-normalized.glb')).toBeVisible()
+  await expect(page.getByText('sc-wh-001-v1-normalized.glb', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Copy Blender prep command' })).toBeVisible()
 
   const handoffDownload = page.waitForEvent('download')
@@ -98,6 +98,6 @@ test('V0.39 builds a traceable provider-agnostic reconstruction handoff', async 
   expect(download.suggestedFilename()).toMatch(/processing-handoff\.json$/u)
 
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
-  await page.screenshot({ path: 'playwright-output/screenshots/v039-ingestion-' + testInfo.project.name + '.png', fullPage: true })
+  await page.screenshot({ path: 'playwright-output/screenshots/v041-ingestion-' + testInfo.project.name + '.png', fullPage: true })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
