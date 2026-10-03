@@ -1097,12 +1097,16 @@ function ProductCaptureAssistant() {
 
         <div className={pilotReady ? 'bundle-state is-ready' : 'bundle-state'}>
           <div>
-            <strong>{pilotReady ? 'Field evidence ZIP is ready' : 'Field evidence ZIP still needs live source files'}</strong>
+            <strong>{qualityReport.blockers.length
+              ? 'Field evidence ZIP blocked by quality preflight'
+              : pilotReady
+                ? 'Field evidence ZIP is ready'
+                : 'Field evidence ZIP still needs capture / verification'}</strong>
             <p>
-              The bundle contains the actual attached photographs plus capture session, validated construction packet, production-candidate manifest scaffold and deterministic file index. Photos never leave this browser except through your download.
+              The bundle contains the actual attached photographs plus capture session, validated construction packet, production-candidate manifest scaffold, quality summary and deterministic file index. Advisory warnings do not block export; objective evidence-quality blockers do.
             </p>
           </div>
-          <span>{attachedSelectedReferences + supplementalFiles.length} source file{attachedSelectedReferences + supplementalFiles.length === 1 ? '' : 's'} attached · ZIP store mode · no recompression</span>
+          <span>{attachedSelectedReferences + supplementalFiles.length} source file{attachedSelectedReferences + supplementalFiles.length === 1 ? '' : 's'} attached · {qualityReport.warnings.length} quality warning{qualityReport.warnings.length === 1 ? '' : 's'} · ZIP store mode</span>
         </div>
 
         <div className="export-actions">
