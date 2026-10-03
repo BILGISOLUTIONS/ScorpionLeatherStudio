@@ -714,7 +714,7 @@ function ProductCaptureAssistant() {
           <div><span>Cautious formats</span><strong>{qualityReport.cautiousFormatImages}</strong><small>JPEG / PNG / WebP preferred</small></div>
         </div>
         {qualityReport.blockers.length || qualityReport.warnings.length ? (
-          <details className="quality-findings">
+          <details className="quality-findings" open={qualityReport.blockers.length > 0}>
             <summary>Review quality findings</summary>
             <ul>
               {[...qualityReport.blockers, ...qualityReport.warnings].slice(0, 12).map((finding, index) => (
