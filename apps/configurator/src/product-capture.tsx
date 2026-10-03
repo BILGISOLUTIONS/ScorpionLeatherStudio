@@ -461,7 +461,7 @@ function ProductCaptureAssistant() {
     <main className="product-capture-shell">
       <header className="product-capture-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.43</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.44</p>
           <h1>Product Capture</h1>
           <p>
             Convert a real Scorpion product into a measured, evidence-backed construction specification before any
@@ -478,8 +478,8 @@ function ProductCaptureAssistant() {
       </header>
 
       <p className="local-note">
-        Local-first capture: selected photographs are not uploaded by this tool. Only filename/size metadata is stored
-        in the browser draft and JSON export.
+        Local-first capture: selected photographs are never uploaded by this tool. Draft metadata persists in this browser,
+        but source-photo bytes remain attached only for the current page session and must be reattached after a reload before a field evidence ZIP can be built.
       </p>
 
       <section className="capture-metrics" aria-label="Capture readiness">
@@ -487,6 +487,7 @@ function ProductCaptureAssistant() {
         <div><span>Required views</span><strong>{capturedRequiredReferences} / {requiredReferences.length}</strong></div>
         <div><span>Dimensions</span><strong>{completeDimensions} / {requiredDimensions.length}</strong></div>
         <div><span>Semantic nodes</span><strong>{confirmedNodes} / {requiredNodes.length}</strong></div>
+        <div><span>Files attached now</span><strong>{attachedSelectedReferences + supplementalFiles.length} / {selectedReferenceKeys.length + supplementalMetadataCount}</strong></div>
       </section>
 
       <section className={pilotReady ? 'pilot-readiness is-ready' : 'pilot-readiness'} aria-label="First welding hood production pilot">
@@ -496,7 +497,7 @@ function ProductCaptureAssistant() {
             <strong>Scorpion leather welding hood</strong>
             <small>The current customer Studio hood remains a development placeholder until a physical-capture candidate passes the complete reconstruction and QA chain.</small>
           </div>
-          <em>{pilotReady ? 'Capture package ready' : pilotSteps.filter((step) => step.ready).length + ' / ' + pilotSteps.length + ' ready'}</em>
+          <em>{pilotReady ? 'Field evidence bundle ready' : pilotSteps.filter((step) => step.ready).length + ' / ' + pilotSteps.length + ' ready'}</em>
         </div>
         <div className="pilot-checklist">
           {pilotSteps.map((step) => (
@@ -508,7 +509,7 @@ function ProductCaptureAssistant() {
           ))}
         </div>
         <p>
-          A generated manifest scaffold is tagged <b>production-candidate / physical-capture</b>. Development placeholder manifests are explicitly blocked from production promotion in Digital Twin QA.
+          A generated manifest scaffold is tagged <b>production-candidate / physical-capture</b>. The field bundle keeps the actual source images beside the capture/construction metadata; development placeholder manifests remain blocked from production promotion.
         </p>
       </section>
 
