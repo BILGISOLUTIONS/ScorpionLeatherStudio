@@ -15,6 +15,12 @@ import {
   sha256Hex,
   verifyReattachedReference,
 } from './capture-integrity'
+import {
+  captureQualityPolicy,
+  evaluateCaptureQuality,
+  inspectImageDimensions,
+  type CaptureImageInspection,
+} from './capture-quality'
 import './product-capture.css'
 
 const STORAGE_KEY = 'scorpion-product-capture:v1'
@@ -146,6 +152,23 @@ function safeFilePart(value: string, fallback: string) {
   return normalized || fallback
 }
 
+function formatBytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return '0 B'
+  if (value >= 1024 ** 3) return (value / 1024 ** 3).toFixed(1) + ' GB'
+  if (value >= 1024 ** 2) return (value / 1024 ** 2).toFixed(1) + ' MB'
+  if (value >= 1024) return Math.round(value / 1024) + ' KB'
+  return Math.round(value) + ' B'
+}
+
+function withInspection(frame: CapturedReferenceFrame, inspection: CaptureImageInspection): CapturedReferenceFrame {
+  if (!inspection.inspectable || !inspection.widthPx || !inspection.heightPx) return frame
+  return {
+    ...frame,
+    imageWidthPx: inspection.widthPx,
+    imageHeightPx: inspection.heightPx,
+  }
+}
+
 function ProductCaptureAssistant() {
   const [session, setSession] = useState<ProductCaptureSession>(loadSession)
   const [referenceFiles, setReferenceFiles] = useState<Record<string, File>>({})
@@ -190,6 +213,27 @@ function ProductCaptureAssistant() {
     const slot = session.materialSlots.find((entry) => entry.slotId === requirement.slotId)
     return slot?.status === 'confirmed' && Boolean(slot.materialId?.trim())
   }).length
+
+  const qualitySources = useMemo(() => {
+    const roleSources = weldingHoodCapturePlan.referenceRequirements.flatMap((requirement) => {
+      const frame = session.references[requirement.key]
+      return frame ? [{
+        id: 'reference:' + requirement.key,
+        label: requirement.label,
+        required: requirement.required,
+        frame,
+      }] : []
+    })
+    const supplementalSources = (session.supplementalReferences ?? []).map((frame, index) => ({
+      id: 'supplemental:' + index,
+      label: 'Supplemental ' + String(index + 1).padStart(3, '0'),
+      required: false,
+      frame,
+    }))
+    return [...roleSources, ...supplementalSources]
+  }, [session.references, session.supplementalReferences])
+
+  const qualityReport = useMemo(() => evaluateCaptureQuality(qualitySources), [qualitySources])
   const pilotSteps = [
     {
       label: 'One physical production hood',
@@ -220,6 +264,11 @@ function ProductCaptureAssistant() {
       label: 'Local source files verified',
       detail: attachedRequiredReferences + ' / ' + requiredReferences.length + ' required files attached · ' + (hashedSelectedReferences + hashedSupplementalReferences) + ' fingerprints recorded.',
       ready: attachedRequiredReferences === requiredReferences.length && evidenceFilesAttached && evidenceFingerprintsComplete,
+    },
+    {
+      label: 'Capture quality preflight',
+      detail: qualityReport.blockers.length + ' blocker · ' + qualityReport.warnings.length + ' warning · ' + qualityReport.sourceCount + ' source images.',
+      ready: qualityReport.ready,
     },
   ]
   const pilotReady = pilotSteps.every((step) => step.ready)
