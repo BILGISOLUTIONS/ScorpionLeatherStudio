@@ -5,7 +5,7 @@ test.beforeAll(async () => {
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
 })
 
-test('V0.43 Product Capture gates the first physical welding-hood pilot and exports capture authority', async ({ page }, testInfo) => {
+test('V0.44 Product Capture exports the real field evidence set and detects detached source bytes', async ({ page }, testInfo) => {
   const scriptRequests: string[] = []
   const consoleErrors: string[] = []
 
@@ -19,6 +19,7 @@ test('V0.43 Product Capture gates the first physical welding-hood pilot and expo
 
   await page.goto('/product-capture.html')
   await expect(page.getByRole('heading', { name: 'Product Capture' })).toBeVisible()
+  expect(scriptRequests.some((url) => url.includes('capture-bundle'))).toBe(false)
 
   await page.getByLabel('Product ID').fill('SC-WH-001')
   await page.getByLabel('Capture operator').fill('QA Capture Operator')
@@ -78,6 +79,12 @@ test('V0.43 Product Capture gates the first physical welding-hood pilot and expo
     })
   }
 
+  await page.getByLabel('Supplemental reconstruction photos').setInputFiles([
+    { name: 'supplemental-a.jpg', mimeType: 'image/jpeg', buffer: jpeg },
+    { name: 'supplemental-b.jpg', mimeType: 'image/jpeg', buffer: jpeg },
+  ])
+  await expect(page.getByText(/2 supplemental metadata files/)).toBeVisible()
+
   for (const label of ['Product root', 'Main leather shell', 'Visor pivot', 'Visor frame', 'Visor lens']) {
     await page.getByRole('checkbox', { name: 'Confirm ' + label, exact: true }).check()
   }
@@ -117,6 +124,7 @@ test('V0.43 Product Capture gates the first physical welding-hood pilot and expo
     constructionNodes: Array<{ status: string }>
     materialSlots: Array<{ slotId: string; status: string }>
     provenance: { singlePhysicalUnitConfirmed?: true }
+    supplementalReferenceCoverage?: Array<{ name: string; size: number; type: string }>
   }
 
   expect(packet.productId).toBe('SC-WH-001')
@@ -126,6 +134,11 @@ test('V0.43 Product Capture gates the first physical welding-hood pilot and expo
   expect(packet.provenance.singlePhysicalUnitConfirmed).toBe(true)
   expect(packet.dimensionsMm.maxWidth).toBe(100)
   expect(packet.referenceCoverage).toHaveLength(18)
+  expect(packet.supplementalReferenceCoverage).toHaveLength(2)
+  expect(packet.supplementalReferenceCoverage?.map((entry) => entry.name)).toEqual([
+    'supplemental-a.jpg',
+    'supplemental-b.jpg',
+  ])
   expect(packet.constructionNodes.every((node) => node.status === 'confirmed')).toBe(true)
   expect(packet.materialSlots).toHaveLength(3)
   expect(packet.materialSlots.every((slot) => slot.status === 'confirmed')).toBe(true)
@@ -165,16 +178,42 @@ test('V0.43 Product Capture gates the first physical welding-hood pilot and expo
 
   expect(scriptRequests.some((url) => url.includes('three-renderer') || url.includes('three.module.js'))).toBe(false)
   expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
-  expect(consoleErrors, 'Product Capture console errors: ' + consoleErrors.join('\n')).toEqual([])
 
-  await expect(pilot.getByText('Capture package ready')).toBeVisible()
+  await expect(pilot.getByText('Field evidence bundle ready')).toBeVisible()
+  const bundleButton = page.getByRole('button', { name: 'Download field evidence bundle (.zip)' })
+  await expect(bundleButton).toBeEnabled()
+  expect(scriptRequests.some((url) => url.includes('capture-bundle'))).toBe(false)
+
+  const [bundleDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    bundleButton.click(),
+  ])
+  expect(bundleDownload.suggestedFilename()).toMatch(/^SC-WH-001-SC-PROD-.*-field-evidence\.zip$/u)
+  const bundlePath = await bundleDownload.path()
+  expect(bundlePath).not.toBeNull()
+  const bundleBytes = await fs.readFile(bundlePath!)
+  expect([...bundleBytes.subarray(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04])
+  const bundleText = bundleBytes.toString('utf8')
+  expect(bundleText).toContain('metadata/capture-bundle-index.json')
+  expect(bundleText).toContain('metadata/construction-packet.json')
+  expect(bundleText).toContain('references/01-front.jpg')
+  expect(bundleText).toContain('supplemental/001-supplemental-a.jpg')
+  expect(bundleText).toContain('\"bundleType\": \"sls-product-capture-evidence\"')
+  await expect.poll(() => scriptRequests.some((url) => url.includes('capture-bundle'))).toBe(true)
 
   const screenshotName = testInfo.project.name.includes('mobile')
-    ? 'product-capture-v043-mobile.png'
-    : 'product-capture-v043-desktop.png'
+    ? 'product-capture-v044-mobile.png'
+    : 'product-capture-v044-desktop.png'
 
   await page.screenshot({
     path: 'playwright-output/screenshots/' + screenshotName,
     fullPage: true,
   })
+
+  await page.reload()
+  await expect(page.getByText(/metadata only — reattach source/).first()).toBeVisible()
+  await expect(page.getByText(/Source bytes are not attached in this browser session/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Download field evidence bundle (.zip)' })).toBeDisabled()
+
+  expect(consoleErrors, 'Product Capture console errors: ' + consoleErrors.join('\n')).toEqual([])
 })
