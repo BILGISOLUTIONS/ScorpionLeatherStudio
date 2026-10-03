@@ -281,6 +281,9 @@ export function validateAssetManifest(
     if (authority.lifecycle === 'development-placeholder' && authority.source !== 'development-scaffold') {
       issues.push({ path: 'assetAuthority', message: 'Development-placeholder assets must identify development-scaffold authority.' })
     }
+    if (authority.lifecycle !== 'development-placeholder' && authority.source === 'development-scaffold') {
+      issues.push({ path: 'assetAuthority', message: 'Development-scaffold authority cannot be labeled as a production candidate or production-approved asset.' })
+    }
     if (authority.source === 'physical-capture') {
       if (!authority.sourceCaptureSessionId?.trim()) {
         issues.push({ path: 'assetAuthority.sourceCaptureSessionId', message: 'Physical-capture assets require a capture-session ID.' })
