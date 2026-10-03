@@ -25,7 +25,7 @@ test('V0.44 Product Capture exports the real field evidence set and detects deta
   await page.getByLabel('Capture operator').fill('QA Capture Operator')
   const pilot = page.getByRole('region', { name: 'First welding hood production pilot' })
   await expect(pilot).toBeVisible()
-  await expect(pilot.getByText(/development placeholder/)).toBeVisible()
+  await expect(pilot.getByText('The current customer Studio hood remains a development placeholder until a physical-capture candidate passes the complete reconstruction and QA chain.')).toBeVisible()
   await page.getByLabel('Confirm one exact physical production unit').check()
 
   const dimensionLabels = [
