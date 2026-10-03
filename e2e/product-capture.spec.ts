@@ -5,7 +5,7 @@ test.beforeAll(async () => {
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
 })
 
-test('Product Capture gates reconstruction on physical evidence and exports a construction packet', async ({ page }, testInfo) => {
+test('V0.43 Product Capture gates the first physical welding-hood pilot and exports capture authority', async ({ page }, testInfo) => {
   const scriptRequests: string[] = []
   const consoleErrors: string[] = []
 
@@ -22,6 +22,10 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
 
   await page.getByLabel('Product ID').fill('SC-WH-001')
   await page.getByLabel('Capture operator').fill('QA Capture Operator')
+  const pilot = page.getByRole('region', { name: 'First welding hood production pilot' })
+  await expect(pilot).toBeVisible()
+  await expect(pilot.getByText(/development placeholder/)).toBeVisible()
+  await page.getByLabel('Confirm one exact physical production unit').check()
 
   const dimensionLabels = [
     'Maximum width millimeters',
@@ -112,12 +116,14 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
     referenceCoverage: Array<{ key: string }>
     constructionNodes: Array<{ status: string }>
     materialSlots: Array<{ slotId: string; status: string }>
+    provenance: { singlePhysicalUnitConfirmed?: true }
   }
 
   expect(packet.productId).toBe('SC-WH-001')
   expect(packet.sourceCaptureSessionId).toMatch(/^SC-PROD-/)
   expect(packet.status).toBe('ready-for-digital-twin-reconstruction')
   expect(packet.automaticAssetMutation).toBe(false)
+  expect(packet.provenance.singlePhysicalUnitConfirmed).toBe(true)
   expect(packet.dimensionsMm.maxWidth).toBe(100)
   expect(packet.referenceCoverage).toHaveLength(18)
   expect(packet.constructionNodes.every((node) => node.status === 'confirmed')).toBe(true)
@@ -132,11 +138,23 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
   expect(manifestPath).not.toBeNull()
   const manifest = JSON.parse(await fs.readFile(manifestPath!, 'utf8')) as {
     rootNode: string
+    assetAuthority: {
+      lifecycle: string
+      source: string
+      sourceCaptureSessionId?: string
+      capturePlanId?: string
+    }
     materialSlotProfiles: Record<string, { kind: string; requiresUv0: boolean; metersPerUvUnit?: number }>
     customizationZones: Record<string, { node: string; purposes: string[]; sizeMeters: [number, number] }>
     presentation: { orbit: { minDistance: number; maxDistance: number } }
   }
   expect(manifest.rootNode).toBe('SLS_ProductRoot')
+  expect(manifest.assetAuthority).toMatchObject({
+    lifecycle: 'production-candidate',
+    source: 'physical-capture',
+    sourceCaptureSessionId: packet.sourceCaptureSessionId,
+    capturePlanId: 'scorpion-welding-hood-v1',
+  })
   expect(manifest.materialSlotProfiles.LeatherPrimary).toMatchObject({ kind: 'leather', requiresUv0: true, metersPerUvUnit: 1 })
   expect(manifest.customizationZones['front-panel']).toMatchObject({
     node: 'Shell_Main',
@@ -149,9 +167,11 @@ test('Product Capture gates reconstruction on physical evidence and exports a co
   expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
   expect(consoleErrors, 'Product Capture console errors: ' + consoleErrors.join('\n')).toEqual([])
 
+  await expect(pilot.getByText('Capture package ready')).toBeVisible()
+
   const screenshotName = testInfo.project.name.includes('mobile')
-    ? 'product-capture-mobile.png'
-    : 'product-capture-desktop.png'
+    ? 'product-capture-v043-mobile.png'
+    : 'product-capture-v043-desktop.png'
 
   await page.screenshot({
     path: 'playwright-output/screenshots/' + screenshotName,
