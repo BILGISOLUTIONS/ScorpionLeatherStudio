@@ -442,6 +442,9 @@ function ProductCaptureAssistant() {
   async function exportFieldCaptureBundle() {
     setBundleBusy(true)
     try {
+      if (!qualityReport.ready) {
+        throw new Error('Capture quality preflight has ' + qualityReport.blockers.length + ' blocker(s). Resolve them before building the field evidence bundle.')
+      }
       const generatedAt = new Date().toISOString()
       const packet = validatedConstructionPacket(generatedAt)
       const missingKeys = Object.keys(session.references).filter((key) => !referenceFiles[key])
