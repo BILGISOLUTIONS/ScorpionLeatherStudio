@@ -403,6 +403,7 @@ function ProductCaptureAssistant() {
         sizeBytes: number
         type: string
         lastModified: number
+        sha256: string
       }> = []
       const supplementalIndex: Array<{
         archivePath: string
@@ -410,6 +411,7 @@ function ProductCaptureAssistant() {
         sizeBytes: number
         type: string
         lastModified: number
+        sha256: string
       }> = []
       const entries: Array<{ path: string; data: Blob | string | Uint8Array }> = []
 
@@ -419,6 +421,8 @@ function ProductCaptureAssistant() {
         if (!metadata || !file) return
         const archivePath = 'references/' + String(index + 1).padStart(2, '0') + '-' + safeFilePart(requirement.key, 'reference') + fileExtension(file.name)
         entries.push({ path: archivePath, data: file })
+        const sha256 = metadata.sha256
+        if (!isSha256Hex(sha256)) throw new Error('Reference fingerprint is missing: ' + requirement.label)
         referenceIndex.push({
           role: requirement.key,
           label: requirement.label,
@@ -428,10 +432,14 @@ function ProductCaptureAssistant() {
           sizeBytes: file.size,
           type: file.type || 'application/octet-stream',
           lastModified: file.lastModified,
+          sha256,
         })
       })
 
       supplementalFiles.forEach((file, index) => {
+        const metadata = session.supplementalReferences?.[index]
+        const sha256 = metadata?.sha256
+        if (!metadata || !isSha256Hex(sha256)) throw new Error('Supplemental fingerprint is missing for file ' + (index + 1) + '.')
         const baseName = file.name.replace(/\.[^.]+$/u, '')
         const archivePath = 'supplemental/' + String(index + 1).padStart(3, '0') + '-' + safeFilePart(baseName, 'supplemental') + fileExtension(file.name)
         entries.push({ path: archivePath, data: file })
@@ -441,6 +449,7 @@ function ProductCaptureAssistant() {
           sizeBytes: file.size,
           type: file.type || 'application/octet-stream',
           lastModified: file.lastModified,
+          sha256,
         })
       })
 
@@ -502,14 +511,20 @@ function ProductCaptureAssistant() {
         { path: 'metadata/capture-bundle-index.json', data: JSON.stringify(bundleIndex, null, 2) + '\n' },
       )
 
-      setStatus('Packaging ' + (referenceIndex.length + supplementalIndex.length) + ' source photographs locally…')
+      const checksumLines: string[] = []
+      for (const entry of entries) {
+        checksumLines.push((await sha256Hex(entry.data)) + '  ' + entry.path)
+      }
+      entries.push({ path: 'SHA256SUMS.txt', data: checksumLines.join('\n') + '\n' })
+
+      setStatus('Packaging ' + (referenceIndex.length + supplementalIndex.length) + ' verified source photographs locally…')
       const { buildStoredZip } = await import('./capture-bundle')
       const zip = await buildStoredZip(entries, new Date(generatedAt))
       downloadBlob(
         safeFilePart(packet.productId, 'product') + '-' + safeFilePart(packet.sourceCaptureSessionId, 'capture') + '-field-evidence.zip',
         zip,
       )
-      setStatus('Field evidence ZIP downloaded. Source photos stayed local; nothing was uploaded by Product Capture.')
+      setStatus('Verified field evidence ZIP downloaded with SHA256SUMS.txt. Source photos stayed local; nothing was uploaded by Product Capture.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Field evidence bundle could not be generated.')
     } finally {
