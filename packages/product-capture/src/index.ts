@@ -71,6 +71,7 @@ export interface CapturedReferenceFrame {
   type: string
   lastModified: number
   kind: ReferenceKind
+  sha256?: string
 }
 
 export interface CapturedDimension {
@@ -154,12 +155,14 @@ export interface ProductConstructionPacket {
     kind: ReferenceKind
     size: number
     lastModified: number
+    sha256?: string
   }>
   supplementalReferenceCoverage?: Array<{
     name: string
     size: number
     type: string
     lastModified: number
+    sha256?: string
   }>
   dimensionsMm: Record<string, number>
   constructionNodes: ConstructionNodeRecord[]
@@ -376,6 +379,7 @@ export function buildProductConstructionPacket(args: {
       kind: frame.kind,
       size: frame.size,
       lastModified: frame.lastModified,
+      sha256: frame.sha256,
     }))
     .sort((a, b) => a.key.localeCompare(b.key))
 
@@ -384,6 +388,7 @@ export function buildProductConstructionPacket(args: {
     size: frame.size,
     type: frame.type,
     lastModified: frame.lastModified,
+    sha256: frame.sha256,
   }))
 
   return {
