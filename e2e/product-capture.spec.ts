@@ -5,7 +5,7 @@ test.beforeAll(async () => {
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
 })
 
-test('V0.45 Product Capture fingerprints evidence and rejects wrong reattachments', async ({ page }, testInfo) => {
+test('V0.46 Product Capture preflights source quality, duplicates and integrity', async ({ page }, testInfo) => {
   const scriptRequests: string[] = []
   const consoleErrors: string[] = []
 
@@ -70,14 +70,14 @@ test('V0.45 Product Capture fingerprints evidence and rejects wrong reattachment
     'Scale / ruler reference',
   ]
 
-  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9])
-  const supplementalA = Buffer.from([0xff, 0xd8, 0x01, 0xff, 0xd9])
-  const supplementalB = Buffer.from([0xff, 0xd8, 0x02, 0xff, 0xd9])
-  for (const label of requiredReferences) {
+  const requiredBuffer = (index: number) => Buffer.from([0xff, 0xd8, 0x20 + index, 0xff, 0xd9])
+  const supplementalA = Buffer.from([0xff, 0xd8, 0xa1, 0xff, 0xd9])
+  const supplementalB = Buffer.from([0xff, 0xd8, 0xa2, 0xff, 0xd9])
+  for (const [index, label] of requiredReferences.entries()) {
     await page.getByLabel(label + ' reference file').setInputFiles({
       name: label.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.jpg',
       mimeType: 'image/jpeg',
-      buffer: jpeg,
+      buffer: requiredBuffer(index),
     })
   }
 
@@ -105,6 +105,26 @@ test('V0.45 Product Capture fingerprints evidence and rejects wrong reattachment
   await expect(page.getByText('1 UV unit = 1 meter on material-ready surfaces')).toBeVisible()
   await expect(page.getByText('Front shell customization area')).toBeVisible()
   await expect(page.getByText(/220 × 240 mm/)).toBeVisible()
+
+  const quality = page.getByRole('region', { name: 'Capture quality preflight' })
+  await expect(quality).toBeVisible()
+  await expect(quality.getByText('No objective quality blockers')).toBeVisible()
+
+  await page.getByLabel('Straight rear reference file').setInputFiles({
+    name: 'straight-rear-duplicate.jpg',
+    mimeType: 'image/jpeg',
+    buffer: requiredBuffer(0),
+  })
+  await expect(quality.getByText(/1 blocker must be resolved/)).toBeVisible()
+  await expect(quality.getByText(/Exact duplicate source image is assigned more than once/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Download verified field evidence bundle (.zip)' })).toBeDisabled()
+
+  await page.getByLabel('Straight rear reference file').setInputFiles({
+    name: 'straight-rear.jpg',
+    mimeType: 'image/jpeg',
+    buffer: requiredBuffer(4),
+  })
+  await expect(quality.getByText('No objective quality blockers')).toBeVisible()
 
   await expect(page.getByText('Capture gate passed')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Download construction packet' })).toBeEnabled()
@@ -203,14 +223,16 @@ test('V0.45 Product Capture fingerprints evidence and rejects wrong reattachment
   expect(bundleText).toContain('references/01-front.jpg')
   expect(bundleText).toContain('supplemental/001-supplemental-a.jpg')
   expect(bundleText).toContain('\"bundleType\": \"sls-product-capture-evidence\"')
+  expect(bundleText).toContain('\"qualityPreflight\"')
+  expect(bundleText).toContain('\"duplicateGroups\": 0')
   expect(bundleText).toContain('SHA256SUMS.txt')
   expect(bundleText).toMatch(/[a-f0-9]{64}  references\/01-front\.jpg/u)
   expect(bundleText).toMatch(/"sha256": "[a-f0-9]{64}"/u)
   await expect.poll(() => scriptRequests.some((url) => url.includes('capture-bundle'))).toBe(true)
 
   const screenshotName = testInfo.project.name.includes('mobile')
-    ? 'product-capture-v045-mobile.png'
-    : 'product-capture-v045-desktop.png'
+    ? 'product-capture-v046-mobile.png'
+    : 'product-capture-v046-desktop.png'
 
   await page.screenshot({
     path: 'playwright-output/screenshots/' + screenshotName,
@@ -230,11 +252,11 @@ test('V0.45 Product Capture fingerprints evidence and rejects wrong reattachment
   await expect(page.getByRole('status')).toContainText('does not match the original SHA-256 fingerprint')
   await expect(page.getByText(/metadata only — reattach source/).first()).toBeVisible()
 
-  for (const label of requiredReferences) {
+  for (const [index, label] of requiredReferences.entries()) {
     await page.getByLabel(label + ' reference file').setInputFiles({
       name: label.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.jpg',
       mimeType: 'image/jpeg',
-      buffer: jpeg,
+      buffer: requiredBuffer(index),
     })
   }
   await page.getByLabel('Supplemental reconstruction photos').setInputFiles([
