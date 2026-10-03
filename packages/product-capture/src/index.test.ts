@@ -98,6 +98,19 @@ describe('product capture validation', () => {
       .toContain('singlePhysicalUnitConfirmed')
   })
 
+  it('validates optional source fingerprints and image dimensions when present', () => {
+    const session = completeSession()
+    session.references.front = {
+      ...session.references.front,
+      sha256: 'not-a-sha',
+      imageWidthPx: 3024,
+      imageHeightPx: undefined,
+    }
+    const paths = validateProductCapture(session, weldingHoodCapturePlan).map((entry) => entry.path)
+    expect(paths).toContain('references.front.sha256')
+    expect(paths).toContain('references.front.imageDimensions')
+  })
+
   it('rejects invalid supplemental reference metadata without making supplemental coverage mandatory', () => {
     const session = completeSession()
     session.supplementalReferences = [{
