@@ -25,6 +25,66 @@ export interface ProductMeshInspection {
   }
 }
 
+export type ProductAssetPreparationStatus =
+  | 'manual-geometry-correction-required'
+  | 'manual-authoring-required'
+  | 'normalized-candidate-ready-for-digital-twin-qa'
+
+export interface ProductAssetPreparationFinding {
+  code: string
+  message: string
+}
+
+export interface ProductAssetPreparationReport {
+  schemaVersion: 1
+  stage: 'raw-reconstruction-preparation'
+  candidateId: string
+  jobId: string
+  assetId: string
+  productId: string
+  sourceCaptureSessionId: string
+  sourceModelFile: string
+  normalizedModelFile: string
+  productionApproved: false
+  requiresDigitalTwinQa: true
+  status: ProductAssetPreparationStatus
+  authority: {
+    uniformScaleOnly: true
+    nonUniformGeometryCorrectionApplied: false
+    realProductRemainsGeometryAuthority: true
+    providerMaterialsRemainReferenceOnly: true
+  }
+  physicalEnvelope: {
+    targetMeters: { width: number; height: number; depth: number }
+    beforeMeters: { width: number; height: number; depth: number }
+    afterMeters: { width: number; height: number; depth: number }
+    uniformScale: number
+    deviationRatios: { width: number; height: number; depth: number }
+    toleranceRatio: number
+  }
+  geometry: {
+    trianglesBefore: number
+    trianglesAfter: number
+    targetTriangles: number
+    meshCount: number
+  }
+  blockers: ProductAssetPreparationFinding[]
+  authoringRequirements: ProductAssetPreparationFinding[]
+  warnings: ProductAssetPreparationFinding[]
+  outputBytes: number
+}
+
+export interface ProductAssetPreparationProvenanceSummary {
+  reportFile: string
+  candidateId: string
+  jobId: string
+  normalizedModelFile: string
+  status: ProductAssetPreparationStatus
+  blockersReported: number
+  authoringRequirementsReported: number
+  warningsReported: number
+}
+
 export interface ProductAssetInspection {
   schemaVersion: 1
   assetId: string
@@ -128,6 +188,7 @@ export interface ProductAssetQaApprovalPacket {
   }
   checks: Record<ProductAssetReviewCheck, boolean>
   notes?: string
+  preparation?: ProductAssetPreparationProvenanceSummary
 }
 
 export interface ProductionProductAssetRecord {
@@ -143,6 +204,7 @@ export interface ProductionProductAssetRecord {
   automaticRegistryMutation: false
   assetRoot: string
   manifest: AssetManifest
+  reconstructionPreparation?: ProductAssetPreparationProvenanceSummary
 }
 
 export interface ProductAssetPromotionResult {
@@ -152,7 +214,7 @@ export interface ProductAssetPromotionResult {
     assetId: string
     root: string
     files: Array<{
-      kind: 'model' | 'manifest' | 'qa-approval' | 'construction-provenance'
+      kind: 'model' | 'manifest' | 'qa-approval' | 'construction-provenance' | 'reconstruction-preparation'
       source: string
       destination: string
     }>
@@ -183,6 +245,110 @@ function finitePositive(value: number): boolean {
   return Number.isFinite(value) && value > 0
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function requiredString(record: Record<string, unknown>, key: string): string {
+  const value = record[key]
+  if (typeof value !== 'string' || !value.trim()) throw new Error('preparation.' + key + ': A non-empty string is required.')
+  return value
+}
+
+function finiteNumber(record: Record<string, unknown>, key: string, path: string): number {
+  const value = record[key]
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(path + ': A finite number is required.')
+  return value
+}
+
+function findingArray(value: unknown, path: string): ProductAssetPreparationFinding[] {
+  if (!Array.isArray(value)) throw new Error(path + ': An array is required.')
+  return value.map((entry, index) => {
+    if (!isRecord(entry)) throw new Error(path + '[' + index + ']: A finding object is required.')
+    return {
+      code: requiredString(entry, 'code'),
+      message: requiredString(entry, 'message'),
+    }
+  })
+}
+
+function envelopeRecord(value: unknown, path: string): { width: number; height: number; depth: number } {
+  if (!isRecord(value)) throw new Error(path + ': A dimension object is required.')
+  return {
+    width: finiteNumber(value, 'width', path + '.width'),
+    height: finiteNumber(value, 'height', path + '.height'),
+    depth: finiteNumber(value, 'depth', path + '.depth'),
+  }
+}
+
+export function parseProductAssetPreparationReport(input: unknown): ProductAssetPreparationReport {
+  if (!isRecord(input)) throw new Error('preparation: Preparation report must be a JSON object.')
+  if (input.schemaVersion !== 1) throw new Error('preparation.schemaVersion: Unsupported preparation-report schema version.')
+  if (input.stage !== 'raw-reconstruction-preparation') throw new Error('preparation.stage: Unsupported preparation stage.')
+  if (input.productionApproved !== false) throw new Error('preparation.productionApproved: Preparation must not claim production approval.')
+  if (input.requiresDigitalTwinQa !== true) throw new Error('preparation.requiresDigitalTwinQa: Preparation must require Digital Twin QA.')
+
+  const statuses: ProductAssetPreparationStatus[] = [
+    'manual-geometry-correction-required',
+    'manual-authoring-required',
+    'normalized-candidate-ready-for-digital-twin-qa',
+  ]
+  if (typeof input.status !== 'string' || !statuses.includes(input.status as ProductAssetPreparationStatus)) {
+    throw new Error('preparation.status: Unsupported preparation status.')
+  }
+  if (!isRecord(input.authority)) throw new Error('preparation.authority: Authority contract is required.')
+  if (
+    input.authority.uniformScaleOnly !== true
+    || input.authority.nonUniformGeometryCorrectionApplied !== false
+    || input.authority.realProductRemainsGeometryAuthority !== true
+    || input.authority.providerMaterialsRemainReferenceOnly !== true
+  ) {
+    throw new Error('preparation.authority: Preparation authority contract is invalid.')
+  }
+  if (!isRecord(input.physicalEnvelope)) throw new Error('preparation.physicalEnvelope: Physical envelope metadata is required.')
+  if (!isRecord(input.geometry)) throw new Error('preparation.geometry: Geometry metadata is required.')
+
+  const report: ProductAssetPreparationReport = {
+    schemaVersion: 1,
+    stage: 'raw-reconstruction-preparation',
+    candidateId: requiredString(input, 'candidateId'),
+    jobId: requiredString(input, 'jobId'),
+    assetId: requiredString(input, 'assetId'),
+    productId: requiredString(input, 'productId'),
+    sourceCaptureSessionId: requiredString(input, 'sourceCaptureSessionId'),
+    sourceModelFile: requiredString(input, 'sourceModelFile'),
+    normalizedModelFile: requiredString(input, 'normalizedModelFile'),
+    productionApproved: false,
+    requiresDigitalTwinQa: true,
+    status: input.status as ProductAssetPreparationStatus,
+    authority: {
+      uniformScaleOnly: true,
+      nonUniformGeometryCorrectionApplied: false,
+      realProductRemainsGeometryAuthority: true,
+      providerMaterialsRemainReferenceOnly: true,
+    },
+    physicalEnvelope: {
+      targetMeters: envelopeRecord(input.physicalEnvelope.targetMeters, 'preparation.physicalEnvelope.targetMeters'),
+      beforeMeters: envelopeRecord(input.physicalEnvelope.beforeMeters, 'preparation.physicalEnvelope.beforeMeters'),
+      afterMeters: envelopeRecord(input.physicalEnvelope.afterMeters, 'preparation.physicalEnvelope.afterMeters'),
+      uniformScale: finiteNumber(input.physicalEnvelope, 'uniformScale', 'preparation.physicalEnvelope.uniformScale'),
+      deviationRatios: envelopeRecord(input.physicalEnvelope.deviationRatios, 'preparation.physicalEnvelope.deviationRatios'),
+      toleranceRatio: finiteNumber(input.physicalEnvelope, 'toleranceRatio', 'preparation.physicalEnvelope.toleranceRatio'),
+    },
+    geometry: {
+      trianglesBefore: finiteNumber(input.geometry, 'trianglesBefore', 'preparation.geometry.trianglesBefore'),
+      trianglesAfter: finiteNumber(input.geometry, 'trianglesAfter', 'preparation.geometry.trianglesAfter'),
+      targetTriangles: finiteNumber(input.geometry, 'targetTriangles', 'preparation.geometry.targetTriangles'),
+      meshCount: finiteNumber(input.geometry, 'meshCount', 'preparation.geometry.meshCount'),
+    },
+    blockers: findingArray(input.blockers, 'preparation.blockers'),
+    authoringRequirements: findingArray(input.authoringRequirements, 'preparation.authoringRequirements'),
+    warnings: findingArray(input.warnings, 'preparation.warnings'),
+    outputBytes: finiteNumber(input, 'outputBytes', 'preparation.outputBytes'),
+  }
+  return report
+}
+
 function near(value: number, target: number, epsilon = 0.001): boolean {
   return Math.abs(value - target) <= epsilon
 }
@@ -203,6 +369,7 @@ export function evaluateProductAssetQa(args: {
   construction: ProductConstructionPacket
   manifest: AssetManifest
   inspection: ProductAssetInspection
+  preparationReport?: ProductAssetPreparationReport
   materialLifecycleById?: Readonly<Record<string, 'reference-only' | 'captured-master' | 'production-approved'>>
   policy?: ProductAssetQaPolicy
 }): ProductAssetQaIssue[] {
@@ -229,6 +396,73 @@ export function evaluateProductAssetQa(args: {
   }
   if (manifest.assetId !== inspection.assetId) {
     issues.push(issue('error', 'assetId', 'Manifest and inspected model must use the same asset ID.'))
+  }
+
+  if (args.preparationReport) {
+    const preparation = args.preparationReport
+    const identityChecks = [
+      ['assetId', manifest.assetId, preparation.assetId],
+      ['productId', construction.productId, preparation.productId],
+      ['sourceCaptureSessionId', construction.sourceCaptureSessionId, preparation.sourceCaptureSessionId],
+    ] as const
+    for (const [path, expected, actual] of identityChecks) {
+      if (expected !== actual) {
+        issues.push(issue('error', 'preparation.' + path, 'Preparation provenance does not match the active product/capture lineage.'))
+      }
+    }
+
+    const targetMeters = {
+      width: construction.dimensionsMm.maxWidth / 1000,
+      height: construction.dimensionsMm.maxHeight / 1000,
+      depth: construction.dimensionsMm.maxDepth / 1000,
+    }
+    for (const axis of ['width', 'height', 'depth'] as const) {
+      const expected = targetMeters[axis]
+      const actual = preparation.physicalEnvelope.targetMeters[axis]
+      if (!finitePositive(expected) || !finitePositive(actual) || Math.abs(actual - expected) / expected > 0.005) {
+        issues.push(issue(
+          'error',
+          'preparation.physicalEnvelope.targetMeters.' + axis,
+          'Preparation report does not use the same authoritative physical envelope as Product Capture.',
+        ))
+      }
+    }
+
+    if (preparation.normalizedModelFile !== inspection.modelFile.name) {
+      issues.push(issue(
+        'warning',
+        'preparation.normalizedModelFile',
+        'Inspected model differs from the normalized preparation output. Confirm the current GLB is a deliberate authored derivative of that candidate.',
+      ))
+    } else if (preparation.outputBytes > 0 && preparation.outputBytes !== inspection.modelFile.sizeBytes) {
+      issues.push(issue(
+        'warning',
+        'preparation.outputBytes',
+        'Preparation report filename matches the inspected model but its recorded byte size differs; confirm the report and GLB are from the same run.',
+      ))
+    }
+
+    if (preparation.blockers.length) {
+      issues.push(issue(
+        'warning',
+        'preparation.blockers',
+        'Preparation reported ' + preparation.blockers.length + ' blocker(s). Current Digital Twin QA must demonstrate that the underlying geometry problems were corrected.',
+      ))
+    }
+    if (preparation.authoringRequirements.length) {
+      issues.push(issue(
+        'warning',
+        'preparation.authoringRequirements',
+        'Preparation reported ' + preparation.authoringRequirements.length + ' manual authoring requirement(s). Named human review must confirm the final authored model resolves them.',
+      ))
+    }
+    if (preparation.status === 'manual-geometry-correction-required') {
+      issues.push(issue(
+        'warning',
+        'preparation.status',
+        'Preparation required manual geometry correction; final dimensions and visual fidelity are therefore especially important in this review.',
+      ))
+    }
   }
 
   const modelExtension = fileExtension(inspection.modelFile.name)
@@ -477,6 +711,8 @@ export function buildProductAssetQaApproval(args: {
   manifest: AssetManifest
   inspection: ProductAssetInspection
   review: ProductAssetHumanReview
+  preparationReport?: ProductAssetPreparationReport
+  preparationReportFile?: string
   materialLifecycleById?: Readonly<Record<string, 'reference-only' | 'captured-master' | 'production-approved'>>
   policy?: ProductAssetQaPolicy
 }): ProductAssetQaApprovalPacket {
@@ -492,6 +728,9 @@ export function buildProductAssetQaApproval(args: {
   const failedChecks = Object.entries(args.review.checks).filter(([, passed]) => !passed)
   if (failedChecks.length || Object.keys(args.review.checks).length !== Object.keys(productAssetReviewLabels).length) {
     throw new Error('review.checks: Every visual/functional QA check must be explicitly passed.')
+  }
+  if (args.preparationReport && !args.preparationReportFile?.trim()) {
+    throw new Error('preparationReportFile: Preparation provenance requires the source report filename.')
   }
 
   return {
@@ -512,6 +751,16 @@ export function buildProductAssetQaApproval(args: {
     },
     checks: { ...args.review.checks },
     notes: args.review.notes?.trim() || undefined,
+    preparation: args.preparationReport ? {
+      reportFile: args.preparationReportFile!.trim(),
+      candidateId: args.preparationReport.candidateId,
+      jobId: args.preparationReport.jobId,
+      normalizedModelFile: args.preparationReport.normalizedModelFile,
+      status: args.preparationReport.status,
+      blockersReported: args.preparationReport.blockers.length,
+      authoringRequirementsReported: args.preparationReport.authoringRequirements.length,
+      warningsReported: args.preparationReport.warnings.length,
+    } : undefined,
   }
 }
 
@@ -566,6 +815,7 @@ export function promoteProductAsset(args: {
     automaticRegistryMutation: false,
     assetRoot: root,
     manifest: productionManifest,
+    reconstructionPreparation: args.approval.preparation,
   }
 
   return {
@@ -579,6 +829,11 @@ export function promoteProductAsset(args: {
         { kind: 'manifest', source: `${args.manifest.assetId}-manifest.json`, destination: `${root}/manifest.json` },
         { kind: 'qa-approval', source: `${args.manifest.assetId}-qa-approval.json`, destination: `${root}/qa-approval.json` },
         { kind: 'construction-provenance', source: `${args.construction.productId}-construction-packet.json`, destination: `${root}/construction-provenance.json` },
+        ...(args.approval.preparation ? [{
+          kind: 'reconstruction-preparation' as const,
+          source: args.approval.preparation.reportFile,
+          destination: `${root}/reconstruction-preparation.json`,
+        }] : []),
       ],
     },
   }
