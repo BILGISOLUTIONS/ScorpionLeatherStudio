@@ -205,7 +205,7 @@ test('V0.45 Product Capture fingerprints evidence and rejects wrong reattachment
   expect(bundleText).toContain('\"bundleType\": \"sls-product-capture-evidence\"')
   expect(bundleText).toContain('SHA256SUMS.txt')
   expect(bundleText).toMatch(/[a-f0-9]{64}  references\/01-front\.jpg/u)
-  expect(bundleText).toMatch(/\"sha256\": \"[a-f0-9]{64}\"/u)
+  expect(bundleText).toMatch(/"sha256": "[a-f0-9]{64}"/u)
   await expect.poll(() => scriptRequests.some((url) => url.includes('capture-bundle'))).toBe(true)
 
   const screenshotName = testInfo.project.name.includes('mobile')
