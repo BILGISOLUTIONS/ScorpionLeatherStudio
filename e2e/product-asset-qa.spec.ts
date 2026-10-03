@@ -5,7 +5,7 @@ test.beforeAll(async () => {
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
 })
 
-test('V0.42 Digital Twin QA links preparation provenance and keeps Three.js deferred', async ({ page }, testInfo) => {
+test('V0.43 Digital Twin QA exposes asset authority and blocks development placeholders', async ({ page }, testInfo) => {
   const scriptRequests: string[] = []
   const consoleErrors: string[] = []
 
@@ -110,6 +110,11 @@ test('V0.42 Digital Twin QA links preparation provenance and keeps Three.js defe
     buffer: Buffer.from(JSON.stringify(manifest)),
   })
 
+  const authorityRegion = page.getByRole('region', { name: 'Digital twin asset authority' })
+  await expect(authorityRegion).toBeVisible()
+  await expect(authorityRegion.getByText('development placeholder')).toBeVisible()
+  await expect(authorityRegion.getByText(/block production approval/)).toBeVisible()
+
   expect(scriptRequests.some((url) => url.includes('ProductAssetQaViewer'))).toBe(false)
 
   await page.getByLabel('Reconstruction preparation report JSON').setInputFiles({
@@ -128,6 +133,7 @@ test('V0.42 Digital Twin QA links preparation provenance and keeps Three.js defe
   await expect(page.getByRole('region', { name: 'Automated asset metrics' })).toBeVisible()
   await expect(page.locator('.gate-state strong').filter({ hasText: /production blocker/ })).toBeVisible()
   await expect(page.getByText('Production assets must be delivered as GLB.')).toBeVisible()
+  await expect(page.getByText(/Development placeholder\/scaffold geometry is never eligible for production promotion/)).toBeVisible()
   await expect(page.getByText(/not production-approved/).first()).toBeVisible()
   await expect(page.getByText('UV0-ready meshes')).toBeVisible()
   await page.getByRole('button', { name: 'UV checker' }).click()
@@ -143,8 +149,8 @@ test('V0.42 Digital Twin QA links preparation provenance and keeps Three.js defe
   await expect.poll(() => scriptRequests.some((url) => url.includes('ProductAssetQaViewer'))).toBe(true)
 
   const screenshotName = testInfo.project.name.includes('mobile')
-    ? 'product-asset-qa-v042-mobile.png'
-    : 'product-asset-qa-v042-desktop.png'
+    ? 'product-asset-qa-v043-mobile.png'
+    : 'product-asset-qa-v043-desktop.png'
 
   await page.screenshot({
     path: 'playwright-output/screenshots/' + screenshotName,
