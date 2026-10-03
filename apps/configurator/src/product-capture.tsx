@@ -236,47 +236,95 @@ function ProductCaptureAssistant() {
     }))
   }
 
-  function setReference(key: string, file: File | undefined) {
+  async function setReference(key: string, file: File | undefined) {
     const requirement = weldingHoodCapturePlan.referenceRequirements.find((entry) => entry.key === key)
     if (!requirement) return
 
-    setReferenceFiles((current) => {
-      const next = { ...current }
-      if (file) next[key] = file
-      else delete next[key]
-      return next
-    })
-
-    setSession((current) => {
-      const references = { ...current.references }
-      if (!file) {
+    if (!file) {
+      setReferenceFiles((current) => {
+        const next = { ...current }
+        delete next[key]
+        return next
+      })
+      setSession((current) => {
+        const references = { ...current.references }
         delete references[key]
-      } else {
-        const frame: CapturedReferenceFrame = {
-          name: file.name,
-          size: file.size,
-          type: file.type || 'application/octet-stream',
-          lastModified: file.lastModified,
-          kind: requirement.kind,
-        }
-        references[key] = frame
-      }
-      return { ...current, references }
-    })
+        return { ...current, references }
+      })
+      return
+    }
+
+    setHashBusy(true)
+    setStatus('Hashing ' + file.name + ' locally…')
+    try {
+      const sha256 = await sha256Hex(file)
+      const existing = session.references[key]
+      const frame: CapturedReferenceFrame = existing && !referenceFiles[key]
+        ? verifyReattachedReference(existing, { file, sha256 })
+        : {
+            name: file.name,
+            size: file.size,
+            type: file.type || 'application/octet-stream',
+            lastModified: file.lastModified,
+            kind: requirement.kind,
+            sha256,
+          }
+
+      setReferenceFiles((current) => ({ ...current, [key]: file }))
+      setSession((current) => ({
+        ...current,
+        references: { ...current.references, [key]: frame },
+      }))
+      setStatus(existing && !referenceFiles[key]
+        ? 'Reference reattached and SHA-256 verified.'
+        : 'Reference attached and SHA-256 fingerprint recorded.')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Reference fingerprint verification failed.')
+    } finally {
+      setHashBusy(false)
+    }
   }
 
-  function setSupplementalReferenceFiles(files: File[]) {
-    setSupplementalFiles(files)
-    setSession((current) => ({
-      ...current,
-      supplementalReferences: files.map((file) => ({
-        name: file.name,
-        size: file.size,
-        type: file.type || 'application/octet-stream',
-        lastModified: file.lastModified,
-        kind: 'supplemental-reference',
-      })),
-    }))
+  async function setSupplementalReferenceFiles(files: File[]) {
+    if (!files.length) {
+      setSupplementalFiles([])
+      setSession((current) => ({ ...current, supplementalReferences: [] }))
+      return
+    }
+
+    setHashBusy(true)
+    try {
+      const hashed = await hashFilesSequentially(files, (completed, total, file) => {
+        setStatus('Hashing supplemental evidence ' + completed + ' / ' + total + ' · ' + file.name)
+      })
+
+      const existing = session.supplementalReferences ?? []
+      const reattaching = existing.length > 0 && supplementalFiles.length === 0
+      if (reattaching) {
+        const reconciled = reconcileReattachedReferenceSet(existing, hashed)
+        setSupplementalFiles(reconciled.files)
+        setSession((current) => ({ ...current, supplementalReferences: reconciled.frames }))
+        setStatus('Supplemental evidence set reattached and SHA-256 verified.')
+      } else {
+        setSupplementalFiles(hashed.map((entry) => entry.file))
+        setSession((current) => ({
+          ...current,
+          supplementalReferences: hashed.map(({ file, sha256 }) => ({
+            name: file.name,
+            size: file.size,
+            type: file.type || 'application/octet-stream',
+            lastModified: file.lastModified,
+            kind: 'supplemental-reference',
+            sha256,
+          })),
+        }))
+        setStatus('Supplemental evidence fingerprints recorded locally.')
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Supplemental evidence fingerprint verification failed.')
+    } finally {
+      setHashBusy(false)
+    }
   }
 
   function clearSession() {
