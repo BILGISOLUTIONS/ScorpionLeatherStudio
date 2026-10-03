@@ -162,3 +162,33 @@ supplemental/
 The index records original filenames, deterministic archive paths, byte sizes, MIME types and modification timestamps. The ZIP uses stored/uncompressed entries because camera images are already compressed; recompressing them would waste field-device CPU and battery for little or no size reduction.
 
 The ZIP writer is dependency-free and loaded only when the operator requests a bundle, so ordinary Product Capture startup remains lightweight.
+
+
+## V0.45 capture evidence integrity
+
+V0.45 makes a field-capture handoff verifiable, not merely complete-looking.
+
+### Local SHA-256 identity
+
+Every newly selected reference and supplemental photograph receives a SHA-256 fingerprint in the browser using the Web Crypto API. The digest is stored beside the existing filename/size/timestamp metadata and carried into the validated construction packet.
+
+No source image is uploaded to calculate the digest.
+
+Supplemental files are hashed sequentially rather than in one parallel batch so a field phone does not need to retain multiple full image buffers for hashing at the same time.
+
+### Reattachment verification
+
+After a page reload, source bytes are still detached just as in V0.44. Reattachment now requires identity verification:
+
+- when a saved SHA-256 fingerprint exists, the selected file must reproduce that exact digest;
+- a wrong file is rejected even if its filename resembles the original;
+- legacy V0.44 drafts without SHA-256 may be upgraded only when filename, byte size and available timestamp metadata match, after which a SHA-256 fingerprint is recorded;
+- supplemental sets are reconciled by fingerprint, so the operator may select the same saved files in a different picker order without corrupting their original evidence ordering.
+
+### Verified evidence ZIP
+
+The field bundle index now records the SHA-256 digest for each reference and supplemental source file.
+
+The ZIP also contains SHA256SUMS.txt. That ledger records the SHA-256 digest of every bundle member present before the ledger itself is added, including source images and metadata artifacts. This allows the handoff to be checked after copying, archiving, reconstruction-provider upload/download, or transfer between operators.
+
+The ZIP itself remains a local, stored/uncompressed archive. V0.45 does not add a backend, database, source-photo upload, analytics SDK, or third-party integrity service.
