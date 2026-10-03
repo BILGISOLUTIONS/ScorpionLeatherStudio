@@ -507,6 +507,8 @@ function ProductCaptureAssistant() {
           type: file.type || 'application/octet-stream',
           lastModified: file.lastModified,
           sha256,
+          ...(Number.isFinite(metadata.imageWidthPx) ? { imageWidthPx: metadata.imageWidthPx } : {}),
+          ...(Number.isFinite(metadata.imageHeightPx) ? { imageHeightPx: metadata.imageHeightPx } : {}),
         })
       })
 
