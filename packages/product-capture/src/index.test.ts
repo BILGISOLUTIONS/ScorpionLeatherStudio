@@ -20,6 +20,7 @@ function completeSession(): ProductCaptureSession {
     sourceSku: 'SC-WH-001',
     operator: 'Capture Operator',
     capturedAt: '2026-09-22T12:00:00.000Z',
+    singlePhysicalUnitConfirmed: true,
     references: Object.fromEntries(
       weldingHoodCapturePlan.referenceRequirements
         .filter((requirement) => requirement.required)
@@ -77,6 +78,13 @@ describe('product capture validation', () => {
     expect(paths).toContain('constructionNodes.product-root.status')
   })
 
+  it('rejects a capture session until one exact physical production unit is attested', () => {
+    const session = completeSession()
+    session.singlePhysicalUnitConfirmed = false
+    expect(validateProductCapture(session, weldingHoodCapturePlan).map((entry) => entry.path))
+      .toContain('singlePhysicalUnitConfirmed')
+  })
+
   it('rejects component evidence that is not part of the capture session', () => {
     const session = completeSession()
     session.components = [{
@@ -128,6 +136,9 @@ describe('product capture validation', () => {
       status: 'ready-for-digital-twin-reconstruction',
       automaticAssetMutation: false,
       generatedAt: '2026-09-22T12:30:00.000Z',
+      provenance: {
+        singlePhysicalUnitConfirmed: true,
+      },
       dimensionsMm: {
         maxWidth: 100,
         visorFrameWidth: 100,
