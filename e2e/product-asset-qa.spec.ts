@@ -126,7 +126,7 @@ test('V0.42 Digital Twin QA links preparation provenance and keeps Three.js defe
 
   await expect(page.getByLabel('Digital twin QA viewer').locator('canvas')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Automated asset metrics' })).toBeVisible()
-  await expect(page.getByText(/production blocker/)).toBeVisible()
+  await expect(page.locator('.gate-state strong').filter({ hasText: /production blocker/ })).toBeVisible()
   await expect(page.getByText('Production assets must be delivered as GLB.')).toBeVisible()
   await expect(page.getByText(/not production-approved/).first()).toBeVisible()
   await expect(page.getByText('UV0-ready meshes')).toBeVisible()
