@@ -34,6 +34,7 @@ function defaultSession(): ProductCaptureSession {
     sourceSku: '',
     operator: '',
     capturedAt: localDateTimeValue(),
+    singlePhysicalUnitConfirmed: false,
     references: {},
     dimensions: weldingHoodCapturePlan.dimensionRequirements.map((requirement) => ({
       id: requirement.id,
@@ -153,6 +154,39 @@ function ProductCaptureAssistant() {
     const node = session.constructionNodes.find((entry) => entry.role === requirement.role)
     return node?.status === 'confirmed' && Boolean(node.nodeName.trim())
   }).length
+  const requiredMaterialSlots = (weldingHoodCapturePlan.materialSlotRequirements ?? []).filter((requirement) => requirement.required)
+  const confirmedMaterialSlots = requiredMaterialSlots.filter((requirement) => {
+    const slot = session.materialSlots.find((entry) => entry.slotId === requirement.slotId)
+    return slot?.status === 'confirmed' && Boolean(slot.materialId?.trim())
+  }).length
+  const pilotSteps = [
+    {
+      label: 'One physical production hood',
+      detail: 'All photos and measurements belong to one exact unit.',
+      ready: session.singlePhysicalUnitConfirmed === true && Boolean(session.productId.trim()) && Boolean(session.operator.trim()),
+    },
+    {
+      label: 'Required capture coverage',
+      detail: requiredReferences.length + ' required views / states / references.',
+      ready: capturedRequiredReferences === requiredReferences.length,
+    },
+    {
+      label: 'Authoritative dimensions',
+      detail: requiredDimensions.length + ' direct physical measurements.',
+      ready: completeDimensions === requiredDimensions.length,
+    },
+    {
+      label: 'Semantic construction contract',
+      detail: requiredNodes.length + ' required model nodes confirmed.',
+      ready: confirmedNodes === requiredNodes.length,
+    },
+    {
+      label: 'Material surface contract',
+      detail: requiredMaterialSlots.length + ' required material slots confirmed.',
+      ready: confirmedMaterialSlots === requiredMaterialSlots.length,
+    },
+  ]
+  const pilotReady = pilotSteps.every((step) => step.ready)
 
   function setDimension(id: string, value: string) {
     const parsed = value.trim() === '' ? undefined : Number(value)
@@ -225,7 +259,7 @@ function ProductCaptureAssistant() {
         modelFileName: 'model.glb',
       })
       downloadJson(`${productId}-asset-manifest-scaffold.json`, manifest)
-      setStatus('Material-ready 3D manifest scaffold downloaded. Geometry, UV quality, cameras, motion and fidelity still require authoring and QA.')
+      setStatus('Physical-capture production-candidate manifest downloaded. Geometry, UV quality, cameras, motion and fidelity still require authoring and Digital Twin QA.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Asset manifest scaffold could not be generated.')
     }
@@ -235,7 +269,7 @@ function ProductCaptureAssistant() {
     <main className="product-capture-shell">
       <header className="product-capture-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.18</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.43</p>
           <h1>Product Capture</h1>
           <p>
             Convert a real Scorpion product into a measured, evidence-backed construction specification before any
@@ -261,6 +295,29 @@ function ProductCaptureAssistant() {
         <div><span>Required views</span><strong>{capturedRequiredReferences} / {requiredReferences.length}</strong></div>
         <div><span>Dimensions</span><strong>{completeDimensions} / {requiredDimensions.length}</strong></div>
         <div><span>Semantic nodes</span><strong>{confirmedNodes} / {requiredNodes.length}</strong></div>
+      </section>
+
+      <section className={pilotReady ? 'pilot-readiness is-ready' : 'pilot-readiness'} aria-label="First welding hood production pilot">
+        <div className="pilot-readiness__heading">
+          <div>
+            <span>FIRST REAL ASSET PILOT</span>
+            <strong>Scorpion leather welding hood</strong>
+            <small>The current customer Studio hood remains a development placeholder until a physical-capture candidate passes the complete reconstruction and QA chain.</small>
+          </div>
+          <em>{pilotReady ? 'Capture package ready' : pilotSteps.filter((step) => step.ready).length + ' / ' + pilotSteps.length + ' ready'}</em>
+        </div>
+        <div className="pilot-checklist">
+          {pilotSteps.map((step) => (
+            <div className={step.ready ? 'is-ready' : ''} key={step.label}>
+              <span>{step.ready ? 'READY' : 'PENDING'}</span>
+              <strong>{step.label}</strong>
+              <small>{step.detail}</small>
+            </div>
+          ))}
+        </div>
+        <p>
+          A generated manifest scaffold is tagged <b>production-candidate / physical-capture</b>. Development placeholder manifests are explicitly blocked from production promotion in Digital Twin QA.
+        </p>
       </section>
 
       <section className="product-capture-panel">
@@ -292,6 +349,18 @@ function ProductCaptureAssistant() {
             <input type="datetime-local" value={session.capturedAt.slice(0, 16)} onChange={(event) => setSession({ ...session, capturedAt: event.target.value })} />
           </label>
         </div>
+        <label className={session.singlePhysicalUnitConfirmed ? 'unit-attestation is-confirmed' : 'unit-attestation'}>
+          <input
+            aria-label="Confirm one exact physical production unit"
+            type="checkbox"
+            checked={session.singlePhysicalUnitConfirmed === true}
+            onChange={(event) => setSession({ ...session, singlePhysicalUnitConfirmed: event.target.checked })}
+          />
+          <span>
+            <strong>One exact physical production unit confirmed</strong>
+            <small>Every measurement and reference in this session belongs to this same hood. Do not mix photos from another hood, revision, repaired sample, or prototype.</small>
+          </span>
+        </label>
       </section>
 
       <section className="product-capture-panel">
