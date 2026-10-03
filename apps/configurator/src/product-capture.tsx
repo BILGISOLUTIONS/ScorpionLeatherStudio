@@ -228,6 +228,13 @@ function ProductCaptureAssistant() {
     const requirement = weldingHoodCapturePlan.referenceRequirements.find((entry) => entry.key === key)
     if (!requirement) return
 
+    setReferenceFiles((current) => {
+      const next = { ...current }
+      if (file) next[key] = file
+      else delete next[key]
+      return next
+    })
+
     setSession((current) => {
       const references = { ...current.references }
       if (!file) {
@@ -246,18 +253,34 @@ function ProductCaptureAssistant() {
     })
   }
 
+  function setSupplementalReferenceFiles(files: File[]) {
+    setSupplementalFiles(files)
+    setSession((current) => ({
+      ...current,
+      supplementalReferences: files.map((file) => ({
+        name: file.name,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+        lastModified: file.lastModified,
+        kind: 'supplemental-reference',
+      })),
+    }))
+  }
+
   function clearSession() {
     const next = defaultSession()
     setSession(next)
+    setReferenceFiles({})
+    setSupplementalFiles([])
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     setStatus('New product-capture session started.')
   }
 
-  function validatedConstructionPacket() {
+  function validatedConstructionPacket(generatedAt = new Date().toISOString()) {
     return buildProductConstructionPacket({
       session,
       plan: weldingHoodCapturePlan,
-      generatedAt: new Date().toISOString(),
+      generatedAt,
     })
   }
 
@@ -286,6 +309,151 @@ function ProductCaptureAssistant() {
       setStatus('Physical-capture production-candidate manifest downloaded. Geometry, UV quality, cameras, motion and fidelity still require authoring and Digital Twin QA.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Asset manifest scaffold could not be generated.')
+    }
+  }
+
+  async function exportFieldCaptureBundle() {
+    setBundleBusy(true)
+    try {
+      const generatedAt = new Date().toISOString()
+      const packet = validatedConstructionPacket(generatedAt)
+      const missingKeys = Object.keys(session.references).filter((key) => !referenceFiles[key])
+      if (missingKeys.length) {
+        throw new Error('Reattach ' + missingKeys.length + ' selected reference photo(s) before building the field evidence bundle.')
+      }
+      if ((session.supplementalReferences?.length ?? 0) !== supplementalFiles.length) {
+        throw new Error('Reattach the supplemental photo set before building the field evidence bundle.')
+      }
+
+      const productPart = safeFilePart(session.productId, 'product')
+      const assetPart = productPart.toLowerCase() + '-v1'
+      const manifest = buildAssetManifestScaffold({
+        construction: packet,
+        plan: weldingHoodCapturePlan,
+        assetId: assetPart,
+        modelFileName: 'model.glb',
+      })
+
+      const referenceIndex: Array<{
+        role: string
+        label: string
+        required: boolean
+        archivePath: string
+        originalName: string
+        sizeBytes: number
+        type: string
+        lastModified: number
+      }> = []
+      const supplementalIndex: Array<{
+        archivePath: string
+        originalName: string
+        sizeBytes: number
+        type: string
+        lastModified: number
+      }> = []
+      const entries: Array<{ path: string; data: Blob | string | Uint8Array }> = []
+
+      weldingHoodCapturePlan.referenceRequirements.forEach((requirement, index) => {
+        const metadata = session.references[requirement.key]
+        const file = referenceFiles[requirement.key]
+        if (!metadata || !file) return
+        const archivePath = 'references/' + String(index + 1).padStart(2, '0') + '-' + safeFilePart(requirement.key, 'reference') + fileExtension(file.name)
+        entries.push({ path: archivePath, data: file })
+        referenceIndex.push({
+          role: requirement.key,
+          label: requirement.label,
+          required: requirement.required,
+          archivePath,
+          originalName: file.name,
+          sizeBytes: file.size,
+          type: file.type || 'application/octet-stream',
+          lastModified: file.lastModified,
+        })
+      })
+
+      supplementalFiles.forEach((file, index) => {
+        const baseName = file.name.replace(/\.[^.]+$/u, '')
+        const archivePath = 'supplemental/' + String(index + 1).padStart(3, '0') + '-' + safeFilePart(baseName, 'supplemental') + fileExtension(file.name)
+        entries.push({ path: archivePath, data: file })
+        supplementalIndex.push({
+          archivePath,
+          originalName: file.name,
+          sizeBytes: file.size,
+          type: file.type || 'application/octet-stream',
+          lastModified: file.lastModified,
+        })
+      })
+
+      const bundleIndex = {
+        schemaVersion: 1,
+        bundleType: 'sls-product-capture-evidence',
+        generatedAt,
+        productId: packet.productId,
+        productLabel: packet.productLabel,
+        captureSessionId: packet.sourceCaptureSessionId,
+        capturePlanId: packet.capturePlanId,
+        assetId: manifest.assetId,
+        authority: {
+          singlePhysicalUnitConfirmed: packet.provenance.singlePhysicalUnitConfirmed === true,
+          physicalProductRemainsGeometryAuthority: true,
+          localOnlyPackaging: true,
+        },
+        totals: {
+          roleReferences: referenceIndex.length,
+          supplementalReferences: supplementalIndex.length,
+          sourceImages: referenceIndex.length + supplementalIndex.length,
+          sourceBytes: [...referenceIndex, ...supplementalIndex].reduce((sum, entry) => sum + entry.sizeBytes, 0),
+        },
+        references: referenceIndex,
+        supplemental: supplementalIndex,
+      }
+
+      const readme = [
+        'Scorpion Leather Studio — Product Capture Evidence Bundle',
+        '',
+        'Product: ' + packet.productLabel + ' (' + packet.productId + ')',
+        'Capture session: ' + packet.sourceCaptureSessionId,
+        'Capture plan: ' + packet.capturePlanId,
+        'Generated: ' + generatedAt,
+        '',
+        'AUTHORITY',
+        '- These source photographs and direct physical measurements describe one exact physical production unit.',
+        '- The physical product and measurements remain geometry authority.',
+        '- Reconstruction/AI output is a candidate only and must pass Blender authoring/preflight and Digital Twin QA.',
+        '- Provider-generated materials are reference-only unless separately approved through the Scorpion material pipeline.',
+        '',
+        'CONTENTS',
+        '- metadata/capture-session.json — field-session metadata.',
+        '- metadata/construction-packet.json — validated physical construction contract.',
+        '- metadata/asset-manifest-scaffold.json — production-candidate runtime scaffold.',
+        '- metadata/capture-bundle-index.json — deterministic mapping from capture roles to source files.',
+        '- references/ — named required/optional capture-plan photographs.',
+        '- supplemental/ — additional overlapping orbit/detail photographs for reconstruction quality.',
+        '',
+        'The ZIP uses stored (uncompressed) entries intentionally: camera files are already compressed, so this avoids wasting mobile CPU/battery on ineffective recompression.',
+        '',
+      ].join('\n')
+
+      entries.unshift(
+        { path: 'README.txt', data: readme },
+        { path: 'metadata/capture-session.json', data: JSON.stringify(session, null, 2) + '\n' },
+        { path: 'metadata/construction-packet.json', data: JSON.stringify(packet, null, 2) + '\n' },
+        { path: 'metadata/asset-manifest-scaffold.json', data: JSON.stringify(manifest, null, 2) + '\n' },
+        { path: 'metadata/capture-bundle-index.json', data: JSON.stringify(bundleIndex, null, 2) + '\n' },
+      )
+
+      setStatus('Packaging ' + (referenceIndex.length + supplementalIndex.length) + ' source photographs locally…')
+      const { buildStoredZip } = await import('./capture-bundle')
+      const zip = await buildStoredZip(entries, new Date(generatedAt))
+      downloadBlob(
+        safeFilePart(packet.productId, 'product') + '-' + safeFilePart(packet.sourceCaptureSessionId, 'capture') + '-field-evidence.zip',
+        zip,
+      )
+      setStatus('Field evidence ZIP downloaded. Source photos stayed local; nothing was uploaded by Product Capture.')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Field evidence bundle could not be generated.')
+    } finally {
+      setBundleBusy(false)
     }
   }
 
