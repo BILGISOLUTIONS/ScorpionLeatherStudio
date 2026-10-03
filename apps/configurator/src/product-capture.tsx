@@ -605,25 +605,36 @@ function ProductCaptureAssistant() {
         <div className="reference-list">
           {weldingHoodCapturePlan.referenceRequirements.map((requirement, index) => {
             const selected = session.references[requirement.key]
+            const attached = referenceFiles[requirement.key]
+            const rowClass = attached
+              ? 'reference-row is-captured'
+              : selected
+                ? 'reference-row is-metadata-only'
+                : 'reference-row'
             return (
-              <div className={`reference-row${selected ? ' is-captured' : ''}`} key={requirement.key}>
+              <div className={rowClass} key={requirement.key}>
                 <span className="reference-code">{String(index + 1).padStart(2, '0')}</span>
                 <div className="reference-info">
                   <strong>{requirement.label}{requirement.required ? ' · Required' : ' · Optional'}</strong>
                   <p>{requirement.purpose}</p>
-                  {selected ? <small>{selected.name} · {(selected.size / 1024 / 1024).toFixed(1)} MB</small> : null}
+                  {selected ? (
+                    <small className={attached ? '' : 'needs-reattach'}>
+                      {selected.name} · {(selected.size / 1024 / 1024).toFixed(1)} MB · {attached ? 'source attached now' : 'metadata only — reattach source'}
+                    </small>
+                  ) : null}
                 </div>
                 <label className="file-button">
                   <input
                     aria-label={`${requirement.label} reference file`}
                     type="file"
                     accept="image/*"
+                    capture="environment"
                     onChange={(event) => {
                       setReference(requirement.key, event.target.files?.[0])
                       event.target.value = ''
                     }}
                   />
-                  <span>{selected ? 'Replace' : 'Select photo'}</span>
+                  <span>{selected ? (attached ? 'Replace' : 'Reattach photo') : 'Select / take photo'}</span>
                 </label>
                 {selected ? (
                   <button type="button" className="clear-button" onClick={() => setReference(requirement.key, undefined)}>Clear</button>
@@ -631,6 +642,46 @@ function ProductCaptureAssistant() {
               </div>
             )
           })}
+        </div>
+
+        <div className={(session.supplementalReferences?.length ?? 0) ? 'supplemental-capture has-files' : 'supplemental-capture'}>
+          <div className="supplemental-copy">
+            <span>SUPPLEMENTAL RECONSTRUCTION SET</span>
+            <strong>Overlapping orbit & construction coverage</strong>
+            <p>
+              The 18 required roles are the minimum evidence contract. For the first production hood, add overlapping photographs around the object and detail areas until the total set is roughly 60–120 sharp images when practical.
+            </p>
+            <small>
+              {session.supplementalReferences?.length ?? 0} supplemental metadata file{(session.supplementalReferences?.length ?? 0) === 1 ? '' : 's'} · {supplementalFiles.length} source file{supplementalFiles.length === 1 ? '' : 's'} attached now
+            </small>
+          </div>
+          <div className="supplemental-actions">
+            <label className="file-button supplemental-select">
+              <input
+                aria-label="Supplemental reconstruction photos"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => {
+                  setSupplementalReferenceFiles(Array.from(event.target.files ?? []))
+                  event.target.value = ''
+                }}
+              />
+              <span>{(session.supplementalReferences?.length ?? 0) ? (supplementalFiles.length ? 'Replace supplemental set' : 'Reattach supplemental set') : 'Select supplemental photos'}</span>
+            </label>
+            {(session.supplementalReferences?.length ?? 0) ? (
+              <button type="button" className="clear-button" onClick={() => setSupplementalReferenceFiles([])}>Clear supplemental</button>
+            ) : null}
+          </div>
+          {(session.supplementalReferences?.length ?? 0) ? (
+            <div className="supplemental-preview" aria-label="Supplemental capture metadata">
+              {(session.supplementalReferences ?? []).slice(0, 8).map((frame, index) => (
+                <span key={frame.name + frame.lastModified + index}>{String(index + 1).padStart(3, '0')} · {frame.name}</span>
+              ))}
+              {(session.supplementalReferences?.length ?? 0) > 8 ? <em>+ {(session.supplementalReferences?.length ?? 0) - 8} more</em> : null}
+              {!supplementalFiles.length ? <b>Source bytes are not attached in this browser session.</b> : null}
+            </div>
+          ) : null}
         </div>
       </section>
 
