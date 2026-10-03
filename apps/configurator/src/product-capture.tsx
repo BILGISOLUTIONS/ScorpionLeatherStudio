@@ -536,7 +536,7 @@ function ProductCaptureAssistant() {
     <main className="product-capture-shell">
       <header className="product-capture-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.44</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.45</p>
           <h1>Product Capture</h1>
           <p>
             Convert a real Scorpion product into a measured, evidence-backed construction specification before any
@@ -553,8 +553,8 @@ function ProductCaptureAssistant() {
       </header>
 
       <p className="local-note">
-        Local-first capture: selected photographs are never uploaded by this tool. Draft metadata persists in this browser,
-        but source-photo bytes remain attached only for the current page session and must be reattached after a reload before a field evidence ZIP can be built.
+        Local-first capture: selected photographs are never uploaded by this tool. SHA-256 fingerprints are computed locally and stored with draft metadata.
+        Source-photo bytes remain attached only for the current page session; after reload, the original files must be reattached and must match their saved fingerprints before export.
       </p>
 
       <section className="capture-metrics" aria-label="Capture readiness">
@@ -563,6 +563,7 @@ function ProductCaptureAssistant() {
         <div><span>Dimensions</span><strong>{completeDimensions} / {requiredDimensions.length}</strong></div>
         <div><span>Semantic nodes</span><strong>{confirmedNodes} / {requiredNodes.length}</strong></div>
         <div><span>Files attached now</span><strong>{attachedSelectedReferences + supplementalFiles.length} / {selectedReferenceKeys.length + supplementalMetadataCount}</strong></div>
+        <div><span>SHA-256 verified</span><strong>{hashedSelectedReferences + hashedSupplementalReferences} / {selectedReferenceKeys.length + supplementalMetadataCount}</strong></div>
       </section>
 
       <section className={pilotReady ? 'pilot-readiness is-ready' : 'pilot-readiness'} aria-label="First welding hood production pilot">
@@ -693,9 +694,14 @@ function ProductCaptureAssistant() {
                   <strong>{requirement.label}{requirement.required ? ' · Required' : ' · Optional'}</strong>
                   <p>{requirement.purpose}</p>
                   {selected ? (
-                    <small className={attached ? '' : 'needs-reattach'}>
-                      {selected.name} · {(selected.size / 1024 / 1024).toFixed(1)} MB · {attached ? 'source attached now' : 'metadata only — reattach source'}
-                    </small>
+                    <>
+                      <small className={attached ? '' : 'needs-reattach'}>
+                        {selected.name} · {(selected.size / 1024 / 1024).toFixed(1)} MB · {attached ? 'source attached now' : 'metadata only — reattach source'}
+                      </small>
+                      <small className="hash-line">
+                        SHA-256 · {isSha256Hex(selected.sha256) ? selected.sha256.slice(0, 16) + '…' : 'legacy metadata — fingerprint on reattach'}
+                      </small>
+                    </>
                   ) : null}
                 </div>
                 <label className="file-button">
@@ -705,7 +711,7 @@ function ProductCaptureAssistant() {
                     accept="image/*"
                     capture="environment"
                     onChange={(event) => {
-                      setReference(requirement.key, event.target.files?.[0])
+                      void setReference(requirement.key, event.target.files?.[0])
                       event.target.value = ''
                     }}
                   />
@@ -727,7 +733,7 @@ function ProductCaptureAssistant() {
               The 18 required roles are the minimum evidence contract. For the first production hood, add overlapping photographs around the object and detail areas until the total set is roughly 60–120 sharp images when practical.
             </p>
             <small>
-              {session.supplementalReferences?.length ?? 0} supplemental metadata file{(session.supplementalReferences?.length ?? 0) === 1 ? '' : 's'} · {supplementalFiles.length} source file{supplementalFiles.length === 1 ? '' : 's'} attached now
+              {session.supplementalReferences?.length ?? 0} supplemental metadata file{(session.supplementalReferences?.length ?? 0) === 1 ? '' : 's'} · {supplementalFiles.length} source file{supplementalFiles.length === 1 ? '' : 's'} attached now · {hashedSupplementalReferences} fingerprint{hashedSupplementalReferences === 1 ? '' : 's'}
             </small>
           </div>
           <div className="supplemental-actions">
@@ -738,14 +744,14 @@ function ProductCaptureAssistant() {
                 accept="image/*"
                 multiple
                 onChange={(event) => {
-                  setSupplementalReferenceFiles(Array.from(event.target.files ?? []))
+                  void setSupplementalReferenceFiles(Array.from(event.target.files ?? []))
                   event.target.value = ''
                 }}
               />
               <span>{(session.supplementalReferences?.length ?? 0) ? (supplementalFiles.length ? 'Replace supplemental set' : 'Reattach supplemental set') : 'Select supplemental photos'}</span>
             </label>
             {(session.supplementalReferences?.length ?? 0) ? (
-              <button type="button" className="clear-button" onClick={() => setSupplementalReferenceFiles([])}>Clear supplemental</button>
+              <button type="button" className="clear-button" disabled={hashBusy} onClick={() => void setSupplementalReferenceFiles([])}>Clear supplemental</button>
             ) : null}
           </div>
           {(session.supplementalReferences?.length ?? 0) ? (
@@ -953,10 +959,10 @@ function ProductCaptureAssistant() {
           <button
             type="button"
             className="primary bundle-download"
-            disabled={!pilotReady || bundleBusy}
+            disabled={!pilotReady || bundleBusy || hashBusy}
             onClick={() => void exportFieldCaptureBundle()}
           >
-            {bundleBusy ? 'Building field evidence ZIP…' : 'Download field evidence bundle (.zip)'}
+            {hashBusy ? 'Verifying source fingerprints…' : bundleBusy ? 'Building verified field evidence ZIP…' : 'Download verified field evidence bundle (.zip)'}
           </button>
           <button
             type="button"
