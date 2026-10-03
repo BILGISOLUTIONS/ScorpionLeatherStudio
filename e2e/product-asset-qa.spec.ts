@@ -5,7 +5,7 @@ test.beforeAll(async () => {
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
 })
 
-test('Digital Twin QA keeps Three.js deferred and inspects a local product asset', async ({ page }, testInfo) => {
+test('V0.42 Digital Twin QA links preparation provenance and keeps Three.js deferred', async ({ page }, testInfo) => {
   const scriptRequests: string[] = []
   const consoleErrors: string[] = []
 
@@ -56,6 +56,48 @@ test('Digital Twin QA keeps Three.js deferred and inspects a local product asset
   const manifest = JSON.parse(
     await fs.readFile('apps/configurator/public/models/placeholder-welding-hood.manifest.json', 'utf8'),
   )
+  const modelPath = 'apps/configurator/public/models/placeholder-welding-hood.gltf'
+  const modelStat = await fs.stat(modelPath)
+  const preparation = {
+    schemaVersion: 1,
+    stage: 'raw-reconstruction-preparation',
+    candidateId: 'SLS-CAND-20261003-E2E42',
+    jobId: 'SLS-RECON-20261003-E2E42',
+    assetId: manifest.assetId,
+    productId: construction.productId,
+    sourceCaptureSessionId: construction.sourceCaptureSessionId,
+    sourceModelFile: 'provider-raw.glb',
+    normalizedModelFile: 'placeholder-welding-hood.gltf',
+    productionApproved: false,
+    requiresDigitalTwinQa: true,
+    status: 'manual-authoring-required',
+    authority: {
+      uniformScaleOnly: true,
+      nonUniformGeometryCorrectionApplied: false,
+      realProductRemainsGeometryAuthority: true,
+      providerMaterialsRemainReferenceOnly: true,
+    },
+    physicalEnvelope: {
+      targetMeters: { width: 0.36, height: 0.67, depth: 0.325 },
+      beforeMeters: { width: 0.34, height: 0.63, depth: 0.31 },
+      afterMeters: { width: 0.36, height: 0.667, depth: 0.328 },
+      uniformScale: 1.06,
+      deviationRatios: { width: 0, height: 0.0045, depth: 0.0092 },
+      toleranceRatio: 0.08,
+    },
+    geometry: {
+      trianglesBefore: 98000,
+      trianglesAfter: 82000,
+      targetTriangles: 150000,
+      meshCount: 5,
+    },
+    blockers: [],
+    authoringRequirements: [
+      { code: 'semantic_authoring_required', message: 'Semantic authoring completed before final QA.' },
+    ],
+    warnings: [],
+    outputBytes: modelStat.size,
+  }
 
   await page.getByLabel('Construction packet JSON').setInputFiles({
     name: 'SC-WH-001-construction-packet.json',
@@ -70,9 +112,17 @@ test('Digital Twin QA keeps Three.js deferred and inspects a local product asset
 
   expect(scriptRequests.some((url) => url.includes('ProductAssetQaViewer'))).toBe(false)
 
-  await page.getByLabel('Candidate 3D model').setInputFiles(
-    'apps/configurator/public/models/placeholder-welding-hood.gltf',
-  )
+  await page.getByLabel('Reconstruction preparation report JSON').setInputFiles({
+    name: 'placeholder-welding-hood.prep.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(preparation)),
+  })
+  const prepRegion = page.getByRole('region', { name: 'Reconstruction preparation provenance' })
+  await expect(prepRegion).toBeVisible()
+  await expect(prepRegion.getByText('SLS-CAND-20261003-E2E42')).toBeVisible()
+  await expect(prepRegion.getByText('manual authoring required')).toBeVisible()
+
+  await page.getByLabel('Candidate 3D model').setInputFiles(modelPath)
 
   await expect(page.getByLabel('Digital twin QA viewer').locator('canvas')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Automated asset metrics' })).toBeVisible()
@@ -93,8 +143,8 @@ test('Digital Twin QA keeps Three.js deferred and inspects a local product asset
   await expect.poll(() => scriptRequests.some((url) => url.includes('ProductAssetQaViewer'))).toBe(true)
 
   const screenshotName = testInfo.project.name.includes('mobile')
-    ? 'product-asset-qa-mobile.png'
-    : 'product-asset-qa-desktop.png'
+    ? 'product-asset-qa-v042-mobile.png'
+    : 'product-asset-qa-v042-desktop.png'
 
   await page.screenshot({
     path: 'playwright-output/screenshots/' + screenshotName,
