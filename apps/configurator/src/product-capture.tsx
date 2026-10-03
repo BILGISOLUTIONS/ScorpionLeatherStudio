@@ -696,6 +696,43 @@ function ProductCaptureAssistant() {
         </p>
       </section>
 
+      <section className={qualityReport.ready ? 'quality-preflight is-ready' : 'quality-preflight has-blockers'} aria-label="Capture quality preflight">
+        <div className="quality-preflight__heading">
+          <div>
+            <span>CAPTURE QUALITY PREFLIGHT</span>
+            <strong>{qualityReport.ready ? 'No objective quality blockers' : qualityReport.blockers.length + ' blocker' + (qualityReport.blockers.length === 1 ? '' : 's') + ' must be resolved'}</strong>
+            <small>SLS internal field guidance only. Low resolution, cautious formats and image-count targets are advisory; exact duplicate required-role evidence and ZIP-limit risk are blocking.</small>
+          </div>
+          <em>{qualityReport.blockers.length} blocker · {qualityReport.warnings.length} warning</em>
+        </div>
+        <div className="quality-preflight__grid">
+          <div><span>Source images</span><strong>{qualityReport.sourceCount}</strong><small>Target {captureQualityPolicy.recommendedImageCountMin}–{captureQualityPolicy.recommendedImageCountMax}</small></div>
+          <div><span>Estimated source size</span><strong>{formatBytes(qualityReport.totalBytes)}</strong><small>Before small metadata overhead</small></div>
+          <div><span>Resolution inspected</span><strong>{qualityReport.inspectableImages} / {qualityReport.sourceCount}</strong><small>{qualityReport.recommendedResolutionImages} at recommended level</small></div>
+          <div><span>Low resolution</span><strong>{qualityReport.lowResolutionImages}</strong><small>Below 2 MP / 1080 px short edge</small></div>
+          <div><span>Exact duplicate groups</span><strong>{qualityReport.duplicateGroups}</strong><small>Required-role duplicates block export</small></div>
+          <div><span>Cautious formats</span><strong>{qualityReport.cautiousFormatImages}</strong><small>JPEG / PNG / WebP preferred</small></div>
+        </div>
+        {qualityReport.blockers.length || qualityReport.warnings.length ? (
+          <details className="quality-findings">
+            <summary>Review quality findings</summary>
+            <ul>
+              {[...qualityReport.blockers, ...qualityReport.warnings].slice(0, 12).map((finding, index) => (
+                <li className={finding.severity} key={finding.code + index}>
+                  <b>{finding.severity === 'blocker' ? 'BLOCKER' : 'WARNING'}</b>
+                  <span>{finding.message}</span>
+                </li>
+              ))}
+              {qualityReport.blockers.length + qualityReport.warnings.length > 12 ? (
+                <li><span>+ {qualityReport.blockers.length + qualityReport.warnings.length - 12} additional quality findings</span></li>
+              ) : null}
+            </ul>
+          </details>
+        ) : (
+          <p>No capture-quality findings yet. Add source images to run the local preflight.</p>
+        )}
+      </section>
+
       <section className="product-capture-panel">
         <div className="section-heading">
           <span>01</span>
