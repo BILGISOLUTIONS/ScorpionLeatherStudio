@@ -462,6 +462,13 @@ export function buildAssetManifestScaffold(args: {
     upAxis: 'Y',
     frontAxis: '-Z',
     rootNode,
+    assetAuthority: {
+      lifecycle: 'production-candidate',
+      source: 'physical-capture',
+      sourceCaptureSessionId: construction.sourceCaptureSessionId,
+      capturePlanId: construction.capturePlanId,
+      note: 'Generated from validated Product Capture evidence; requires Digital Twin QA before production promotion.',
+    },
     materialSlots,
     materialSlotProfiles,
     defaultMaterialVariants,
