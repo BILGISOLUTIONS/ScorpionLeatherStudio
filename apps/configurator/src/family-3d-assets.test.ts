@@ -16,6 +16,10 @@ describe('V0.37 family 3D assets', () => {
   it('keeps the welding hood on its existing G1 asset in this bounded release', () => {
     expect(family3DAssets['welding-hood'].authority).toBe('G1-development-twin')
     expect(family3DAssets['welding-hood'].manifest.model).toBe('/models/placeholder-welding-hood.gltf')
+    expect(family3DAssets['welding-hood'].manifest.assetAuthority).toMatchObject({
+      lifecycle: 'development-placeholder',
+      source: 'development-scaffold',
+    })
   })
 
   it.each(g2Families)('binds %s to an isolated G2 model contract', (familyId) => {
@@ -24,6 +28,10 @@ describe('V0.37 family 3D assets', () => {
     expect(asset.authority).toBe('G2-development-twin')
     expect(asset.manifest.model).toBe(`/models/development-g2-${familyId}.gltf`)
     expect(asset.manifest.model).not.toContain('development-product-families.gltf')
+    expect(asset.manifest.assetAuthority).toMatchObject({
+      lifecycle: 'development-placeholder',
+      source: 'development-scaffold',
+    })
     expect(asset.manifest.components).toEqual({
       [`family.${familyId}`]: [expect.stringMatching(/^Family_/u)],
     })
