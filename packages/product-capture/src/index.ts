@@ -118,6 +118,7 @@ export interface ProductCaptureSession {
   capturedAt: string
   singlePhysicalUnitConfirmed?: boolean
   references: Record<string, CapturedReferenceFrame>
+  supplementalReferences?: CapturedReferenceFrame[]
   dimensions: CapturedDimension[]
   constructionNodes: ConstructionNodeRecord[]
   components: ProductComponentRecord[]
@@ -151,6 +152,12 @@ export interface ProductConstructionPacket {
     name: string
     kind: ReferenceKind
     size: number
+    lastModified: number
+  }>
+  supplementalReferenceCoverage?: Array<{
+    name: string
+    size: number
+    type: string
     lastModified: number
   }>
   dimensionsMm: Record<string, number>
@@ -229,6 +236,19 @@ export function validateProductCapture(
   for (const key of Object.keys(session.references)) {
     if (!requirementKeys.has(key)) {
       issues.push(issue(`references.${key}`, 'Reference is not defined by the active capture plan.'))
+    }
+  }
+
+  for (const [index, frame] of (session.supplementalReferences ?? []).entries()) {
+    const prefix = `supplementalReferences.${index}`
+    if (frame.size <= 0 || !Number.isFinite(frame.size)) {
+      issues.push(issue(`${prefix}.size`, 'Supplemental reference file size must be greater than zero.'))
+    }
+    if (!nonEmpty(frame.name)) {
+      issues.push(issue(`${prefix}.name`, 'Supplemental reference filename is required.'))
+    }
+    if (!nonEmpty(frame.type)) {
+      issues.push(issue(`${prefix}.type`, 'Supplemental reference media type is required.'))
     }
   }
 
@@ -358,6 +378,13 @@ export function buildProductConstructionPacket(args: {
     }))
     .sort((a, b) => a.key.localeCompare(b.key))
 
+  const supplementalReferenceCoverage = (args.session.supplementalReferences ?? []).map((frame) => ({
+    name: frame.name,
+    size: frame.size,
+    type: frame.type,
+    lastModified: frame.lastModified,
+  }))
+
   return {
     schemaVersion: 1,
     productId: args.session.productId.trim(),
@@ -375,6 +402,7 @@ export function buildProductConstructionPacket(args: {
       singlePhysicalUnitConfirmed: true,
     },
     referenceCoverage,
+    supplementalReferenceCoverage: supplementalReferenceCoverage.length ? supplementalReferenceCoverage : undefined,
     dimensionsMm,
     constructionNodes: args.session.constructionNodes.map((node) => ({ ...node, nodeName: node.nodeName.trim() })),
     components: args.session.components.map((component) => ({
