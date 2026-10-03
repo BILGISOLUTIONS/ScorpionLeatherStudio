@@ -116,6 +116,7 @@ export interface ProductCaptureSession {
   sourceSku?: string
   operator: string
   capturedAt: string
+  singlePhysicalUnitConfirmed?: boolean
   references: Record<string, CapturedReferenceFrame>
   dimensions: CapturedDimension[]
   constructionNodes: ConstructionNodeRecord[]
@@ -143,6 +144,7 @@ export interface ProductConstructionPacket {
   provenance: {
     operator: string
     capturedAt: string
+    singlePhysicalUnitConfirmed?: true
   }
   referenceCoverage: Array<{
     key: string
@@ -198,6 +200,12 @@ export function validateProductCapture(
   if (!nonEmpty(session.productCategory)) issues.push(issue('productCategory', 'Product category is required.'))
   if (!nonEmpty(session.operator)) issues.push(issue('operator', 'Capture operator is required.'))
   if (!validTimestamp(session.capturedAt)) issues.push(issue('capturedAt', 'A valid capture timestamp is required.'))
+  if (session.singlePhysicalUnitConfirmed !== true) {
+    issues.push(issue(
+      'singlePhysicalUnitConfirmed',
+      'Confirm that all measurements and reference photographs belong to one exact physical production unit.',
+    ))
+  }
 
   const requirementKeys = new Set(plan.referenceRequirements.map((requirement) => requirement.key))
   for (const requirement of plan.referenceRequirements) {
@@ -364,6 +372,7 @@ export function buildProductConstructionPacket(args: {
     provenance: {
       operator: args.session.operator.trim(),
       capturedAt: new Date(args.session.capturedAt).toISOString(),
+      singlePhysicalUnitConfirmed: true,
     },
     referenceCoverage,
     dimensionsMm,
