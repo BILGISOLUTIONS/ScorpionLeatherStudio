@@ -74,6 +74,11 @@ function manifest(args: {
   return {
     schemaVersion:1, assetId:args.assetId, model:familyModel(args.familyId),
     units:'meters', upAxis:'Y', frontAxis:'-Z', rootNode:'SLS_ProductRoot',
+    assetAuthority:{
+      lifecycle:'development-placeholder',
+      source:'development-scaffold',
+      note:'Generated G2 development twin. Never eligible for production promotion.',
+    },
     materialSlots:slots, materialSlotProfiles:profiles, defaultMaterialVariants:defaults,
     customizationZones:{ primary: args.zone },
     components:{ [`family.${args.familyId}`]: [familyRootById[args.familyId]] }, animations:{},
@@ -99,6 +104,11 @@ export const family3DAssets: Readonly<Record<StudioFamilyKind, Family3DAsset>> =
     manifest:{
       schemaVersion:1,assetId:'placeholder-welding-hood-v7-uv',model:'/models/placeholder-welding-hood.gltf',
       units:'meters',upAxis:'Y',frontAxis:'-Z',rootNode:'SLS_ProductRoot',
+      assetAuthority:{
+        lifecycle:'development-placeholder',
+        source:'development-scaffold',
+        note:'Legacy G1 welding-hood placeholder. Replace with a physical-capture production candidate.',
+      },
       materialSlots:{LeatherPrimary:['Shell_Main','NeckGuard_Standard','NeckGuard_Extended'],HardwarePrimary:['Visor_Frame','Rivets'],Lens:['Visor_Lens']},
       materialSlotProfiles:{
         LeatherPrimary:leatherProfile,HardwarePrimary:hardwareProfile,
