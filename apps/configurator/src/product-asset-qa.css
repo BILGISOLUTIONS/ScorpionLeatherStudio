@@ -120,3 +120,19 @@ button,input,textarea{font:inherit}
 @media(max-width:440px){
   .prep-provenance-grid{grid-template-columns:1fr}
 }
+
+
+/* V0.43 — explicit digital-twin authority */
+.asset-authority-banner{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.5fr);gap:16px;align-items:center;margin-top:10px;padding:12px 14px;border:1px solid #46513c;background:#0d120b}
+.asset-authority-banner.is-development{border-color:#634439;background:#160f0d}
+.asset-authority-banner>div{display:grid;gap:3px}
+.asset-authority-banner span{color:#a68c5d;font-size:.54rem;font-weight:900;letter-spacing:.09em}
+.asset-authority-banner strong{font-size:.78rem;text-transform:capitalize}
+.asset-authority-banner small{color:#8b8377;font-size:.62rem;overflow-wrap:anywhere}
+.asset-authority-banner p{margin:0;color:#978e81;font-size:.65rem;line-height:1.48}
+.asset-authority-banner.is-development strong{color:#d2a398}
+.asset-authority-banner.is-candidate strong{color:#afc79a}
+@media(max-width:700px){
+  .asset-authority-banner{grid-template-columns:1fr}
+  .asset-authority-banner p,.asset-authority-banner small{font-size:.7rem}
+}
