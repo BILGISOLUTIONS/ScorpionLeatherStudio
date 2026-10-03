@@ -32,6 +32,8 @@ function completeSession(): ProductCaptureSession {
             type: 'image/jpeg',
             lastModified: 1,
             kind: requirement.kind,
+            imageWidthPx: 3024,
+            imageHeightPx: 4032,
           },
         ]),
     ),
@@ -42,6 +44,8 @@ function completeSession(): ProductCaptureSession {
         type: 'image/jpeg',
         lastModified: 2,
         kind: 'supplemental-reference',
+        imageWidthPx: 3024,
+        imageHeightPx: 4032,
       },
     ],
     dimensions: weldingHoodCapturePlan.dimensionRequirements.map((requirement) => ({
@@ -181,6 +185,8 @@ describe('product capture validation', () => {
         size: 2_000_000,
         type: 'image/jpeg',
         lastModified: 2,
+        imageWidthPx: 3024,
+        imageHeightPx: 4032,
       },
     ])
     expect(packet.materialSlots).toHaveLength(3)
