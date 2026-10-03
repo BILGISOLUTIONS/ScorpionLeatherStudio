@@ -294,3 +294,42 @@ The field bundle index now records the SHA-256 digest for each reference and sup
 The ZIP also contains SHA256SUMS.txt. That ledger records the SHA-256 digest of every bundle member present before the ledger itself is added, including source images and metadata artifacts. This allows the handoff to be checked after copying, archiving, reconstruction-provider upload/download, or transfer between operators.
 
 The ZIP itself remains a local, stored/uncompressed archive. V0.45 does not add a backend, database, source-photo upload, analytics SDK, or third-party integrity service.
+
+
+## V0.46 capture quality preflight
+
+V0.46 adds a deterministic local preflight before the first real hood evidence bundle is exported. It intentionally avoids AI blur/exposure scoring until real Scorpion field captures provide evidence for useful thresholds.
+
+### Internal field guidance
+
+The current SLS guidance is:
+
+- first-hood working target: roughly 60–120 sharp source photographs when practical;
+- warn below 2 megapixels or a 1080 px short edge;
+- recommended resolution level: at least 4 megapixels and a 1440 px short edge;
+- JPEG, PNG and WebP are preferred for reconstruction-provider portability;
+- unusually tiny files are flagged as possible thumbnails/aggressively compressed derivatives;
+- source sets above 1.5 GB receive a device-storage/performance warning;
+- source evidence approaching the classic ZIP 4 GB boundary is blocked so the local field archive cannot be represented as safely exportable when it is not.
+
+These thresholds are operational guidance, not claims about universal photogrammetry requirements. Low resolution, cautious format and source-count findings remain warnings so an otherwise valuable field capture is not discarded automatically.
+
+### Objective duplicate blocker
+
+V0.45 already assigns each source image an exact SHA-256 identity. V0.46 uses that identity to detect an important field error: one photograph being reused to satisfy multiple required capture roles.
+
+If the same SHA-256 image is assigned to two or more required roles, Product Capture blocks the field bundle until the evidence is corrected. A duplicate involving an optional/supplemental image is reported as a warning instead because supplemental overlap may be intentional and should not invalidate the authoritative required-role set.
+
+### Local image inspection
+
+When a file is selected or reattached, Product Capture attempts to decode only enough of the local image to record pixel width and height. The result is stored beside its fingerprint and carried into the construction packet and bundle index.
+
+Dimension inspection remains local. If the browser cannot decode a format, the source is retained and flagged for review rather than silently rewritten or uploaded for analysis.
+
+### Field-bundle quality provenance
+
+`capture-bundle-index.json` now records a quality-preflight summary containing the active policy thresholds and observed blocker/warning/resolution/format/duplicate counts. Source index records can also include the measured pixel dimensions.
+
+The evidence ZIP README repeats the preflight summary. Existing source SHA-256 values are reused when generating `SHA256SUMS.txt`, avoiding a second full read/hash pass over 60–120 camera files during export.
+
+The preflight remains dependency-free, local-first and advisory except for objectively invalid evidence conditions such as repeated required-role source identity or archive-size risk.
