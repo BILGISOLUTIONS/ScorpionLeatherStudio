@@ -266,7 +266,7 @@ test('V0.46 Product Capture preflights source quality, duplicates and integrity'
 
   await expect(pilot.getByText('Field evidence bundle ready')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Download verified field evidence bundle (.zip)' })).toBeEnabled()
-  await expect(page.getByRole('status')).toContainText('Supplemental evidence set reattached and SHA-256 verified')
+  await expect(page.getByRole('status')).toContainText('Supplemental evidence set reattached, SHA-256 verified and quality-inspected')
 
   expect(consoleErrors, 'Product Capture console errors: ' + consoleErrors.join('\n')).toEqual([])
 })
