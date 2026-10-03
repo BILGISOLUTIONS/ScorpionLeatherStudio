@@ -35,6 +35,15 @@ function completeSession(): ProductCaptureSession {
           },
         ]),
     ),
+    supplementalReferences: [
+      {
+        name: 'supplemental-orbit-001.jpg',
+        size: 2_000_000,
+        type: 'image/jpeg',
+        lastModified: 2,
+        kind: 'required-view',
+      },
+    ],
     dimensions: weldingHoodCapturePlan.dimensionRequirements.map((requirement) => ({
       id: requirement.id,
       label: requirement.label,
@@ -83,6 +92,25 @@ describe('product capture validation', () => {
     session.singlePhysicalUnitConfirmed = false
     expect(validateProductCapture(session, weldingHoodCapturePlan).map((entry) => entry.path))
       .toContain('singlePhysicalUnitConfirmed')
+  })
+
+  it('rejects invalid supplemental reference metadata without making supplemental coverage mandatory', () => {
+    const session = completeSession()
+    session.supplementalReferences = [{
+      name: '',
+      size: 0,
+      type: '',
+      lastModified: 1,
+      kind: 'required-view',
+    }]
+    const paths = validateProductCapture(session, weldingHoodCapturePlan).map((entry) => entry.path)
+    expect(paths).toContain('supplementalReferences.0.name')
+    expect(paths).toContain('supplementalReferences.0.size')
+    expect(paths).toContain('supplementalReferences.0.type')
+
+    const withoutSupplemental = completeSession()
+    withoutSupplemental.supplementalReferences = []
+    expect(validateProductCapture(withoutSupplemental, weldingHoodCapturePlan)).toEqual([])
   })
 
   it('rejects component evidence that is not part of the capture session', () => {
@@ -147,6 +175,14 @@ describe('product capture validation', () => {
     expect(packet.referenceCoverage).toHaveLength(
       weldingHoodCapturePlan.referenceRequirements.filter((requirement) => requirement.required).length,
     )
+    expect(packet.supplementalReferenceCoverage).toEqual([
+      {
+        name: 'supplemental-orbit-001.jpg',
+        size: 2_000_000,
+        type: 'image/jpeg',
+        lastModified: 2,
+      },
+    ])
     expect(packet.materialSlots).toHaveLength(3)
 
     const manifest = buildAssetManifestScaffold({
