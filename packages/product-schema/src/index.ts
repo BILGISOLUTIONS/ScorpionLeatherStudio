@@ -124,6 +124,17 @@ export interface AssetCustomizationZone {
   safeInsetMeters?: number
 }
 
+export type AssetLifecycle = 'development-placeholder' | 'production-candidate' | 'production-approved'
+export type AssetAuthoritySource = 'development-scaffold' | 'physical-capture' | 'legacy'
+
+export interface AssetAuthority {
+  lifecycle: AssetLifecycle
+  source: AssetAuthoritySource
+  sourceCaptureSessionId?: string
+  capturePlanId?: string
+  note?: string
+}
+
 export interface AssetPresentation {
   groundY?: number
   shadowScale?: number
@@ -143,6 +154,7 @@ export interface AssetManifest {
   upAxis: 'Y'
   frontAxis: '-Z' | 'Z'
   rootNode: string
+  assetAuthority?: AssetAuthority
   materialSlots: Record<string, string[]>
   materialSlotProfiles?: Record<string, AssetMaterialSlotProfile>
   defaultMaterialVariants?: Record<string, string>
@@ -257,6 +269,31 @@ export function validateAssetManifest(
   if (!manifest.assetId.trim()) issues.push({ path: 'assetId', message: 'Asset id is required.' })
   if (!manifest.model.trim()) issues.push({ path: 'model', message: 'Model URI is required.' })
   if (!manifest.rootNode.trim()) issues.push({ path: 'rootNode', message: 'Root node is required.' })
+
+  const authority = manifest.assetAuthority
+  if (authority) {
+    if (!['development-placeholder', 'production-candidate', 'production-approved'].includes(authority.lifecycle)) {
+      issues.push({ path: 'assetAuthority.lifecycle', message: 'Unsupported asset lifecycle.' })
+    }
+    if (!['development-scaffold', 'physical-capture', 'legacy'].includes(authority.source)) {
+      issues.push({ path: 'assetAuthority.source', message: 'Unsupported asset authority source.' })
+    }
+    if (authority.lifecycle === 'development-placeholder' && authority.source !== 'development-scaffold') {
+      issues.push({ path: 'assetAuthority', message: 'Development-placeholder assets must identify development-scaffold authority.' })
+    }
+    if (authority.source === 'physical-capture') {
+      if (!authority.sourceCaptureSessionId?.trim()) {
+        issues.push({ path: 'assetAuthority.sourceCaptureSessionId', message: 'Physical-capture assets require a capture-session ID.' })
+      }
+      if (!authority.capturePlanId?.trim()) {
+        issues.push({ path: 'assetAuthority.capturePlanId', message: 'Physical-capture assets require a capture-plan ID.' })
+      }
+    }
+    if (authority.note !== undefined && !authority.note.trim()) {
+      issues.push({ path: 'assetAuthority.note', message: 'Asset authority note must be non-empty when provided.' })
+    }
+  }
+
   if (nodes && !nodes.has(manifest.rootNode)) {
     issues.push({ path: 'rootNode', message: `Root node "${manifest.rootNode}" was not found in the loaded model.` })
   }
