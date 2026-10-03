@@ -114,3 +114,39 @@ button,input,textarea{font:inherit}
 .authoring-zone>span{color:#bda778;font-size:.66rem;text-transform:capitalize}
 .authoring-zone code{color:#bfb5a5;font-size:.64rem;overflow-wrap:anywhere}
 @media(max-width:760px){.authoring-zone{grid-template-columns:1fr}.authoring-zone code{padding-top:2px}}
+
+
+/* V0.43 — first physical welding-hood production pilot */
+.pilot-readiness{margin:14px 0;padding:14px;border:1px solid #4c3e2d;background:linear-gradient(115deg,rgba(166,119,50,.09),transparent 58%),#10100d}
+.pilot-readiness.is-ready{border-color:#526341;background:linear-gradient(115deg,rgba(91,126,65,.10),transparent 58%),#0d120b}
+.pilot-readiness__heading{display:flex;align-items:start;justify-content:space-between;gap:18px}
+.pilot-readiness__heading>div{display:grid;gap:3px;min-width:0}
+.pilot-readiness__heading span{color:#b99350;font-size:.56rem;font-weight:900;letter-spacing:.09em}
+.pilot-readiness__heading strong{font-family:Georgia,"Times New Roman",serif;font-size:1.05rem;font-weight:500}
+.pilot-readiness__heading small{max-width:820px;color:#968d7f;font-size:.65rem;line-height:1.45}
+.pilot-readiness__heading em{flex:0 0 auto;color:#c5a875;font-size:.62rem;font-style:normal}
+.pilot-readiness.is-ready .pilot-readiness__heading em{color:#a9c592}
+.pilot-checklist{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:10px}
+.pilot-checklist>div{display:grid;align-content:start;gap:4px;min-height:92px;padding:9px;border:1px solid #322d26;background:#0b0b09}
+.pilot-checklist>div.is-ready{border-color:#46553a;background:#0d120b}
+.pilot-checklist span{color:#a47f45;font-size:.51rem;font-weight:900;letter-spacing:.08em}
+.pilot-checklist>div.is-ready span{color:#8fab78}
+.pilot-checklist strong{font-size:.69rem}
+.pilot-checklist small{color:#81796e;font-size:.6rem;line-height:1.4}
+.pilot-readiness>p{margin:9px 0 0;color:#8f8679;font-size:.64rem;line-height:1.45}
+.pilot-readiness>p b{color:#c7ae80}
+.unit-attestation{display:grid;grid-template-columns:22px minmax(0,1fr);gap:9px;align-items:start;margin-top:12px;padding:11px;border:1px solid #4c3a31;background:#130e0c;cursor:pointer}
+.unit-attestation.is-confirmed{border-color:#4d5d40;background:#0e120c}
+.unit-attestation input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--gold)}
+.unit-attestation span{display:grid;gap:3px}
+.unit-attestation strong{font-size:.72rem}
+.unit-attestation small{color:#91877a;font-size:.63rem;line-height:1.45}
+@media(max-width:1050px){.pilot-checklist{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){
+  .pilot-readiness__heading{display:grid;gap:6px}
+  .pilot-readiness__heading em{justify-self:start}
+  .pilot-checklist{grid-template-columns:1fr 1fr}
+  .pilot-readiness__heading small,.pilot-readiness>p,.pilot-checklist small,.unit-attestation small{font-size:.69rem}
+  .pilot-checklist strong,.unit-attestation strong{font-size:.74rem}
+}
+@media(max-width:440px){.pilot-checklist{grid-template-columns:1fr}}
