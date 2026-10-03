@@ -243,3 +243,66 @@ The normalized GLB must still pass the existing Blender asset preflight, Digital
 ### Meshy production-candidate refinement
 
 Meshy production candidates and drafts now ask the provider to remesh to the SLS requested web target, clamped to the current 100-300,000 target-polycount range. Source-master intent keeps provider remeshing off. Texture resolution is 2K, image enhancement is disabled because SLS inputs are already controlled prepared captures, and lighting removal remains enabled. SLS still measures the actual returned model because provider target counts are not guarantees.
+
+## V0.42 preparation provenance bridge into Digital Twin QA
+
+V0.42 closes the provenance gap between V0.41 raw-model preparation and final Product Asset QA.
+
+Digital Twin QA accepts the `*.prep.json` emitted by `scripts/blender/sls_reconstruction_prepare.py` as an optional fourth local input. It is recommended for reconstructed assets and remains optional for hand-authored or legacy assets that never passed through the V0.41 preparation runner.
+
+### What is validated
+
+The preparation report must retain the V0.41 authority contract:
+
+- `stage: raw-reconstruction-preparation`
+- `productionApproved: false`
+- `requiresDigitalTwinQa: true`
+- uniform-scale-only preparation
+- no non-uniform geometry correction performed automatically
+- real product remains geometry authority
+- provider materials remain reference-only
+
+Digital Twin QA cross-checks preparation lineage against the active Product Capture packet and runtime manifest:
+
+- asset ID
+- product ID
+- capture-session ID
+- authoritative width / height / depth target
+
+A mismatch in those identity/physical-authority fields is a production blocker.
+
+### Historical findings versus current final state
+
+V0.41 preparation findings describe the state of the raw/normalized reconstruction before final authoring. They are therefore not blindly treated as permanent blockers after manual correction.
+
+Instead:
+
+- preparation blockers and authoring requirements appear as QA warnings;
+- the final inspected GLB must independently satisfy dimensions, semantics, material lifecycle, UV requirements, customization zones, geometry budgets and human fidelity review;
+- `manual-geometry-correction-required` is surfaced prominently so the named reviewer knows the reconstruction required manual shape correction;
+- when the inspected model filename differs from the normalized preparation output, QA warns that the current GLB must be confirmed as a deliberate authored derivative.
+
+This allows a real Blender correction/retopology pass to resolve earlier reconstruction defects without deleting the historical evidence that those defects existed.
+
+### Approval and production provenance
+
+When a valid preparation report is supplied, the QA approval packet records a compact reconstruction-preparation summary:
+
+- source preparation report filename
+- reconstruction candidate ID
+- reconstruction job ID
+- normalized model filename
+- preparation status
+- number of blockers reported during preparation
+- number of manual authoring requirements
+- number of preparation warnings
+
+Production promotion carries that summary into the production asset record and adds the preparation report to the deterministic placement plan as:
+
+`reconstruction-preparation.json`
+
+This keeps the chain:
+
+`physical capture -> provider job -> raw candidate -> V0.41 preparation -> authored final GLB -> Digital Twin QA -> production promotion`
+
+auditable without making the third-party reconstruction provider or automated preparation step the production authority.
