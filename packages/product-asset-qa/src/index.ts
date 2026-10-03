@@ -398,6 +398,31 @@ export function evaluateProductAssetQa(args: {
     issues.push(issue('error', 'assetId', 'Manifest and inspected model must use the same asset ID.'))
   }
 
+  const authority = manifest.assetAuthority
+  if (authority?.lifecycle === 'development-placeholder') {
+    issues.push(issue(
+      'error',
+      'manifest.assetAuthority.lifecycle',
+      'Development placeholder/scaffold geometry is never eligible for production promotion. Replace it with a physical-capture production candidate.',
+    ))
+  }
+  if (authority?.source === 'physical-capture') {
+    if (authority.sourceCaptureSessionId !== construction.sourceCaptureSessionId) {
+      issues.push(issue(
+        'error',
+        'manifest.assetAuthority.sourceCaptureSessionId',
+        'Asset authority does not match the active Product Capture session.',
+      ))
+    }
+    if (authority.capturePlanId !== construction.capturePlanId) {
+      issues.push(issue(
+        'error',
+        'manifest.assetAuthority.capturePlanId',
+        'Asset authority does not match the active Product Capture plan.',
+      ))
+    }
+  }
+
   if (args.preparationReport) {
     const preparation = args.preparationReport
     const identityChecks = [
@@ -797,9 +822,20 @@ export function promoteProductAsset(args: {
 
   const root = normalizeRoot(args.construction.productId, args.manifest.assetId, args.assetRoot)
   const modelDestination = `${root}/model.glb`
+  if (args.manifest.assetAuthority?.lifecycle === 'development-placeholder') {
+    throw new Error('manifest.assetAuthority.lifecycle: Development placeholder assets cannot be promoted.')
+  }
+
   const productionManifest: AssetManifest = {
     ...args.manifest,
     model: modelDestination,
+    assetAuthority: {
+      lifecycle: 'production-approved',
+      source: args.manifest.assetAuthority?.source ?? 'legacy',
+      sourceCaptureSessionId: args.manifest.assetAuthority?.sourceCaptureSessionId,
+      capturePlanId: args.manifest.assetAuthority?.capturePlanId,
+      note: args.manifest.assetAuthority?.note,
+    },
   }
 
   const record: ProductionProductAssetRecord = {
