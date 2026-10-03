@@ -171,5 +171,10 @@
       ],
       "cameraPreset": "front"
     }
+  },
+  "assetAuthority": {
+    "lifecycle": "development-placeholder",
+    "source": "development-scaffold",
+    "note": "Legacy G1 welding-hood placeholder. Development visualization only; never eligible for production promotion."
   }
 }
