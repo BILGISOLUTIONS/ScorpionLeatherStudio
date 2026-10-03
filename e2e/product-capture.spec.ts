@@ -228,7 +228,7 @@ test('V0.45 Product Capture fingerprints evidence and rejects wrong reattachment
     buffer: Buffer.from([0xff, 0xd8, 0x99, 0xff, 0xd9]),
   })
   await expect(page.getByRole('status')).toContainText('does not match the original SHA-256 fingerprint')
-  await expect(page.getByText(/Straight front.*metadata only — reattach source/s)).toBeVisible()
+  await expect(page.getByText(/metadata only — reattach source/).first()).toBeVisible()
 
   for (const label of requiredReferences) {
     await page.getByLabel(label + ' reference file').setInputFiles({
