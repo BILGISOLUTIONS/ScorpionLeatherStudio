@@ -26,9 +26,16 @@ function cleanPath(value: string): string {
   return segments.join('/')
 }
 
+function bytesArrayBuffer(value: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(value.byteLength)
+  copy.set(value)
+  return copy.buffer
+}
+
 function asBlob(value: StoredZipEntry['data']): Blob {
   if (value instanceof Blob) return value
-  return new Blob([value], { type: 'application/octet-stream' })
+  if (typeof value === 'string') return new Blob([value], { type: 'application/octet-stream' })
+  return new Blob([bytesArrayBuffer(value)], { type: 'application/octet-stream' })
 }
 
 async function crc32(blob: Blob): Promise<number> {
@@ -166,13 +173,13 @@ export async function buildStoredZip(entries: readonly StoredZipEntry[], modifie
   let centralSize = 0
 
   for (const entry of prepared) {
-    localParts.push(localHeader({
+    localParts.push(bytesArrayBuffer(localHeader({
       name: entry.name,
       crc: entry.crc,
       size: entry.size,
       date: stamp.date,
       time: stamp.time,
-    }))
+    })))
     localParts.push(entry.blob)
 
     const central = centralHeader({
@@ -190,5 +197,9 @@ export async function buildStoredZip(entries: readonly StoredZipEntry[], modifie
   if (centralSize > MAX_UINT32) throw new Error('ZIP central directory exceeds the classic ZIP limit.')
   const end = endOfCentralDirectory(prepared.length, centralSize, localOffset)
 
-  return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' })
+  return new Blob([
+    ...localParts,
+    ...centralParts.map(bytesArrayBuffer),
+    bytesArrayBuffer(end),
+  ], { type: 'application/zip' })
 }
