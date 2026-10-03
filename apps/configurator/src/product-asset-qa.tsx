@@ -6,9 +6,11 @@ import {
   buildProductAssetQaApproval,
   defaultProductAssetQaPolicy,
   evaluateProductAssetQa,
+  parseProductAssetPreparationReport,
   productAssetReviewLabels,
   promoteProductAsset,
   type ProductAssetHumanReview,
+  type ProductAssetPreparationReport,
   type ProductAssetInspection,
   type ProductAssetQaApprovalPacket,
   type ProductAssetReviewCheck,
@@ -57,6 +59,8 @@ function AssetQaApp() {
   const [construction, setConstruction] = useState<ProductConstructionPacket | null>(null)
   const [manifest, setManifest] = useState<AssetManifest | null>(null)
   const [modelFile, setModelFile] = useState<File | null>(null)
+  const [preparationReport, setPreparationReport] = useState<ProductAssetPreparationReport | null>(null)
+  const [preparationReportFile, setPreparationReportFile] = useState('')
   const [inspection, setInspection] = useState<ProductAssetInspection | null>(null)
   const [viewerError, setViewerError] = useState('')
   const [diagnosticMode, setDiagnosticMode] = useState<'original' | 'uv-checker' | 'normals' | 'zones'>('original')
@@ -86,9 +90,10 @@ function AssetQaApp() {
       construction,
       manifest,
       inspection,
+      preparationReport: preparationReport ?? undefined,
       materialLifecycleById: lifecycleById,
     })
-  }, [construction, manifest, inspection])
+  }, [construction, manifest, inspection, preparationReport])
 
   const blockers = issues.filter((entry) => entry.severity === 'error')
   const warnings = issues.filter((entry) => entry.severity === 'warning')
@@ -132,6 +137,22 @@ function AssetQaApp() {
     setStatus('Candidate model selected. Local 3D inspection will begin when the manifest is available.')
   }
 
+  async function selectPreparationReport(file: File | undefined) {
+    if (!file) return
+    try {
+      const parsed = parseProductAssetPreparationReport(JSON.parse(await file.text()))
+      setPreparationReport(parsed)
+      setPreparationReportFile(file.name)
+      setApproval(null)
+      setStatus('Reconstruction preparation provenance loaded. Digital Twin QA will cross-check it against the active product lineage.')
+    } catch (error) {
+      setPreparationReport(null)
+      setPreparationReportFile('')
+      setApproval(null)
+      setStatus(error instanceof Error ? error.message : 'Preparation report could not be loaded.')
+    }
+  }
+
   function createApproval() {
     if (!construction || !manifest || !inspection) return
     try {
@@ -139,6 +160,8 @@ function AssetQaApp() {
         construction,
         manifest,
         inspection,
+        preparationReport: preparationReport ?? undefined,
+        preparationReportFile: preparationReport ? preparationReportFile : undefined,
         materialLifecycleById: lifecycleById,
         review: {
           reviewer,
@@ -180,7 +203,7 @@ function AssetQaApp() {
     <main className="asset-qa-shell">
       <header className="asset-qa-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.19</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.42</p>
           <h1>Digital Twin QA</h1>
           <p>
             Validate the reconstructed product against physical capture provenance, semantic model contracts,
@@ -249,12 +272,55 @@ function AssetQaApp() {
           />
           <em>{modelFile ? 'Replace model' : 'Select model'}</em>
         </label>
+
+        <label className={preparationReport ? 'input-card is-ready' : 'input-card'}>
+          <span>04 · PREPARATION PROVENANCE</span>
+          <strong>{preparationReportFile || 'V0.41 preparation report'}</strong>
+          <small>
+            {preparationReport
+              ? preparationReport.candidateId + ' · ' + preparationReport.status.replaceAll('-', ' ')
+              : 'Recommended for reconstructed assets. Hand-authored/legacy assets may continue without it.'}
+          </small>
+          <input
+            aria-label="Reconstruction preparation report JSON"
+            type="file"
+            accept=".json,application/json"
+            onChange={(event) => {
+              void selectPreparationReport(event.target.files?.[0])
+              event.target.value = ''
+            }}
+          />
+          <em>{preparationReport ? 'Replace report' : 'Select prep JSON'}</em>
+        </label>
       </section>
+
+      {preparationReport ? (
+        <section className="preparation-provenance" aria-label="Reconstruction preparation provenance">
+          <div className="prep-provenance-heading">
+            <div>
+              <span>RECONSTRUCTION LINEAGE</span>
+              <strong>{preparationReport.candidateId}</strong>
+              <small>{preparationReport.sourceModelFile} → {preparationReport.normalizedModelFile}</small>
+            </div>
+            <em>{preparationReport.productionApproved ? 'Invalid authority' : 'Preparation only · QA required'}</em>
+          </div>
+          <div className="prep-provenance-grid">
+            <div><span>Prep status</span><strong>{preparationReport.status.replaceAll('-', ' ')}</strong></div>
+            <div><span>Uniform scale</span><strong>{preparationReport.physicalEnvelope.uniformScale.toFixed(4)}×</strong></div>
+            <div><span>Triangles</span><strong>{formatNumber(preparationReport.geometry.trianglesBefore)} → {formatNumber(preparationReport.geometry.trianglesAfter)}</strong></div>
+            <div><span>Prep findings</span><strong>{preparationReport.blockers.length} blocker · {preparationReport.authoringRequirements.length} authoring · {preparationReport.warnings.length} warning</strong></div>
+          </div>
+          <p>
+            Historical prep findings do not automatically fail a later authored GLB. Final QA must prove the current asset now satisfies physical dimensions,
+            semantics, materials, UVs and web budgets; lineage mismatches are production blockers.
+          </p>
+        </section>
+      ) : null}
 
       {modelFile && manifest ? (
         <section className="viewer-panel">
           <div className="section-heading">
-            <span>04</span>
+            <span>05</span>
             <div>
               <h2>Local model inspection</h2>
               <p>Three.js is loaded only after a candidate model is selected. Rotate and inspect the same asset that generates the automated geometry report.</p>
@@ -308,7 +374,7 @@ function AssetQaApp() {
 
           <section className="qa-panel">
             <div className="section-heading">
-              <span>05</span>
+              <span>06</span>
               <div>
                 <h2>Automated production gate</h2>
                 <p>Physical dimensions, semantic nodes, real-world UV scale, placement zones, material lifecycle and web budgets are evaluated together.</p>
@@ -349,7 +415,7 @@ function AssetQaApp() {
 
           <section className="qa-panel">
             <div className="section-heading">
-              <span>06</span>
+              <span>07</span>
               <div>
                 <h2>Human fidelity review</h2>
                 <p>Automation cannot determine whether a seam, rivet, fold, lens, leather response or silhouette actually matches the physical product. A named reviewer must confirm it.</p>
@@ -417,7 +483,7 @@ function AssetQaApp() {
 
           <section className="qa-panel promotion-panel">
             <div className="section-heading">
-              <span>07</span>
+              <span>08</span>
               <div>
                 <h2>Controlled production promotion</h2>
                 <p>Promotion generates deterministic production metadata and file placement. GitHub/asset storage remains a deliberate final operation.</p>
@@ -428,6 +494,7 @@ function AssetQaApp() {
               <div><span>Product</span><strong>{construction?.productId ?? '—'}</strong></div>
               <div><span>Asset</span><strong>{manifest?.assetId ?? '—'}</strong></div>
               <div><span>QA</span><strong>{approval ? 'Approved' : 'Not approved'}</strong></div>
+              <div><span>Reconstruction lineage</span><strong>{approval?.preparation ? 'Linked' : preparationReport ? 'Pending approval' : 'Not supplied'}</strong></div>
               <div><span>Registry mutation</span><strong>Manual only</strong></div>
             </div>
 
