@@ -5,7 +5,7 @@ test.beforeAll(async () => {
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
 })
 
-test('V0.44 Product Capture exports the real field evidence set and detects detached source bytes', async ({ page }, testInfo) => {
+test('V0.45 Product Capture fingerprints evidence and rejects wrong reattachments', async ({ page }, testInfo) => {
   const scriptRequests: string[] = []
   const consoleErrors: string[] = []
 
@@ -71,6 +71,8 @@ test('V0.44 Product Capture exports the real field evidence set and detects deta
   ]
 
   const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9])
+  const supplementalA = Buffer.from([0xff, 0xd8, 0x01, 0xff, 0xd9])
+  const supplementalB = Buffer.from([0xff, 0xd8, 0x02, 0xff, 0xd9])
   for (const label of requiredReferences) {
     await page.getByLabel(label + ' reference file').setInputFiles({
       name: label.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.jpg',
@@ -80,8 +82,8 @@ test('V0.44 Product Capture exports the real field evidence set and detects deta
   }
 
   await page.getByLabel('Supplemental reconstruction photos').setInputFiles([
-    { name: 'supplemental-a.jpg', mimeType: 'image/jpeg', buffer: jpeg },
-    { name: 'supplemental-b.jpg', mimeType: 'image/jpeg', buffer: jpeg },
+    { name: 'supplemental-a.jpg', mimeType: 'image/jpeg', buffer: supplementalA },
+    { name: 'supplemental-b.jpg', mimeType: 'image/jpeg', buffer: supplementalB },
   ])
   await expect(page.getByText(/2 supplemental metadata files/)).toBeVisible()
 
@@ -120,11 +122,11 @@ test('V0.44 Product Capture exports the real field evidence set and detects deta
     status: string
     automaticAssetMutation: boolean
     dimensionsMm: Record<string, number>
-    referenceCoverage: Array<{ key: string }>
+    referenceCoverage: Array<{ key: string; sha256?: string }>
     constructionNodes: Array<{ status: string }>
     materialSlots: Array<{ slotId: string; status: string }>
     provenance: { singlePhysicalUnitConfirmed?: true }
-    supplementalReferenceCoverage?: Array<{ name: string; size: number; type: string }>
+    supplementalReferenceCoverage?: Array<{ name: string; size: number; type: string; sha256?: string }>
   }
 
   expect(packet.productId).toBe('SC-WH-001')
@@ -134,7 +136,9 @@ test('V0.44 Product Capture exports the real field evidence set and detects deta
   expect(packet.provenance.singlePhysicalUnitConfirmed).toBe(true)
   expect(packet.dimensionsMm.maxWidth).toBe(100)
   expect(packet.referenceCoverage).toHaveLength(18)
+  expect(packet.referenceCoverage.every((entry) => /^[a-f0-9]{64}$/u.test(entry.sha256 ?? ''))).toBe(true)
   expect(packet.supplementalReferenceCoverage).toHaveLength(2)
+  expect(packet.supplementalReferenceCoverage?.every((entry) => /^[a-f0-9]{64}$/u.test(entry.sha256 ?? ''))).toBe(true)
   expect(packet.supplementalReferenceCoverage?.map((entry) => entry.name)).toEqual([
     'supplemental-a.jpg',
     'supplemental-b.jpg',
@@ -180,7 +184,7 @@ test('V0.44 Product Capture exports the real field evidence set and detects deta
   expect(scriptRequests.some((url) => url.includes('OrderCapture'))).toBe(false)
 
   await expect(pilot.getByText('Field evidence bundle ready')).toBeVisible()
-  const bundleButton = page.getByRole('button', { name: 'Download field evidence bundle (.zip)' })
+  const bundleButton = page.getByRole('button', { name: 'Download verified field evidence bundle (.zip)' })
   await expect(bundleButton).toBeEnabled()
   expect(scriptRequests.some((url) => url.includes('capture-bundle'))).toBe(false)
 
@@ -199,11 +203,14 @@ test('V0.44 Product Capture exports the real field evidence set and detects deta
   expect(bundleText).toContain('references/01-front.jpg')
   expect(bundleText).toContain('supplemental/001-supplemental-a.jpg')
   expect(bundleText).toContain('\"bundleType\": \"sls-product-capture-evidence\"')
+  expect(bundleText).toContain('SHA256SUMS.txt')
+  expect(bundleText).toMatch(/[a-f0-9]{64}  references\/01-front\.jpg/u)
+  expect(bundleText).toMatch(/\"sha256\": \"[a-f0-9]{64}\"/u)
   await expect.poll(() => scriptRequests.some((url) => url.includes('capture-bundle'))).toBe(true)
 
   const screenshotName = testInfo.project.name.includes('mobile')
-    ? 'product-capture-v044-mobile.png'
-    : 'product-capture-v044-desktop.png'
+    ? 'product-capture-v045-mobile.png'
+    : 'product-capture-v045-desktop.png'
 
   await page.screenshot({
     path: 'playwright-output/screenshots/' + screenshotName,
@@ -213,7 +220,31 @@ test('V0.44 Product Capture exports the real field evidence set and detects deta
   await page.reload()
   await expect(page.getByText(/metadata only — reattach source/).first()).toBeVisible()
   await expect(page.getByText(/Source bytes are not attached in this browser session/)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Download field evidence bundle (.zip)' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Download verified field evidence bundle (.zip)' })).toBeDisabled()
+
+  await page.getByLabel('Straight front reference file').setInputFiles({
+    name: 'straight-front.jpg',
+    mimeType: 'image/jpeg',
+    buffer: Buffer.from([0xff, 0xd8, 0x99, 0xff, 0xd9]),
+  })
+  await expect(page.getByRole('status')).toContainText('does not match the original SHA-256 fingerprint')
+  await expect(page.getByText(/Straight front.*metadata only — reattach source/s)).toBeVisible()
+
+  for (const label of requiredReferences) {
+    await page.getByLabel(label + ' reference file').setInputFiles({
+      name: label.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.jpg',
+      mimeType: 'image/jpeg',
+      buffer: jpeg,
+    })
+  }
+  await page.getByLabel('Supplemental reconstruction photos').setInputFiles([
+    { name: 'supplemental-b.jpg', mimeType: 'image/jpeg', buffer: supplementalB },
+    { name: 'supplemental-a.jpg', mimeType: 'image/jpeg', buffer: supplementalA },
+  ])
+
+  await expect(pilot.getByText('Field evidence bundle ready')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Download verified field evidence bundle (.zip)' })).toBeEnabled()
+  await expect(page.getByRole('status')).toContainText('Supplemental evidence set reattached and SHA-256 verified')
 
   expect(consoleErrors, 'Product Capture console errors: ' + consoleErrors.join('\n')).toEqual([])
 })
