@@ -72,6 +72,8 @@ export interface CapturedReferenceFrame {
   lastModified: number
   kind: ReferenceKind
   sha256?: string
+  imageWidthPx?: number
+  imageHeightPx?: number
 }
 
 export interface CapturedDimension {
@@ -156,6 +158,8 @@ export interface ProductConstructionPacket {
     size: number
     lastModified: number
     sha256?: string
+    imageWidthPx?: number
+    imageHeightPx?: number
   }>
   supplementalReferenceCoverage?: Array<{
     name: string
@@ -163,6 +167,8 @@ export interface ProductConstructionPacket {
     type: string
     lastModified: number
     sha256?: string
+    imageWidthPx?: number
+    imageHeightPx?: number
   }>
   dimensionsMm: Record<string, number>
   constructionNodes: ConstructionNodeRecord[]
@@ -380,6 +386,8 @@ export function buildProductConstructionPacket(args: {
       size: frame.size,
       lastModified: frame.lastModified,
       ...(frame.sha256 ? { sha256: frame.sha256 } : {}),
+      ...(Number.isFinite(frame.imageWidthPx) ? { imageWidthPx: frame.imageWidthPx } : {}),
+      ...(Number.isFinite(frame.imageHeightPx) ? { imageHeightPx: frame.imageHeightPx } : {}),
     }))
     .sort((a, b) => a.key.localeCompare(b.key))
 
@@ -389,6 +397,8 @@ export function buildProductConstructionPacket(args: {
     type: frame.type,
     lastModified: frame.lastModified,
     ...(frame.sha256 ? { sha256: frame.sha256 } : {}),
+    ...(Number.isFinite(frame.imageWidthPx) ? { imageWidthPx: frame.imageWidthPx } : {}),
+    ...(Number.isFinite(frame.imageHeightPx) ? { imageHeightPx: frame.imageHeightPx } : {}),
   }))
 
   return {
