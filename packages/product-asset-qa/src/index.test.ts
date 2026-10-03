@@ -45,6 +45,12 @@ const manifest: AssetManifest = {
   upAxis: 'Y',
   frontAxis: '-Z',
   rootNode: 'SLS_ProductRoot',
+  assetAuthority: {
+    lifecycle: 'production-candidate',
+    source: 'physical-capture',
+    sourceCaptureSessionId: 'SC-PROD-20260924-0001',
+    capturePlanId: 'scorpion-welding-hood-v1',
+  },
   materialSlots: {
     LeatherPrimary: ['Shell_Main'],
     HardwarePrimary: ['Visor_Frame'],
@@ -181,6 +187,41 @@ describe('product asset QA', () => {
       inspection,
       materialLifecycleById: lifecycles,
     }).filter((entry) => entry.severity === 'error')).toEqual([])
+  })
+
+  it('blocks development placeholder geometry and capture-authority mismatch', () => {
+    const developmentIssues = evaluateProductAssetQa({
+      construction,
+      manifest: {
+        ...manifest,
+        assetAuthority: {
+          lifecycle: 'development-placeholder',
+          source: 'development-scaffold',
+          note: 'Development only.',
+        },
+      },
+      inspection,
+      materialLifecycleById: lifecycles,
+    })
+    expect(developmentIssues.some((entry) => (
+      entry.path === 'manifest.assetAuthority.lifecycle'
+      && entry.severity === 'error'
+      && entry.message.includes('never eligible for production promotion')
+    ))).toBe(true)
+
+    const mismatchIssues = evaluateProductAssetQa({
+      construction,
+      manifest: {
+        ...manifest,
+        assetAuthority: {
+          ...manifest.assetAuthority!,
+          sourceCaptureSessionId: 'SC-PROD-WRONG',
+        },
+      },
+      inspection,
+      materialLifecycleById: lifecycles,
+    })
+    expect(mismatchIssues.some((entry) => entry.path === 'manifest.assetAuthority.sourceCaptureSessionId')).toBe(true)
   })
 
   it('blocks scale drift, missing semantic nodes and non-production materials', () => {
@@ -339,6 +380,12 @@ describe('product asset QA', () => {
     expect(promoted.record.lifecycle).toBe('production-approved')
     expect(promoted.record.automaticRegistryMutation).toBe(false)
     expect(promoted.record.manifest.model).toBe('/assets/products/SC-WH-001/sc-wh-001-v1/model.glb')
+    expect(promoted.record.manifest.assetAuthority).toMatchObject({
+      lifecycle: 'production-approved',
+      source: 'physical-capture',
+      sourceCaptureSessionId: construction.sourceCaptureSessionId,
+      capturePlanId: construction.capturePlanId,
+    })
     expect(promoted.assetPlacement.files).toHaveLength(4)
   })
 
