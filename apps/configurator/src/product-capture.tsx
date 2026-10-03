@@ -307,8 +307,10 @@ function ProductCaptureAssistant() {
     setStatus('Hashing ' + file.name + ' locally…')
     try {
       const sha256 = await sha256Hex(file)
+      setStatus('Inspecting ' + file.name + ' resolution and format locally…')
+      const inspection = await inspectImageDimensions(file)
       const existing = session.references[key]
-      const frame: CapturedReferenceFrame = existing && !referenceFiles[key]
+      const baseFrame: CapturedReferenceFrame = existing && !referenceFiles[key]
         ? verifyReattachedReference(existing, { file, sha256 })
         : {
             name: file.name,
@@ -318,15 +320,19 @@ function ProductCaptureAssistant() {
             kind: requirement.kind,
             sha256,
           }
+      const frame = withInspection(baseFrame, inspection)
 
       setReferenceFiles((current) => ({ ...current, [key]: file }))
       setSession((current) => ({
         ...current,
         references: { ...current.references, [key]: frame },
       }))
-      setStatus(existing && !referenceFiles[key]
-        ? 'Reference reattached and SHA-256 verified.'
-        : 'Reference attached and SHA-256 fingerprint recorded.')
+      const resolution = frame.imageWidthPx && frame.imageHeightPx
+        ? ' · ' + frame.imageWidthPx + '×' + frame.imageHeightPx + ' px'
+        : ' · dimensions unavailable'
+      setStatus((existing && !referenceFiles[key]
+        ? 'Reference reattached and SHA-256 verified'
+        : 'Reference attached and SHA-256 fingerprint recorded') + resolution + '.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Reference fingerprint verification failed.')
     } finally {
@@ -346,28 +352,40 @@ function ProductCaptureAssistant() {
       const hashed = await hashFilesSequentially(files, (completed, total, file) => {
         setStatus('Hashing supplemental evidence ' + completed + ' / ' + total + ' · ' + file.name)
       })
+      const inspections: CaptureImageInspection[] = []
+      for (let index = 0; index < hashed.length; index += 1) {
+        const entry = hashed[index]!
+        setStatus('Inspecting supplemental image ' + (index + 1) + ' / ' + hashed.length + ' · ' + entry.file.name)
+        inspections.push(await inspectImageDimensions(entry.file))
+      }
 
       const existing = session.supplementalReferences ?? []
       const reattaching = existing.length > 0 && supplementalFiles.length === 0
       if (reattaching) {
         const reconciled = reconcileReattachedReferenceSet(existing, hashed)
+        const inspectionByHash = new Map(hashed.map((entry, index) => [entry.sha256, inspections[index]!]))
+        const frames = reconciled.frames.map((frame) => (
+          isSha256Hex(frame.sha256)
+            ? withInspection(frame, inspectionByHash.get(frame.sha256) ?? { inspectable: false })
+            : frame
+        ))
         setSupplementalFiles(reconciled.files)
-        setSession((current) => ({ ...current, supplementalReferences: reconciled.frames }))
-        setStatus('Supplemental evidence set reattached and SHA-256 verified.')
+        setSession((current) => ({ ...current, supplementalReferences: frames }))
+        setStatus('Supplemental evidence set reattached, SHA-256 verified and quality-inspected.')
       } else {
         setSupplementalFiles(hashed.map((entry) => entry.file))
         setSession((current) => ({
           ...current,
-          supplementalReferences: hashed.map(({ file, sha256 }) => ({
+          supplementalReferences: hashed.map(({ file, sha256 }, index) => withInspection({
             name: file.name,
             size: file.size,
             type: file.type || 'application/octet-stream',
             lastModified: file.lastModified,
             kind: 'supplemental-reference',
             sha256,
-          })),
+          }, inspections[index] ?? { inspectable: false })),
         }))
-        setStatus('Supplemental evidence fingerprints recorded locally.')
+        setStatus('Supplemental evidence fingerprints and image dimensions recorded locally.')
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Supplemental evidence fingerprint verification failed.')
