@@ -57,6 +57,37 @@ describe('asset manifest validation', () => {
     expect(validateAssetManifest(manifest, ['LEATHER-1'], ['Root', 'Shell', 'Guard', 'Pivot'])).toEqual([])
   })
 
+  it('validates explicit asset authority without breaking legacy manifests', () => {
+    expect(validateAssetManifest({
+      ...manifest,
+      assetAuthority: {
+        lifecycle: 'production-candidate',
+        source: 'physical-capture',
+        sourceCaptureSessionId: 'SC-PROD-20261003-0001',
+        capturePlanId: 'scorpion-welding-hood-v1',
+      },
+    }, ['LEATHER-1'], ['Root', 'Shell', 'Guard', 'Pivot'])).toEqual([])
+
+    const invalid = validateAssetManifest({
+      ...manifest,
+      assetAuthority: {
+        lifecycle: 'production-candidate',
+        source: 'physical-capture',
+      },
+    }, ['LEATHER-1'], ['Root', 'Shell', 'Guard', 'Pivot'])
+    expect(invalid.map((entry) => entry.path)).toContain('assetAuthority.sourceCaptureSessionId')
+    expect(invalid.map((entry) => entry.path)).toContain('assetAuthority.capturePlanId')
+
+    expect(validateAssetManifest({
+      ...manifest,
+      assetAuthority: {
+        lifecycle: 'development-placeholder',
+        source: 'development-scaffold',
+        note: 'Development geometry only.',
+      },
+    }, ['LEATHER-1'], ['Root', 'Shell', 'Guard', 'Pivot'])).toEqual([])
+  })
+
   it('reports missing nodes and material variants', () => {
     const issues = validateAssetManifest(manifest, ['OTHER'], ['Root'])
     expect(issues.some((issue) => issue.message.includes('LEATHER-1'))).toBe(true)
