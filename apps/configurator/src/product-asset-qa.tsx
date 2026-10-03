@@ -203,7 +203,7 @@ function AssetQaApp() {
     <main className="asset-qa-shell">
       <header className="asset-qa-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.42</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.43</p>
           <h1>Digital Twin QA</h1>
           <p>
             Validate the reconstructed product against physical capture provenance, semantic model contracts,
@@ -244,7 +244,9 @@ function AssetQaApp() {
         <label className={manifest ? 'input-card is-ready' : 'input-card'}>
           <span>02 · RUNTIME CONTRACT</span>
           <strong>{manifest?.assetId ?? 'Asset manifest'}</strong>
-          <small>{manifest ? `${manifest.rootNode} · ${Object.keys(manifest.cameraPresets ?? {}).length} cameras` : 'Load the manifest that describes nodes, slots, components and motion.'}</small>
+          <small>{manifest
+            ? `${manifest.rootNode} · ${Object.keys(manifest.cameraPresets ?? {}).length} cameras · ${manifest.assetAuthority?.lifecycle ?? "legacy authority"}`
+            : 'Load the manifest that describes nodes, slots, components and motion.'}</small>
           <input
             aria-label="Asset manifest JSON"
             type="file"
@@ -293,6 +295,21 @@ function AssetQaApp() {
           <em>{preparationReport ? 'Replace report' : 'Select prep JSON'}</em>
         </label>
       </section>
+
+      {manifest?.assetAuthority ? (
+        <section className={manifest.assetAuthority.lifecycle === 'development-placeholder' ? 'asset-authority-banner is-development' : 'asset-authority-banner is-candidate'} aria-label="Digital twin asset authority">
+          <div>
+            <span>ASSET AUTHORITY</span>
+            <strong>{manifest.assetAuthority.lifecycle.replaceAll('-', ' ')}</strong>
+            <small>{manifest.assetAuthority.source.replaceAll('-', ' ')}{manifest.assetAuthority.sourceCaptureSessionId ? ' · ' + manifest.assetAuthority.sourceCaptureSessionId : ''}</small>
+          </div>
+          <p>
+            {manifest.assetAuthority.lifecycle === 'development-placeholder'
+              ? 'Development geometry can be inspected, but Digital Twin QA will block production approval. Replace it with a capture-derived production candidate.'
+              : 'This manifest claims capture-derived candidate authority. QA verifies its capture-session and capture-plan lineage before approval.'}
+          </p>
+        </section>
+      ) : null}
 
       {preparationReport ? (
         <section className="preparation-provenance" aria-label="Reconstruction preparation provenance">
