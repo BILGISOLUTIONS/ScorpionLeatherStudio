@@ -864,7 +864,25 @@ function ProductCaptureAssistant() {
           ) : null}
         </div>
 
+        <div className={pilotReady ? 'bundle-state is-ready' : 'bundle-state'}>
+          <div>
+            <strong>{pilotReady ? 'Field evidence ZIP is ready' : 'Field evidence ZIP still needs live source files'}</strong>
+            <p>
+              The bundle contains the actual attached photographs plus capture session, validated construction packet, production-candidate manifest scaffold and deterministic file index. Photos never leave this browser except through your download.
+            </p>
+          </div>
+          <span>{attachedSelectedReferences + supplementalFiles.length} source file{attachedSelectedReferences + supplementalFiles.length === 1 ? '' : 's'} attached · ZIP store mode · no recompression</span>
+        </div>
+
         <div className="export-actions">
+          <button
+            type="button"
+            className="primary bundle-download"
+            disabled={!pilotReady || bundleBusy}
+            onClick={() => void exportFieldCaptureBundle()}
+          >
+            {bundleBusy ? 'Building field evidence ZIP…' : 'Download field evidence bundle (.zip)'}
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -875,7 +893,7 @@ function ProductCaptureAssistant() {
           >
             Download capture session
           </button>
-          <button type="button" className="primary" disabled={issues.length > 0} onClick={exportConstructionPacket}>
+          <button type="button" disabled={issues.length > 0} onClick={exportConstructionPacket}>
             Download construction packet
           </button>
           <button type="button" disabled={issues.length > 0} onClick={exportManifestScaffold}>
