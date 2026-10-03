@@ -484,6 +484,8 @@ function ProductCaptureAssistant() {
         type: string
         lastModified: number
         sha256: string
+        imageWidthPx?: number
+        imageHeightPx?: number
       }> = []
       const entries: Array<{ path: string; data: Blob | string | Uint8Array }> = []
 
