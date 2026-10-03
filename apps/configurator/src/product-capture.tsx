@@ -614,9 +614,13 @@ function ProductCaptureAssistant() {
         { path: 'metadata/capture-bundle-index.json', data: JSON.stringify(bundleIndex, null, 2) + '\n' },
       )
 
+      const sourceHashes = new Map<string, string>([
+        ...referenceIndex.map((entry) => [entry.archivePath, entry.sha256] as const),
+        ...supplementalIndex.map((entry) => [entry.archivePath, entry.sha256] as const),
+      ])
       const checksumLines: string[] = []
       for (const entry of entries) {
-        checksumLines.push((await sha256Hex(entry.data)) + '  ' + entry.path)
+        checksumLines.push((sourceHashes.get(entry.path) ?? await sha256Hex(entry.data)) + '  ' + entry.path)
       }
       entries.push({ path: 'SHA256SUMS.txt', data: checksumLines.join('\n') + '\n' })
 
