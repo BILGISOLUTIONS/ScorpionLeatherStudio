@@ -93,6 +93,51 @@ describe('digital twin ingestion', () => {
     expect(job.outputRequest.targetWebTriangles).toBe(150_000)
   })
 
+  it('carries verified field-bundle source identity into the reconstruction job and rejects lineage mismatch', () => {
+    const packet = construction()
+    const digest = 'a'.repeat(64)
+    packet.referenceCoverage = packet.referenceCoverage.map((entry) => (
+      entry.key === 'front' ? { ...entry, sha256: digest } : entry
+    ))
+    const verifiedSource: ReconstructionSourceFile = {
+      ...source('front'),
+      captureEvidence: {
+        archivePath: 'references/01-front.png',
+        originalName: 'front.png',
+        sha256: digest,
+        sizeBytes: 1000,
+        verifiedFieldBundle: true,
+      },
+    }
+    const job = buildReconstructionJobPacket({
+      construction: packet,
+      providerId: 'trellis2',
+      sourceFiles: [verifiedSource],
+      jobId: 'SLS-RECON-VERIFIED',
+      assetId: 'sc-wh-001-v1',
+      createdAt: '2026-10-05T20:00:00.000Z',
+      intent: 'production-candidate',
+    })
+    expect(job.sourceImages[0]?.captureEvidence).toMatchObject({
+      archivePath: 'references/01-front.png',
+      sha256: digest,
+      verifiedFieldBundle: true,
+    })
+
+    expect(() => buildReconstructionJobPacket({
+      construction: packet,
+      providerId: 'trellis2',
+      sourceFiles: [{
+        ...verifiedSource,
+        captureEvidence: { ...verifiedSource.captureEvidence!, sha256: 'b'.repeat(64) },
+      }],
+      jobId: 'SLS-RECON-WRONG',
+      assetId: 'sc-wh-001-v1',
+      createdAt: '2026-10-05T20:00:00.000Z',
+      intent: 'production-candidate',
+    })).toThrow(/fingerprint does not match Product Capture provenance/u)
+  })
+
   it('requires rights before a raw candidate can enter processing', () => {
     const packet = construction()
     const job = buildReconstructionJobPacket({
