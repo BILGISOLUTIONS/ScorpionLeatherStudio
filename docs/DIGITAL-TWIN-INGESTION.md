@@ -306,3 +306,52 @@ This keeps the chain:
 `physical capture -> provider job -> raw candidate -> V0.41 preparation -> authored final GLB -> Digital Twin QA -> production promotion`
 
 auditable without making the third-party reconstruction provider or automated preparation step the production authority.
+
+
+## V0.47 verified field-bundle intake
+
+V0.47 closes the operational handoff gap between Product Capture and Digital Twin Ingestion. The preferred Stage 1 input is now the complete verified `*-field-evidence.zip` produced by Product Capture rather than a separately downloaded construction JSON plus manually reattached photographs.
+
+### Local verification before reconstruction
+
+Digital Twin Ingestion verifies the bundle entirely in the browser before exposing any source image to the reconstruction workflow. The verifier:
+
+- accepts the SLS classic ZIP/store archive format only;
+- rejects unsafe or duplicate archive paths, unsupported compression/data descriptors, truncation and CRC mismatches;
+- requires `SHA256SUMS.txt` to cover every non-ledger archive member exactly once;
+- recomputes and verifies each ledger SHA-256 locally;
+- validates `capture-bundle-index.json` and `construction-packet.json`;
+- cross-checks product ID, capture-session ID and capture-plan ID;
+- rejects a bundle whose quality-preflight metadata reports unresolved blockers;
+- verifies every indexed role/supplemental source path, byte count and SHA-256 against the archive and ledger;
+- cross-checks source SHA-256 against Product Capture construction provenance when that digest is present.
+
+No source photo is uploaded to SLS during this verification.
+
+### Verified source hydration
+
+After a valid field ZIP is loaded, the recommended provider source roles are restored directly from the verified archive into browser memory. The operator no longer has to manually locate and reattach the original field images before preparing a reconstruction job.
+
+The construction-packet-only input remains available for legacy/manual workflows where no verified V0.45+ field bundle exists.
+
+### Prepared derivatives retain upstream identity
+
+A reconstruction provider may benefit from a geometry-preserving prepared derivative: background cleanup, exposure normalization or other non-geometric presentation work. V0.47 permits replacing the verified original for a selected reconstruction role, but the reconstruction job keeps an explicit `captureEvidence` link to the original field source:
+
+- archive path;
+- original filename;
+- original SHA-256;
+- original source byte count;
+- `verifiedFieldBundle: true`.
+
+Job construction validates this evidence against Product Capture provenance. The Digital Twin Ingestion UI also lets the operator restore the verified original directly from the loaded field bundle.
+
+This preserves the chain:
+
+`physical product -> verified field ZIP -> original source SHA-256 -> prepared derivative (optional) -> reconstruction job -> raw candidate -> preparation -> QA`
+
+without pretending the prepared derivative or reconstruction provider output is physical authority.
+
+### Boundary
+
+V0.47 adds no backend upload service, database, analytics SDK or new reconstruction vendor dependency. Verification and source hydration stay local. Provider submission remains controlled by the existing provider adapters/manual execution recipes and their separate rights/terms confirmations.
