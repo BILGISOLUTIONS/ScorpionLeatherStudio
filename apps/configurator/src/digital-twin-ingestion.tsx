@@ -470,6 +470,13 @@ function DigitalTwinIngestionApp() {
               .map((reference) => {
                 const selected = selectedKeys.includes(reference.key)
                 const file = preparedFiles[reference.key]
+                const bundleSource = fieldBundle?.roleSources.get(reference.key)
+                const usingVerifiedOriginal = Boolean(
+                  bundleSource
+                  && file
+                  && file.name === bundleSource.index.originalName
+                  && file.size === bundleSource.index.sizeBytes
+                )
                 return (
                   <div className={selected ? 'source-view is-selected' : 'source-view'} key={reference.key}>
                     <label className="source-toggle">
@@ -477,22 +484,32 @@ function DigitalTwinIngestionApp() {
                       <span>
                         <strong>{reference.key}</strong>
                         <small>Capture: {reference.name}</small>
+                        {bundleSource ? <small className="verified-source">Verified source · SHA-256 {bundleSource.index.sha256.slice(0, 14)}…</small> : null}
                       </span>
                     </label>
                     {selected ? (
-                      <label className={file ? 'prepared-file is-ready' : 'prepared-file'}>
-                        <input
-                          aria-label={reference.key + ' prepared image'}
-                          type="file"
-                          accept="image/*"
-                          onChange={(event) => {
-                            attachPreparedFile(reference.key, event.target.files?.[0])
-                            event.target.value = ''
-                          }}
-                        />
-                        <span>{file ? file.name : 'Attach prepared image'}</span>
-                        <small>{file ? formatBytes(file.size) : 'Retouched for presentation/reconstruction, not reshaped.'}</small>
-                      </label>
+                      <div className="prepared-source-stack">
+                        <label className={file ? 'prepared-file is-ready' : 'prepared-file'}>
+                          <input
+                            aria-label={reference.key + ' prepared image'}
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) => {
+                              attachPreparedFile(reference.key, event.target.files?.[0])
+                              event.target.value = ''
+                            }}
+                          />
+                          <span>{file ? file.name : 'Attach prepared image'}</span>
+                          <small>{file
+                            ? (usingVerifiedOriginal ? 'Verified original field source · ' : 'Prepared derivative · ') + formatBytes(file.size)
+                            : 'Retouched for presentation/reconstruction, not reshaped.'}</small>
+                        </label>
+                        {bundleSource && !usingVerifiedOriginal ? (
+                          <button type="button" className="restore-source" onClick={() => restoreVerifiedBundleSource(reference.key)}>
+                            Restore verified original
+                          </button>
+                        ) : null}
+                      </div>
                     ) : <span className="not-used">Not sent to provider</span>}
                   </div>
                 )
