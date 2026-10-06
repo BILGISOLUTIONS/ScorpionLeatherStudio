@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import fs from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { buildStoredZip } from '../apps/configurator/src/capture-bundle'
+import { readStoredZip } from '../apps/configurator/src/stored-zip-reader'
 
 const construction = {
   schemaVersion: 1,
@@ -118,7 +119,7 @@ async function buildFieldBundleFixture(): Promise<Buffer> {
   return Buffer.from(await zip.arrayBuffer())
 }
 
-test('V0.47 ingests a verified field bundle into a traceable reconstruction and preparation handoff', async ({ page }, testInfo) => {
+test('V0.48 packages verified field sources into a deterministic runner workspace', async ({ page }, testInfo) => {
   await page.goto('/digital-twin-ingestion.html')
 
   await page.getByLabel('Verified field evidence ZIP').setInputFiles({
@@ -155,6 +156,44 @@ test('V0.47 ingests a verified field bundle into a traceable reconstruction and 
   await expect(page.getByText('Meshy Multi-Image REST runner')).toBeVisible()
   await expect(page.locator('.execution-env span').filter({ hasText: 'MESHY_API_KEY' })).toBeVisible()
   await expect(page.getByText(/meshy_multi_image\.mjs/)).toBeVisible()
+  await expect(page.getByText('Preferred handoff')).toBeVisible()
+
+  const executionBundleDownload = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download execution bundle (.zip)' }).click()
+  const executionDownload = await executionBundleDownload
+  expect(executionDownload.suggestedFilename()).toMatch(/^sls-recon-.*-execution\.zip$/u)
+  const executionPath = await executionDownload.path()
+  expect(executionPath).not.toBeNull()
+  const executionBytes = await fs.readFile(executionPath!)
+  const executionArchive = await readStoredZip(new Blob([executionBytes]))
+  expect(executionArchive.files.has('execution-manifest.json')).toBe(true)
+  expect(executionArchive.files.has('execution-recipe.json')).toBe(true)
+  expect(executionArchive.files.has('SHA256SUMS.txt')).toBe(true)
+  expect(executionArchive.files.has('sources/01-front.png')).toBe(true)
+  expect(executionArchive.files.has('sources/02-rear.png')).toBe(true)
+  expect(executionArchive.files.has('sources/03-left.png')).toBe(true)
+  expect(executionArchive.files.has('sources/04-right.png')).toBe(true)
+
+  const bundledJobEntry = [...executionArchive.files.entries()].find(([path]) => /^sls-recon-.*\.json$/u.test(path))
+  expect(bundledJobEntry).toBeTruthy()
+  const bundledJob = JSON.parse(await bundledJobEntry![1].blob.text()) as {
+    sourceImages: Array<{ sourceKey: string; preparedFileName: string }>
+  }
+  expect(bundledJob.sourceImages.map((entry) => entry.preparedFileName)).toEqual([
+    'sources/01-front.png',
+    'sources/02-rear.png',
+    'sources/03-left.png',
+    'sources/04-right.png',
+  ])
+
+  const executionManifest = JSON.parse(await executionArchive.files.get('execution-manifest.json')!.blob.text()) as {
+    sourceFiles: Array<{ sourceKey: string; sha256: string; archivePath: string }>
+  }
+  expect(executionManifest.sourceFiles).toHaveLength(4)
+  expect(executionManifest.sourceFiles.every((entry) => /^[a-f0-9]{64}$/u.test(entry.sha256))).toBe(true)
+
+  const executionChecksums = await executionArchive.files.get('SHA256SUMS.txt')!.blob.text()
+  expect(executionChecksums).toMatch(/[a-f0-9]{64}  sources\/01-front\.png/u)
 
   const jobText = await page.locator('.job-ready').locator('strong').first().textContent()
   expect(jobText).toMatch(/^SLS-RECON-/u)
@@ -200,6 +239,6 @@ test('V0.47 ingests a verified field bundle into a traceable reconstruction and 
   expect(download.suggestedFilename()).toMatch(/processing-handoff\.json$/u)
 
   await fs.mkdir('playwright-output/screenshots', { recursive: true })
-  await page.screenshot({ path: 'playwright-output/screenshots/v047-ingestion-' + testInfo.project.name + '.png', fullPage: true })
+  await page.screenshot({ path: 'playwright-output/screenshots/v048-ingestion-' + testInfo.project.name + '.png', fullPage: true })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
