@@ -8,6 +8,10 @@ import {
 } from './reconstruction-provider-adapters'
 import { buildReconstructionPrepRecipe } from './reconstruction-prep-recipe'
 import {
+  loadVerifiedFieldEvidenceBundle,
+  type VerifiedFieldEvidenceBundle,
+} from './field-evidence-bundle'
+import {
   buildDigitalTwinCandidatePacket,
   buildReconstructionJobPacket,
   buildReconstructionProcessingHandoff,
@@ -53,6 +57,7 @@ function formatBytes(value: number) {
 
 function DigitalTwinIngestionApp() {
   const [construction, setConstruction] = useState<ProductConstructionPacket | null>(null)
+  const [fieldBundle, setFieldBundle] = useState<VerifiedFieldEvidenceBundle | null>(null)
   const [providerId, setProviderId] = useState<ReconstructionProviderId>('trellis2')
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
   const [preparedFiles, setPreparedFiles] = useState<Record<string, File>>({})
@@ -79,14 +84,27 @@ function DigitalTwinIngestionApp() {
   useEffect(() => {
     if (!construction) {
       setSelectedKeys([])
+      setPreparedFiles({})
       return
     }
-    setSelectedKeys(recommendedReconstructionSourceKeys(construction, providerId))
-    setPreparedFiles({})
+    const keys = recommendedReconstructionSourceKeys(construction, providerId)
+    setSelectedKeys(keys)
+    const bundled: Record<string, File> = {}
+    if (fieldBundle && fieldBundle.construction.sourceCaptureSessionId === construction.sourceCaptureSessionId) {
+      for (const key of keys) {
+        const source = fieldBundle.roleSources.get(key)
+        if (!source) continue
+        bundled[key] = new File([source.blob], source.index.originalName, {
+          type: source.index.type,
+          lastModified: source.index.lastModified,
+        })
+      }
+    }
+    setPreparedFiles(bundled)
     setJob(null)
     setCandidate(null)
     setModelFile(null)
-  }, [construction, providerId])
+  }, [construction, providerId, fieldBundle])
 
   const sourceFiles = useMemo<ReconstructionSourceFile[]>(() => {
     if (!construction) return []
@@ -95,6 +113,7 @@ function DigitalTwinIngestionApp() {
       const file = preparedFiles[key]
       const reference = referencesByKey.get(key)
       if (!file || !reference) return []
+      const bundleSource = fieldBundle?.roleSources.get(key)
       return [{
         sourceKey: key,
         sourceLabel: key,
@@ -104,9 +123,16 @@ function DigitalTwinIngestionApp() {
         type: file.type || 'application/octet-stream',
         lastModified: file.lastModified,
         geometryPreservedConfirmed: geometryPreserved,
+        captureEvidence: bundleSource ? {
+          archivePath: bundleSource.index.archivePath,
+          originalName: bundleSource.index.originalName,
+          sha256: bundleSource.index.sha256,
+          sizeBytes: bundleSource.index.sizeBytes,
+          verifiedFieldBundle: true as const,
+        } : undefined,
       }]
     })
-  }, [construction, selectedKeys, preparedFiles, geometryPreserved])
+  }, [construction, selectedKeys, preparedFiles, geometryPreserved, fieldBundle])
 
   const allSelectedFilesReady = selectedKeys.length > 0 && sourceFiles.length === selectedKeys.length
   const candidateIssues = useMemo(
@@ -122,14 +148,34 @@ function DigitalTwinIngestionApp() {
     [candidate],
   )
 
+  async function loadFieldBundle(file: File | undefined) {
+    if (!file) return
+    setStatus('Verifying field evidence ZIP locally: CRC, SHA-256 ledger, source index and construction provenance…')
+    try {
+      const verified = await loadVerifiedFieldEvidenceBundle(file)
+      setFieldBundle(verified)
+      setConstruction(verified.construction)
+      setAssetId(verified.index.assetId)
+      setStatus('Verified field bundle loaded. ' + verified.verifiedFiles + ' archived files passed integrity checks; reconstruction sources are available without reattaching the field photos.')
+    } catch (error) {
+      setFieldBundle(null)
+      setConstruction(null)
+      setJob(null)
+      setCandidate(null)
+      setStatus(error instanceof Error ? error.message : 'Field evidence bundle could not be verified.')
+    }
+  }
+
   async function loadConstruction(file: File | undefined) {
     if (!file) return
     try {
       const parsed = parseProductConstructionPacket(JSON.parse(await file.text()))
+      setFieldBundle(null)
       setConstruction(parsed)
       setAssetId(safePart(parsed.productId, 'product') + '-v1')
       setStatus('Physical construction provenance loaded. Select the reconstruction provider and prepared source views.')
     } catch (error) {
+      setFieldBundle(null)
       setConstruction(null)
       setJob(null)
       setCandidate(null)
@@ -264,7 +310,7 @@ function DigitalTwinIngestionApp() {
     <main className="ingestion-shell">
       <header className="ingestion-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.41</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.47</p>
           <h1>Digital Twin Ingestion</h1>
           <p>
             Turn controlled product photography into a traceable reconstruction candidate, then hand it to the
