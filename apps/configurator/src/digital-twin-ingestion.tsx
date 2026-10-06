@@ -215,6 +215,17 @@ function DigitalTwinIngestionApp() {
     setCandidate(null)
   }
 
+  function restoreVerifiedBundleSource(key: string) {
+    const source = fieldBundle?.roleSources.get(key)
+    if (!source) return
+    const file = new File([source.blob], source.index.originalName, {
+      type: source.index.type,
+      lastModified: source.index.lastModified,
+    })
+    attachPreparedFile(key, file)
+    setStatus('Verified original field source restored for ' + key + '. Geometry-preserving prep attestation is still required before job creation.')
+  }
+
   function createJob() {
     if (!construction) return
     try {
@@ -344,24 +355,59 @@ function DigitalTwinIngestionApp() {
         <div className="section-heading">
           <span>01</span>
           <div>
-            <h2>Load physical provenance</h2>
-            <p>The construction packet comes from Product Capture and carries measurements, source-view identity, semantic nodes and material slots.</p>
+            <h2>Load verified physical provenance</h2>
+            <p>Prefer the complete Product Capture field ZIP. SLS verifies the archive, integrity ledger, source index and construction lineage locally before reconstruction can begin.</p>
           </div>
         </div>
-        <label className={construction ? 'drop-card is-ready' : 'drop-card'}>
-          <input
-            aria-label="Construction packet JSON"
-            type="file"
-            accept=".json,application/json"
-            onChange={(event) => {
-              void loadConstruction(event.target.files?.[0])
-              event.target.value = ''
-            }}
-          />
-          <span>{construction ? 'PHYSICAL PROVENANCE LOADED' : 'SELECT CONSTRUCTION PACKET'}</span>
-          <strong>{construction?.productLabel ?? 'Product Capture JSON'}</strong>
-          <small>{construction ? construction.sourceCaptureSessionId : 'No images or product data are uploaded by this tool.'}</small>
-        </label>
+        <div className="provenance-intake-grid">
+          <label className={fieldBundle ? 'drop-card is-ready bundle-intake' : 'drop-card bundle-intake'}>
+            <input
+              aria-label="Verified field evidence ZIP"
+              type="file"
+              accept=".zip,application/zip"
+              onChange={(event) => {
+                void loadFieldBundle(event.target.files?.[0])
+                event.target.value = ''
+              }}
+            />
+            <span>{fieldBundle ? 'VERIFIED FIELD BUNDLE LOADED' : 'PREFERRED · SELECT FIELD EVIDENCE ZIP'}</span>
+            <strong>{fieldBundle?.fileName ?? 'Product Capture field-evidence.zip'}</strong>
+            <small>{fieldBundle
+              ? fieldBundle.verifiedFiles + ' archived files verified · ' + fieldBundle.index.totals.sourceImages + ' source images · SHA-256 ledger passed'
+              : 'Verifies CRC, SHA256SUMS, source index, construction packet and capture lineage entirely in this browser.'}</small>
+          </label>
+
+          <label className={!fieldBundle && construction ? 'drop-card is-ready' : 'drop-card'}>
+            <input
+              aria-label="Construction packet JSON"
+              type="file"
+              accept=".json,application/json"
+              onChange={(event) => {
+                void loadConstruction(event.target.files?.[0])
+                event.target.value = ''
+              }}
+            />
+            <span>{!fieldBundle && construction ? 'LEGACY / MANUAL PROVENANCE LOADED' : 'FALLBACK · CONSTRUCTION PACKET ONLY'}</span>
+            <strong>{!fieldBundle && construction ? construction.productLabel : 'Product Capture construction JSON'}</strong>
+            <small>Use this only when no verified V0.45+ field ZIP exists. Source photographs must then be attached manually.</small>
+          </label>
+        </div>
+        {fieldBundle ? (
+          <section className="bundle-verification" aria-label="Verified field bundle summary">
+            <div>
+              <span>FIELD EVIDENCE VERIFIED</span>
+              <strong>{fieldBundle.index.productLabel}</strong>
+              <small>{fieldBundle.index.captureSessionId} · {fieldBundle.index.assetId}</small>
+            </div>
+            <div className="bundle-verification__metrics">
+              <div><span>Ledger files</span><strong>{fieldBundle.verifiedFiles}</strong></div>
+              <div><span>Role sources</span><strong>{fieldBundle.index.references.length}</strong></div>
+              <div><span>Supplemental</span><strong>{fieldBundle.index.supplemental.length}</strong></div>
+              <div><span>Quality blockers</span><strong>{fieldBundle.index.qualityPreflight?.blockerCount ?? 0}</strong></div>
+            </div>
+            <p>Original capture bytes remain local. Selected provider inputs start from the verified originals and may be replaced with geometry-preserving prepared derivatives without losing the upstream field-source SHA-256 identity.</p>
+          </section>
+        ) : null}
         {construction ? (
           <div className="provenance-grid">
             <div><span>Product</span><strong>{construction.productId}</strong></div>
@@ -377,7 +423,7 @@ function DigitalTwinIngestionApp() {
           <span>02</span>
           <div>
             <h2>Prepare reconstruction job</h2>
-            <p>Choose the external reconstruction engine and attach only geometry-preserving prepared derivatives of the captured views.</p>
+            <p>Choose the external reconstruction engine. Verified field sources are loaded directly from the bundle; replace them only with geometry-preserving prepared derivatives when useful.</p>
           </div>
         </div>
 
