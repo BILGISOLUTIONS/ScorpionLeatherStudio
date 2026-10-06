@@ -127,7 +127,7 @@ test('V0.47 ingests a verified field bundle into a traceable reconstruction and 
     buffer: await buildFieldBundleFixture(),
   })
 
-  await expect(page.getByText('VERIFIED FIELD BUNDLE LOADED')).toBeVisible()
+  await expect(page.getByText('VERIFIED FIELD BUNDLE LOADED', { exact: true })).toBeVisible()
   const bundleSummary = page.getByRole('region', { name: 'Verified field bundle summary' })
   await expect(bundleSummary).toBeVisible()
   await expect(bundleSummary.getByText('FIELD EVIDENCE VERIFIED')).toBeVisible()
