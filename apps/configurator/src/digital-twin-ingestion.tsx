@@ -28,8 +28,7 @@ import {
 } from './digital-twin-ingestion-core'
 import './digital-twin-ingestion.css'
 
-function downloadJson(filename: string, value: unknown) {
-  const blob = new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json' })
+function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
@@ -38,6 +37,10 @@ function downloadJson(filename: string, value: unknown) {
   anchor.click()
   anchor.remove()
   URL.revokeObjectURL(url)
+}
+
+function downloadJson(filename: string, value: unknown) {
+  downloadBlob(filename, new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json' }))
 }
 
 function safePart(value: string, fallback: string) {
@@ -66,6 +69,7 @@ function DigitalTwinIngestionApp() {
   const [assetId, setAssetId] = useState('')
   const [notes, setNotes] = useState('')
   const [job, setJob] = useState<ReconstructionJobPacket | null>(null)
+  const [executionBundleBusy, setExecutionBundleBusy] = useState(false)
   const [modelFile, setModelFile] = useState<File | null>(null)
   const [resultReference, setResultReference] = useState('')
   const [rights, setRights] = useState({
@@ -249,6 +253,26 @@ function DigitalTwinIngestionApp() {
     }
   }
 
+  async function downloadExecutionBundle() {
+    if (!job) return
+    setExecutionBundleBusy(true)
+    setStatus('Hashing and packaging the exact prepared reconstruction inputs locally…')
+    try {
+      const { buildReconstructionExecutionBundle } = await import('./reconstruction-execution-bundle')
+      const result = await buildReconstructionExecutionBundle({
+        job,
+        preparedFiles,
+        generatedAt: new Date().toISOString(),
+      })
+      downloadBlob(result.fileName, result.blob)
+      setStatus('Reconstruction execution ZIP downloaded. Exact prepared source bytes, runner-ready job, provider recipe and SHA-256 ledger are frozen together.')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Reconstruction execution bundle could not be created.')
+    } finally {
+      setExecutionBundleBusy(false)
+    }
+  }
+
   async function copyRunnerCommand() {
     if (!executionRecipe?.command) return
     try {
@@ -321,7 +345,7 @@ function DigitalTwinIngestionApp() {
     <main className="ingestion-shell">
       <header className="ingestion-header">
         <div>
-          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.47</p>
+          <p className="eyebrow">SCORPION LEATHER STUDIO · V0.48</p>
           <h1>Digital Twin Ingestion</h1>
           <p>
             Turn controlled product photography into a traceable reconstruction candidate, then hand it to the
@@ -576,8 +600,20 @@ function DigitalTwinIngestionApp() {
                 <ul>
                   {executionRecipe.notes.map((note) => <li key={note}>{note}</li>)}
                 </ul>
+                <div className="execution-bundle-note">
+                  <strong>Preferred handoff</strong>
+                  <span>Package this job with the exact prepared source bytes so the runner workspace cannot drift from the SLS job packet.</span>
+                </div>
                 <div className="action-row compact-actions">
-                  <button type="button" onClick={() => downloadJson(job.jobId.toLowerCase() + '-execution.json', executionRecipe)}>Download execution recipe</button>
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={executionBundleBusy}
+                    onClick={() => void downloadExecutionBundle()}
+                  >
+                    {executionBundleBusy ? 'Building execution ZIP…' : 'Download execution bundle (.zip)'}
+                  </button>
+                  <button type="button" onClick={() => downloadJson(job.jobId.toLowerCase() + '-execution.json', executionRecipe)}>Download recipe only</button>
                   {executionRecipe.command ? <button type="button" onClick={() => void copyRunnerCommand()}>Copy runner command</button> : null}
                 </div>
               </section>
