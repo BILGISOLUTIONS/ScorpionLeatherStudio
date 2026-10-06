@@ -85,6 +85,13 @@ export interface ReconstructionSourceFile {
   type: string
   lastModified: number
   geometryPreservedConfirmed: boolean
+  captureEvidence?: {
+    archivePath: string
+    originalName: string
+    sha256: string
+    sizeBytes: number
+    verifiedFieldBundle: true
+  }
 }
 
 export interface ReconstructionJobPacket {
@@ -343,6 +350,21 @@ export function evaluateReconstructionJob(packet: ReconstructionJobPacket): Reco
     if (!source.preparedFileName.trim() || source.sizeBytes <= 0) {
       issues.push({ severity: 'error', path: 'sourceImages.' + source.sourceKey, message: 'Prepared image metadata is incomplete.' })
     }
+    if (source.captureEvidence) {
+      if (
+        !source.captureEvidence.archivePath.trim()
+        || !source.captureEvidence.originalName.trim()
+        || !/^[a-f0-9]{64}$/u.test(source.captureEvidence.sha256)
+        || source.captureEvidence.sizeBytes <= 0
+        || source.captureEvidence.verifiedFieldBundle !== true
+      ) {
+        issues.push({
+          severity: 'error',
+          path: 'sourceImages.' + source.sourceKey + '.captureEvidence',
+          message: 'Verified field-bundle source provenance is incomplete.',
+        })
+      }
+    }
     if (source.preparedFileName !== source.captureReferenceName) {
       issues.push({
         severity: 'warning',
@@ -374,8 +396,17 @@ export function buildReconstructionJobPacket(args: {
   const profile = getReconstructionProviderProfile(args.providerId)
   const knownReferences = new Map(args.construction.referenceCoverage.map((entry) => [entry.key, entry]))
   for (const source of args.sourceFiles) {
-    if (!knownReferences.has(source.sourceKey)) {
+    const reference = knownReferences.get(source.sourceKey)
+    if (!reference) {
       throw new Error('sourceFiles.' + source.sourceKey + ': Source role is not present in the physical capture packet.')
+    }
+    if (source.captureEvidence) {
+      if (reference.sha256 && reference.sha256 !== source.captureEvidence.sha256) {
+        throw new Error('sourceFiles.' + source.sourceKey + ': Field-bundle source fingerprint does not match Product Capture provenance.')
+      }
+      if (reference.name !== source.captureEvidence.originalName) {
+        throw new Error('sourceFiles.' + source.sourceKey + ': Field-bundle original filename does not match Product Capture provenance.')
+      }
     }
   }
 
