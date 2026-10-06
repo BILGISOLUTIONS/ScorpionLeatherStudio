@@ -355,3 +355,37 @@ without pretending the prepared derivative or reconstruction provider output is 
 ### Boundary
 
 V0.47 adds no backend upload service, database, analytics SDK or new reconstruction vendor dependency. Verification and source hydration stay local. Provider submission remains controlled by the existing provider adapters/manual execution recipes and their separate rights/terms confirmations.
+
+## V0.48 reconstruction execution bundle
+
+V0.48 closes the handoff gap between a validated SLS reconstruction job and the external provider runner.
+
+A reconstruction job can now be exported as one deterministic local ZIP workspace containing:
+
+- the runner-ready reconstruction job JSON;
+- the exact prepared source-image bytes selected in Digital Twin Ingestion;
+- collision-safe canonical source paths (`sources/01-<role>.<ext>`, etc.);
+- the provider execution recipe;
+- an execution manifest containing SHA-256 identity for every prepared source;
+- `SHA256SUMS.txt` for the complete workspace except the ledger itself;
+- a plain-text README with install/environment/run instructions.
+
+The provider runner scripts remain version-controlled in the SLS repository and credentials remain environment-only. The bundle deliberately does not copy secrets into the workspace.
+
+### Why canonical source names are generated
+
+Phone/camera exports and edited derivatives can reuse generic names such as `IMG_0001.jpg` or `image.jpg`. A normal folder handoff can therefore overwrite one selected view with another.
+
+The V0.48 workspace rewrites only the runner copy of each `preparedFileName` to a deterministic role-prefixed path while preserving the original job/source provenance in the execution manifest. The selected bytes themselves are not recompressed or altered.
+
+### Stale-job protection
+
+The execution bundle refuses to build when the live prepared source file is missing or no longer matches the filename/byte-size metadata frozen in the active SLS reconstruction job. This prevents an old job JSON from being packaged against a later replacement file silently.
+
+### Execution integrity
+
+Each prepared source is SHA-256 hashed locally at packaging time. Known source hashes are reused when building the workspace checksum ledger so the browser does not need a redundant second read of large source photos.
+
+The generated provider recipe is rebuilt against the canonical workspace job, meaning the displayed runner command and `sourceFiles` list refer to the actual paths inside the downloaded ZIP.
+
+The resulting provider output is still a raw reconstruction candidate. V0.48 changes transfer reliability only; it does not change physical authority, licensing requirements, Blender preparation, Digital Twin QA, or controlled production promotion.
