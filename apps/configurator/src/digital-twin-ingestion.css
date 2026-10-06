@@ -223,3 +223,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .restore-source{min-height:40px;font-size:.68rem}
 }
 @media(max-width:440px){.bundle-verification__metrics{grid-template-columns:1fr}}
+
+
+/* V0.48 — deterministic reconstruction execution bundle */
+.execution-bundle-note{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:start;margin-top:9px;padding:9px 10px;border:1px solid #425238;background:#0d120b}
+.execution-bundle-note strong{color:#b7cba5;font-size:.61rem;white-space:nowrap}
+.execution-bundle-note span{color:#87977b;font-size:.61rem;line-height:1.42}
+@media(max-width:700px){
+  .execution-bundle-note{grid-template-columns:1fr}
+  .execution-bundle-note strong,.execution-bundle-note span{font-size:.68rem}
+}
