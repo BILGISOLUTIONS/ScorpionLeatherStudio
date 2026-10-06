@@ -193,3 +193,33 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .prep-files strong{font-size:.68rem}
 }
 @media(max-width:460px){.prep-files{grid-template-columns:1fr}}
+
+
+/* V0.47 — verified field-bundle intake */
+.provenance-intake-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:8px;margin-top:12px}
+.provenance-intake-grid .drop-card{margin-top:0;min-height:122px}
+.bundle-intake{background:linear-gradient(112deg,rgba(116,139,86,.07),transparent 60%),#0c0c0a}
+.bundle-verification{display:grid;grid-template-columns:minmax(220px,.9fr) minmax(0,1.5fr);gap:12px;margin-top:9px;padding:12px;border:1px solid #4a5e3c;background:linear-gradient(110deg,rgba(84,119,66,.1),transparent 58%),#0c120a}
+.bundle-verification>div:first-child{display:grid;align-content:start;gap:3px}
+.bundle-verification>div:first-child span{color:#99b77f;font-size:.55rem;font-weight:900;letter-spacing:.09em}
+.bundle-verification>div:first-child strong{font-size:.8rem}
+.bundle-verification>div:first-child small{color:#89977e;font-size:.62rem;overflow-wrap:anywhere}
+.bundle-verification__metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.bundle-verification__metrics>div{display:grid;gap:3px;padding:8px;border:1px solid #314029;background:#0a0e08}
+.bundle-verification__metrics span{color:#718266;font-size:.51rem;text-transform:uppercase;letter-spacing:.06em}
+.bundle-verification__metrics strong{font-size:.71rem}
+.bundle-verification p{grid-column:1/-1;margin:0;color:#8f9d84;font-size:.63rem;line-height:1.45}
+.verified-source{color:#90ab79!important;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.prepared-source-stack{display:grid;gap:5px}
+.restore-source{min-height:32px;border:1px solid #4d5f40;background:#0d120b;color:#b7caaa;cursor:pointer;font-size:.6rem}
+.restore-source:hover{border-color:#75905f}
+@media(max-width:900px){
+  .provenance-intake-grid{grid-template-columns:1fr}
+  .bundle-verification{grid-template-columns:1fr}
+  .bundle-verification__metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  .bundle-verification p,.bundle-verification>div:first-child small{font-size:.69rem}
+  .restore-source{min-height:40px;font-size:.68rem}
+}
+@media(max-width:440px){.bundle-verification__metrics{grid-template-columns:1fr}}
